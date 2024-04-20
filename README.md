@@ -1,5 +1,6 @@
 # wirthx
-wirthx is an experimental pascal interpreter and maybe one day compiler. 
+Wirthx is an experimental pascal interpreter and maybe one day compiler. 
+The language is named after Nicolaus Wirth the creator of pascal.
 
 # Usage
 

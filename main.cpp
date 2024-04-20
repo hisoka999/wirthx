@@ -12,6 +12,8 @@ using namespace std::literals;
 
 int main(int args, char **argv)
 {
+    bool displayAst = false;
+    size_t fileArg = 1;
     if (args == 2)
     {
         if (argv[1] == "--version"sv || argv[1] == "-v"sv)
@@ -20,19 +22,24 @@ int main(int args, char **argv)
             return 0;
         }
     }
+    else if (argv[1] == "--ast"sv)
+    {
+        displayAst = true;
+        fileArg++;
+    }
 
     std::ifstream file;
     std::istringstream is;
     std::string s;
     std::string group;
-    std::filesystem::path file_path(argv[1]);
+    std::filesystem::path file_path(argv[fileArg]);
     if (!std::filesystem::exists(file_path))
     {
         std::cerr << "the first argument is not a valid input file\n";
         return 1;
     }
 
-    file.open(argv[1], std::ios::in);
+    file.open(file_path, std::ios::in);
     if (!file.is_open())
     {
         return 1;
@@ -61,7 +68,10 @@ int main(int args, char **argv)
     Stack stack;
     for (auto &ast : asts)
     {
-        ast->print();
+        if (displayAst)
+        {
+            ast->print();
+        }
         auto func = std::dynamic_pointer_cast<FunctionDefinitionNode>(ast);
         if (func != nullptr)
         {
