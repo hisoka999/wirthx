@@ -1,6 +1,6 @@
 #include "Lexer.h"
-#include <iostream>
 #include "compare.h"
+#include <iostream>
 
 Lexer::Lexer()
 {
@@ -10,9 +10,14 @@ Lexer::~Lexer()
 {
 }
 
-bool validNameChar(char value)
+bool validStartNameChar(char value)
 {
     return (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z') || value == '_';
+}
+
+bool validNameChar(char value)
+{
+    return validStartNameChar(value) || (value >= '0' && value <= '9');
 }
 
 std::vector<Token> Lexer::tokenize(std::string_view content)
@@ -146,17 +151,23 @@ bool Lexer::find_string(std::string_view content, size_t start, size_t *endPosit
     }
     return true;
 }
+bool isNumberStart(char c)
+{
+    return (c >= '0' && c <= '9') || c == '-';
+}
 
 bool Lexer::find_number(std::string_view content, size_t start, size_t *endPosition)
 {
+    int index = 0;
     char current = content[start];
-    if (current < '0' || current > '9')
+    if (!isNumberStart(current))
         return false;
-    while (current >= '0' && current <= '9')
+    while ((current >= '0' && current <= '9') || (index == 0 && current == '-'))
     {
 
         *endPosition += 1;
         current = content[*endPosition];
+        index++;
     }
     if (current < '0' || current > '9')
         *endPosition -= 1;
@@ -167,7 +178,7 @@ bool Lexer::find_token(std::string_view content, size_t start, size_t *endPositi
 {
     char current = content[start];
     *endPosition = start;
-    if (!validNameChar(current))
+    if (!validStartNameChar(current))
         return false;
 
     while (validNameChar(current))
@@ -176,7 +187,7 @@ bool Lexer::find_token(std::string_view content, size_t start, size_t *endPositi
         *endPosition += 1;
         current = content[*endPosition];
     }
-    while (current < 'A' || current > 'z')
+    while (!validNameChar(current))
     {
         *endPosition -= 1;
         current = content[*endPosition];
@@ -189,7 +200,7 @@ bool Lexer::find_fixed_token(std::string_view content, size_t start, size_t *end
 
     char current = content[start];
     *endPosition = start + 1;
-    if (!validNameChar(current))
+    if (!validStartNameChar(current))
         return false;
 
     while (validNameChar(current))

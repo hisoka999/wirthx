@@ -16,6 +16,10 @@ void FunctionDefinitionNode::print()
     for (size_t i = 0; i < m_params.size(); ++i)
     {
         auto &param = m_params[i];
+        if (param.isReference)
+        {
+            std::cout << "var ";
+        }
         std::cout << param.argumentName + " :" + param.type.typeName;
 
         if (i != m_params.size() - 1)

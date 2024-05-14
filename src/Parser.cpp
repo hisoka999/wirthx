@@ -342,36 +342,29 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
         std::vector<FunctionArgument> functionParams;
         while (token.tokenType != TokenType::RIGHT_CURLY)
         {
-            switch (token.tokenType)
-            {
-            case TokenType::NAMEDTOKEN:
-            {
-                auto paramName = std::string(token.lexical);
 
-                consume(TokenType::COLON);
-                if (canConsume(TokenType::NAMEDTOKEN))
-                {
-                    token = next();
-                    VariableType type{.baseType = VariableBaseType::Unknown, .typeName = std::string(token.lexical)};
-                    if (isVariableDefined(paramName, scope))
-                    {
-                        m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = currentToken, .message = "A variable with the name " + paramName + " was allready defined!"});
-                    }
-                    m_known_variable_definitions.push_back(VariableDefinition{.variableType = type, .variableName = paramName, .scopeId = scope});
+            auto isReference = tryConsumeKeyWord("var");
+            auto paramName = std::string(token.lexical);
 
-                    functionParams.push_back(FunctionArgument{.type = type, .argumentName = paramName});
-                }
-                else
+            consume(TokenType::COLON);
+            if (canConsume(TokenType::NAMEDTOKEN))
+            {
+                token = next();
+                VariableType type{.baseType = VariableBaseType::Unknown, .typeName = std::string(token.lexical)};
+                if (isVariableDefined(paramName, scope))
                 {
-                    // TODO type def missing
-                    m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = currentToken, .message = "For the parameter definition " + paramName + " there is a type missing"});
+                    m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = currentToken, .message = "A variable with the name " + paramName + " was allready defined!"});
                 }
+                m_known_variable_definitions.push_back(VariableDefinition{.variableType = type, .variableName = paramName, .scopeId = scope});
+
+                functionParams.push_back(FunctionArgument{.type = type, .argumentName = paramName, .isReference = isReference});
+
+                tryConsume(TokenType::SEMICOLON);
             }
-            break;
-            case TokenType::COMMA:
-                break;
-            default:
-                break;
+            else
+            {
+                // TODO type def missing
+                m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = currentToken, .message = "For the parameter definition " + paramName + " there is a type missing"});
             }
 
             token = next();

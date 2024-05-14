@@ -9,6 +9,7 @@ struct FunctionArgument
 {
     VariableType type;
     std::string argumentName;
+    bool isReference;
 };
 
 class FunctionDefinitionNode : public ASTNode

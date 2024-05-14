@@ -34,7 +34,7 @@ struct Token
 };
 
 inline auto possible_tokens = {
-    "program", "begin", "end", "procedure", "var", "if", "then", "else"};
+    "program", "begin", "end", "procedure", "function", "var", "if", "then", "else"};
 
 class Lexer
 {

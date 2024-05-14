@@ -33,7 +33,21 @@ file(GLOB SRC
     main.cpp )
 INCLUDE_DIRECTORIES("src")
 
+include(FetchContent)
 
+option(BUILD_TESTS "Build test programs" ON)
+if(BUILD_TESTS)
+    FetchContent_Declare(
+    googletest
+    URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+    )
+    # For Windows: Prevent overriding the parent project's compiler/linker settings
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(googletest)
+    enable_testing()
+    add_subdirectory(tests)
+
+endif()
 
 # Let's set compiler-specific flags
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
