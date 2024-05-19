@@ -1,28 +1,28 @@
 #include "Parser.h"
+#include <algorithm>
+#include <exception>
 #include <fstream>
+#include <iostream>
 #include <sstream>
 #include <string>
-#include <exception>
-#include <iostream>
-#include <algorithm>
 
-#include "compare.h"
-#include "ast/PrintNode.h"
-#include "ast/InputNode.h"
-#include "ast/NumberNode.h"
-#include "ast/StringConstantNode.h"
-#include "ast/BinaryOperationNode.h"
-#include "ast/ComparissionNode.h"
-#include "ast/VariableAccessNode.h"
-#include "ast/LogicalExpressionNode.h"
-#include "ast/IfConditionNode.h"
-#include "ast/VariableAssignmentNode.h"
-#include "ast/FunctionDefinitionNode.h"
-#include "ast/ReturnNode.h"
-#include "ast/FunctionCallNode.h"
-#include "ast/BlockNode.h"
-#include "ast/SystemFunctionCallNode.h"
 #include "Lexer.h"
+#include "ast/BinaryOperationNode.h"
+#include "ast/BlockNode.h"
+#include "ast/ComparissionNode.h"
+#include "ast/FunctionCallNode.h"
+#include "ast/FunctionDefinitionNode.h"
+#include "ast/IfConditionNode.h"
+#include "ast/InputNode.h"
+#include "ast/LogicalExpressionNode.h"
+#include "ast/NumberNode.h"
+#include "ast/PrintNode.h"
+#include "ast/ReturnNode.h"
+#include "ast/StringConstantNode.h"
+#include "ast/SystemFunctionCallNode.h"
+#include "ast/VariableAccessNode.h"
+#include "ast/VariableAssignmentNode.h"
+#include "compare.h"
 #include <magic_enum/magic_enum.hpp>
 
 Parser::Parser(const std::filesystem::path &path, std::vector<Token> &tokens) : m_file_path(path), m_tokens(tokens)
@@ -201,9 +201,9 @@ std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, size_t currentSc
     return nullptr;
 }
 
-bool Parser::isVariableDefined(std::string_view name, size_t scope)
+bool Parser::isVariableDefined(const std::string_view name, size_t scope)
 {
-    for (auto &def : m_known_variable_definitions)
+    for (const auto &def : m_known_variable_definitions)
     {
         if (iequals(def.variableName, name) && def.scopeId <= scope)
             return true;
@@ -224,7 +224,7 @@ std::shared_ptr<ASTNode> Parser::parseBlock([[maybe_unused]] const Token &curren
             // consume var declarations
             consume(TokenType::NAMEDTOKEN);
             _currentToken = current();
-            auto varName = _currentToken.lexical;
+            auto varName = std::string(_currentToken.lexical);
 
             consume(TokenType::COLON);
 
@@ -236,7 +236,7 @@ std::shared_ptr<ASTNode> Parser::parseBlock([[maybe_unused]] const Token &curren
             consume(TokenType::ENDLINE);
             if (isVariableDefined(varName, scope))
             {
-                m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = currentToken, .message = "A variable with the name " + std::string(varName) + " was allready defined!"});
+                m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = currentToken, .message = "A variable with the name " + varName + " was allready defined!"});
                 continue;
             }
 
@@ -280,13 +280,14 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
             {
                 consume(TokenType::ENDLINE);
             }
-            if (!canConsumeKeyWord("begin"))
+            while (!canConsumeKeyWord("begin") && !canConsumeKeyWord("var"))
             {
                 parseKeyWord(next(), nodes, scope + 1);
-            }
-            while (canConsume(TokenType::ENDLINE))
-            {
-                consume(TokenType::ENDLINE);
+
+                while (canConsume(TokenType::ENDLINE))
+                {
+                    consume(TokenType::ENDLINE);
+                }
             }
             nodes.push_back(parseBlock(current(), 0));
 
@@ -343,8 +344,8 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
         while (token.tokenType != TokenType::RIGHT_CURLY)
         {
 
-            auto isReference = tryConsumeKeyWord("var");
-            auto paramName = std::string(token.lexical);
+            const auto isReference = tryConsumeKeyWord("var");
+            const std::string paramName = {token.lexical.begin(), token.lexical.end()};
 
             consume(TokenType::COLON);
             if (canConsume(TokenType::NAMEDTOKEN))
@@ -379,6 +380,10 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
         consume(TokenType::SEMICOLON);
 
         nodes.push_back(std::make_shared<FunctionDefinitionNode>(functionName, functionParams, functionBody, true));
+    }
+    else if (iequals(currentToken.lexical, "function"))
+    {
+        parseFunction(scope, nodes);
     }
     else if (currentToken.lexical == "import")
     {
@@ -425,6 +430,64 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
         parseOk = false;
     }
     return parseOk;
+}
+
+void Parser::parseFunction(size_t scope, std::vector<std::shared_ptr<ASTNode>> &nodes)
+{
+    consume(TokenType::NAMEDTOKEN);
+    auto functionName = std::string(current().lexical);
+    m_known_function_names.push_back(functionName);
+
+    consume(TokenType::LEFT_CURLY);
+    auto token = next();
+    std::vector<FunctionArgument> functionParams;
+    while (token.tokenType != TokenType::RIGHT_CURLY)
+    {
+
+        const auto isReference = tryConsumeKeyWord("var");
+        const std::string funcParamName = std::string(token.lexical);
+
+        consume(TokenType::COLON);
+        if (canConsume(TokenType::NAMEDTOKEN))
+        {
+            token = next();
+            VariableType type{.baseType = VariableBaseType::Unknown, .typeName = std::string(token.lexical)};
+            if (isVariableDefined(funcParamName, scope))
+            {
+                m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = token, .message = "A variable with the name " + funcParamName + " was allready defined!"});
+            }
+            m_known_variable_definitions.push_back(VariableDefinition{.variableType = type, .variableName = funcParamName, .scopeId = scope});
+
+            functionParams.push_back(FunctionArgument{.type = type, .argumentName = funcParamName, .isReference = isReference});
+
+            tryConsume(TokenType::SEMICOLON);
+        }
+        else
+        {
+            // TODO type def missing
+            m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = token, .message = "For the parameter definition " + funcParamName + " there is a type missing"});
+        }
+
+        token = next();
+    }
+    consume(TokenType::COLON);
+    VariableType returnType;
+    if (consume(TokenType::NAMEDTOKEN))
+    {
+        returnType.typeName = {current().lexical.begin(), current().lexical.end()};
+
+        m_known_variable_definitions.push_back(VariableDefinition{.variableType = returnType, .variableName = functionName, .scopeId = scope});
+    }
+    consume(TokenType::SEMICOLON);
+    tryConsume(TokenType::ENDLINE);
+
+    std::vector<std::shared_ptr<ASTNode>> functionBody;
+    // parse function body
+
+    functionBody.emplace_back(parseBlock(current(), scope + 1));
+    consume(TokenType::SEMICOLON);
+
+    nodes.push_back(std::make_shared<FunctionDefinitionNode>(functionName, functionParams, functionBody, false, returnType));
 }
 
 std::shared_ptr<ASTNode> Parser::parseComparrision(const Token &currentToken, size_t currentScope, std::vector<std::shared_ptr<ASTNode>> &nodes)
@@ -580,7 +643,7 @@ void Parser::parseVariableAssignment(const Token &currentToken, size_t currentSc
     }
 
     // parse expression
-    auto expression = parseExpression(next(), 0);
+    auto expression = parseExpression(next(), currentScope);
     // TODO m_known_variable_names.push_back(variableName);
     nodes.push_back(std::make_shared<VariableAssignmentNode>(variableName, expression));
 }
@@ -622,10 +685,10 @@ bool Parser::hasError() const
     return !m_errors.empty();
 }
 
-void Parser::printErrors()
+void Parser::printErrors(std::ostream &outputStream)
 {
     for (auto &error : m_errors)
     {
-        std::cerr << error.file_name << ":" << error.token.row << ":" << error.token.col << ": " << error.message << "\n";
+        outputStream << error.file_name << ":" << error.token.row << ":" << error.token.col << ": " << error.message << "\n";
     }
 }

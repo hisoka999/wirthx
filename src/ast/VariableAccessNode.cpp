@@ -11,7 +11,7 @@ void VariableAccessNode::print()
     std::cout << m_variableName;
 }
 
-void VariableAccessNode::eval([[maybe_unused]] Stack &stack)
+void VariableAccessNode::eval([[maybe_unused]] Stack &stack, [[maybe_unused]] std::ostream &outputStream)
 {
 
     stack.push_back(stack.get_var(m_variableName));

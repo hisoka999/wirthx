@@ -15,5 +15,5 @@ enum class VariableBaseType
 struct VariableType
 {
     VariableBaseType baseType = VariableBaseType::Unknown;
-    std::string typeName;
+    std::string typeName = "";
 };

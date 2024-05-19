@@ -42,16 +42,16 @@ void LogicalExpressionNode::print()
     }
 }
 
-void LogicalExpressionNode::eval(Stack &stack)
+void LogicalExpressionNode::eval(Stack &stack, std::ostream &outputStream)
 {
 
     switch (m_operator)
     {
     case LogicalOperator::AND:
     {
-        m_lhs->eval(stack);
+        m_lhs->eval(stack, outputStream);
         auto lhs = stack.pop_front<int64_t>();
-        m_rhs->eval(stack);
+        m_rhs->eval(stack, outputStream);
         auto rhs = stack.pop_front<int64_t>();
 
         stack.push_back(static_cast<int64_t>(lhs && rhs));
@@ -59,9 +59,9 @@ void LogicalExpressionNode::eval(Stack &stack)
     break;
     case LogicalOperator::OR:
     {
-        m_lhs->eval(stack);
+        m_lhs->eval(stack, outputStream);
         auto lhs = stack.pop_front<int64_t>();
-        m_rhs->eval(stack);
+        m_rhs->eval(stack, outputStream);
         auto rhs = stack.pop_front<int64_t>();
 
         stack.push_back(static_cast<int64_t>(lhs || rhs));
@@ -69,7 +69,7 @@ void LogicalExpressionNode::eval(Stack &stack)
     break;
     case LogicalOperator::NOT:
     {
-        m_rhs->eval(stack);
+        m_rhs->eval(stack, outputStream);
         auto rhs = stack.pop_front<int64_t>();
         stack.push_back(static_cast<int64_t>(!rhs));
     }

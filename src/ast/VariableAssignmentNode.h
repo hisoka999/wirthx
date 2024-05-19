@@ -12,5 +12,5 @@ public:
     VariableAssignmentNode(const std::string_view variableName, const std::shared_ptr<ASTNode> &expression);
     ~VariableAssignmentNode() = default;
     void print() override;
-    void eval(Stack &stack) override;
+    void eval(Stack &stack, std::ostream &outputStream) override;
 };

@@ -52,6 +52,11 @@ StackObject Stack::get_var(const std::string &varName)
     return m_variables[varName];
 }
 
+bool Stack::has_var(const std::string &varName)
+{
+    return m_variables.count(varName) != 0;
+}
+
 void Stack::addFunction(std::shared_ptr<FunctionDefinitionNode> &function)
 {
     m_functions[function->name()] = function;

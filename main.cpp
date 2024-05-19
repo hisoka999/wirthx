@@ -1,12 +1,12 @@
-#include <iostream>
-#include <cstring>
-#include <fstream>
-#include <sstream>
 #include "Lexer.h"
 #include "Parser.h"
-#include "interpreter/Stack.h"
 #include "ast/FunctionDefinitionNode.h"
+#include "interpreter/Stack.h"
+#include <cstring>
 #include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <sstream>
 
 using namespace std::literals;
 
@@ -62,7 +62,7 @@ int main(int args, char **argv)
     std::vector<std::shared_ptr<ASTNode>> exec_nodes;
     if (parser.hasError())
     {
-        parser.printErrors();
+        parser.printErrors(std::cerr);
         return 1;
     }
     Stack stack;
@@ -85,7 +85,7 @@ int main(int args, char **argv)
 
     for (auto &ast : exec_nodes)
     {
-        ast->eval(stack);
+        ast->eval(stack, std::cout);
     }
     return 0;
 }

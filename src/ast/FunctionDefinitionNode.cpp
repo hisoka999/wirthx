@@ -1,9 +1,9 @@
 #include "FunctionDefinitionNode.h"
-#include <iostream>
 #include "interpreter/Stack.h"
+#include <iostream>
 
-FunctionDefinitionNode::FunctionDefinitionNode(std::string name, std::vector<FunctionArgument> params, std::vector<std::shared_ptr<ASTNode>> body, bool isProcedure)
-    : m_name(name), m_params(params), m_body(body), m_isProcedure(isProcedure)
+FunctionDefinitionNode::FunctionDefinitionNode(std::string name, std::vector<FunctionArgument> params, std::vector<std::shared_ptr<ASTNode>> body, bool isProcedure, VariableType returnType)
+    : m_name(name), m_params(params), m_body(body), m_isProcedure(isProcedure), m_returnType(returnType)
 {
 }
 
@@ -27,7 +27,15 @@ void FunctionDefinitionNode::print()
             std::cout << ",";
         }
     }
-    std::cout << ")\n";
+    std::cout << ")";
+    if (m_isProcedure)
+    {
+        std::cout << "\n";
+    }
+    else
+    {
+        std::cout << ": " << m_returnType.typeName << ";\n";
+    }
     for (auto &node : m_body)
     {
         node->print();
@@ -35,7 +43,7 @@ void FunctionDefinitionNode::print()
     // std::cout << "end;\n";
 }
 
-void FunctionDefinitionNode::eval([[maybe_unused]] Stack &stack)
+void FunctionDefinitionNode::eval(Stack &stack, std::ostream &outputStream)
 {
     for (auto param : m_params)
     {
@@ -44,7 +52,7 @@ void FunctionDefinitionNode::eval([[maybe_unused]] Stack &stack)
     }
     for (auto &node : m_body)
     {
-        node->eval(stack);
+        node->eval(stack, outputStream);
     }
 }
 

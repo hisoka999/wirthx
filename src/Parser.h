@@ -1,10 +1,10 @@
 #pragma once
-#include <vector>
-#include <memory>
 #include "Lexer.h"
 #include "ast/ASTNode.h"
-#include <filesystem>
 #include "ast/VariableType.h"
+#include <filesystem>
+#include <memory>
+#include <vector>
 
 struct ParserError
 {
@@ -16,7 +16,7 @@ struct ParserError
 struct VariableDefinition
 {
     VariableType variableType;
-    std::string_view variableName;
+    std::string variableName;
     size_t scopeId;
 };
 
@@ -41,6 +41,7 @@ private:
     bool canConsumeKeyWord(const std::string &keyword);
     std::shared_ptr<ASTNode> parseToken(const Token &token, size_t currentScope, std::vector<std::shared_ptr<ASTNode>> nodes);
     bool parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr<ASTNode>> &nodes, size_t scope);
+    void parseFunction(size_t scope, std::vector<std::shared_ptr<ASTNode>> &nodes);
     void parseVariableAssignment(const Token &currentToken, size_t currentScope, std::vector<std::shared_ptr<ASTNode>> &nodes);
     std::shared_ptr<ASTNode> parseComparrision(const Token &currentToken, size_t currentScope, std::vector<std::shared_ptr<ASTNode>> &nodes);
     std::shared_ptr<ASTNode> parseExpression(const Token &currentToken, size_t currentScope);
@@ -50,7 +51,7 @@ public:
     Parser(const std::filesystem::path &path, std::vector<Token> &tokens);
     ~Parser();
     bool hasError() const;
-    void printErrors();
+    void printErrors(std::ostream &outputStream);
 
     std::vector<std::shared_ptr<ASTNode>> parseTokens();
 };

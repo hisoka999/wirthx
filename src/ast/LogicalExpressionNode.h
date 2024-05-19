@@ -23,5 +23,5 @@ public:
     ~LogicalExpressionNode() = default;
 
     void print() override;
-    void eval(Stack &stack) override;
+    void eval(Stack &stack, std::ostream &outputStream) override;
 };

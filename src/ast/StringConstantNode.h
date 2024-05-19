@@ -12,5 +12,5 @@ public:
     StringConstantNode(std::string_view literal);
     ~StringConstantNode() = default;
     void print() override;
-    void eval(Stack &stack) override;
+    void eval(Stack &stack, std::ostream &outputStream) override;
 };

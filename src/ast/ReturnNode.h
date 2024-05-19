@@ -13,5 +13,5 @@ public:
     ReturnNode(std::shared_ptr<ASTNode> expression);
     ~ReturnNode() = default;
     void print() override;
-    void eval(Stack &stack) override;
+    void eval(Stack &stack, std::ostream &outputStream) override;
 };

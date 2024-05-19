@@ -82,10 +82,10 @@ void compare_str(CMPOperator op, StackObject lhs, StackObject rhs, Stack &stack)
         break;
     }
 }
-void ComparrisionNode::eval(Stack &stack)
+void ComparrisionNode::eval(Stack &stack, std::ostream &outputStream)
 {
-    m_lhs->eval(stack);
-    m_rhs->eval(stack);
+    m_lhs->eval(stack, outputStream);
+    m_rhs->eval(stack, outputStream);
     auto lhs = stack.pop_front();
     auto rhs = stack.pop_front();
     if (std::holds_alternative<int64_t>(lhs) && std::holds_alternative<int64_t>(rhs))

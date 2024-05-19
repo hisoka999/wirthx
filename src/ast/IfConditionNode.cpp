@@ -28,23 +28,23 @@ void IfConditionNode::print()
     }
 }
 
-void IfConditionNode::eval(Stack &stack)
+void IfConditionNode::eval(Stack &stack, std::ostream &outputStream)
 {
-    m_conditionNode->eval(stack);
+    m_conditionNode->eval(stack, outputStream);
     // check result
     auto result = stack.pop_front<int64_t>();
     if (result)
     {
         for (auto &exp : m_ifExpressions)
         {
-            exp->eval(stack);
+            exp->eval(stack, outputStream);
         }
     }
     else
     {
         for (auto &exp : m_elseExpressions)
         {
-            exp->eval(stack);
+            exp->eval(stack, outputStream);
         }
     }
 }

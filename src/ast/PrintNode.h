@@ -10,5 +10,5 @@ public:
     PrintNode(std::vector<std::shared_ptr<ASTNode>> &args);
     ~PrintNode() = default;
     void print() override;
-    void eval(Stack &stack) override;
+    void eval(Stack &stack, std::ostream &outputStream) override;
 };

@@ -16,10 +16,10 @@ void BlockNode::print()
     std::cout << "end;\n";
 }
 
-void BlockNode::eval(Stack &stack)
+void BlockNode::eval(Stack &stack, std::ostream &outputStream)
 {
     for (auto &exp : m_expressions)
     {
-        exp->eval(stack);
+        exp->eval(stack, outputStream);
     }
 }

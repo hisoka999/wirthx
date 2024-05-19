@@ -12,5 +12,5 @@ public:
     InputNode(std::shared_ptr<ASTNode> outputTextNode, const std::string_view variableName);
     ~InputNode() = default;
     void print() override;
-    void eval(Stack &stack) override;
+    void eval(Stack &stack, std::ostream &outputStream) override;
 };

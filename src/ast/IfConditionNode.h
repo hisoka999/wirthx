@@ -14,5 +14,5 @@ public:
     IfConditionNode(std::shared_ptr<ASTNode> conditionNode, std::vector<std::shared_ptr<ASTNode>> ifExpressions, std::vector<std::shared_ptr<ASTNode>> elseExpressions);
     ~IfConditionNode() = default;
     void print() override;
-    void eval(Stack &stack) override;
+    void eval(Stack &stack, std::ostream &outputStream) override;
 };

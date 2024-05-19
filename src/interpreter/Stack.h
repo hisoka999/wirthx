@@ -1,11 +1,11 @@
 #pragma once
 
-#include <vector>
 #include <cstdint>
-#include <variant>
-#include <string>
 #include <map>
 #include <memory>
+#include <string>
+#include <variant>
+#include <vector>
 
 typedef std::variant<std::string_view, int64_t> StackObject;
 
@@ -39,6 +39,7 @@ public:
         auto value = get_var(varName);
         return std::get<T>(value);
     }
+    bool has_var(const std::string &varName);
     StackObject pop_front();
     template <typename T>
     T pop_front()

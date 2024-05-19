@@ -13,9 +13,9 @@ void VariableAssignmentNode::print()
     std::cout << ";\n";
 }
 
-void VariableAssignmentNode::eval(Stack &stack)
+void VariableAssignmentNode::eval(Stack &stack, std::ostream &outputStream)
 {
-    m_expression->eval(stack);
+    m_expression->eval(stack, outputStream);
     auto value = stack.pop_front();
     stack.set_var(m_variableName, value);
 }

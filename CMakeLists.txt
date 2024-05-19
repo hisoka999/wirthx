@@ -28,6 +28,7 @@ file(GLOB SRC
     src/ast/BlockNode.cpp
     src/ast/SystemFunctionCallNode.cpp
     src/interpreter/Stack.cpp
+    src/interpreter/interpreter.cpp
     src/Lexer.cpp
     src/Parser.cpp
     main.cpp )

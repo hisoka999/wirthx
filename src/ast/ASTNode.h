@@ -1,6 +1,6 @@
 #pragma once
-#include <vector>
 #include <memory>
+#include <vector>
 
 class Stack;
 
@@ -11,5 +11,5 @@ public:
     virtual ~ASTNode(){};
 
     virtual void print() = 0;
-    virtual void eval(Stack &stack) = 0;
+    virtual void eval(Stack &stack, std::ostream &outputStream) = 0;
 };
