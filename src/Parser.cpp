@@ -270,7 +270,7 @@ std::shared_ptr<ASTNode> Parser::parseBlock([[maybe_unused]] const Token &curren
 bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr<ASTNode>> &nodes, size_t scope)
 {
     bool parseOk = true;
-    if (iequals(currentToken.lexical, "program"))
+    if (iequals(currentToken.lexical, "program") || iequals(currentToken.lexical, "unit"))
     {
         if (consume(TokenType::NAMEDTOKEN))
         {
@@ -385,11 +385,11 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
     {
         parseFunction(scope, nodes);
     }
-    else if (currentToken.lexical == "import")
+    else if (iequals(currentToken.lexical, "uses"))
     {
         if (consume(TokenType::NAMEDTOKEN))
         {
-            auto filename = std::string(current().lexical) + ".yab";
+            auto filename = std::string(current().lexical) + ".pas";
             auto path = this->m_file_path.parent_path() / filename;
             Lexer lexer;
             std::ifstream file;
@@ -397,8 +397,8 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
             file.open(path, std::ios::in);
             if (!file.is_open())
             {
-                m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = current(), .message = std::string(current().lexical) + " is not a valid import"});
-                m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = current(), .message = path.string() + " is not a valid yab file"});
+                m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = current(), .message = std::string(current().lexical) + " is not a valid unit"});
+                m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = current(), .message = path.string() + " is not a valid pascal file"});
 
                 return false;
             }
