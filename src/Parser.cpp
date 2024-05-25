@@ -22,6 +22,7 @@
 #include "ast/SystemFunctionCallNode.h"
 #include "ast/VariableAccessNode.h"
 #include "ast/VariableAssignmentNode.h"
+#include "ast/WhileNode.h"
 #include "compare.h"
 #include <magic_enum/magic_enum.hpp>
 
@@ -56,12 +57,14 @@ bool Parser::canConsume(TokenType tokenType)
     return m_tokens[m_current + 1].tokenType == tokenType;
 }
 
-void Parser::tryConsume(TokenType tokenType)
+bool Parser::tryConsume(TokenType tokenType)
 {
     if (canConsume(tokenType))
     {
         next();
+        return true;
     }
+    return false;
 }
 bool Parser::consume(TokenType tokenType)
 {
@@ -425,6 +428,30 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
             }
         }
     }
+    else if (iequals(currentToken.lexical, "while"))
+    {
+        auto expression = parseExpression(next(), scope + 1);
+        std::vector<std::shared_ptr<ASTNode>> whileNodes;
+
+        consumeKeyWord("do");
+
+        while (canConsume(TokenType::ENDLINE))
+        {
+            consume(TokenType::ENDLINE);
+        }
+        while (!canConsumeKeyWord("begin") && !canConsumeKeyWord("var"))
+        {
+            parseKeyWord(next(), whileNodes, scope + 1);
+
+            while (canConsume(TokenType::ENDLINE))
+            {
+                consume(TokenType::ENDLINE);
+            }
+        }
+        whileNodes.push_back(parseBlock(current(), 0));
+
+        nodes.push_back(std::make_shared<WhileNode>(expression, whileNodes));
+    }
     else
     {
         parseOk = false;
@@ -497,7 +524,7 @@ std::shared_ptr<ASTNode> Parser::parseComparrision(const Token &currentToken, si
     switch (currentToken.tokenType)
     {
     case TokenType::GREATER:
-        if (consume(TokenType::EQUAL))
+        if (tryConsume(TokenType::EQUAL))
         {
             op = CMPOperator::GREATER_EQUAL;
         }
@@ -507,7 +534,7 @@ std::shared_ptr<ASTNode> Parser::parseComparrision(const Token &currentToken, si
         }
         break;
     case TokenType::LESS:
-        if (consume(TokenType::EQUAL))
+        if (tryConsume(TokenType::EQUAL))
         {
             op = CMPOperator::LESS_EQUAL;
         }
@@ -582,11 +609,13 @@ std::shared_ptr<ASTNode> Parser::parseExpression(const Token &currentToken, size
                 {
                     op = LogicalOperator::AND;
                 }
-                else if (token.lexical != "or")
-                {
-                    m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = token, .message = "keyword '" + std::string(token.lexical) + "' is not allowed here!"});
 
-                    break;
+                else
+                {
+                    m_current--;
+                    if (nodes.empty())
+                        return nullptr;
+                    return nodes.at(0);
                 }
                 auto lhs = nodes.at(0);
                 auto rhs = parseExpression(next(), currentScope);

@@ -21,6 +21,7 @@ file(GLOB SRC
     src/ast/VariableAccessNode.cpp
     src/ast/LogicalExpressionNode.cpp
     src/ast/IfConditionNode.cpp
+    src/ast/WhileNode.cpp
     src/ast/VariableAssignmentNode.cpp
     src/ast/FunctionDefinitionNode.cpp
     src/ast/ReturnNode.cpp

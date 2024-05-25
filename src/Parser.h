@@ -34,7 +34,7 @@ private:
     bool isVariableDefined(std::string_view name, size_t scope);
     bool hasNext();
     bool consume(TokenType tokenType);
-    void tryConsume(TokenType tokenType);
+    bool tryConsume(TokenType tokenType);
     bool canConsume(TokenType tokenType);
     bool consumeKeyWord(const std::string &keyword);
     bool tryConsumeKeyWord(const std::string &keyword);
