@@ -58,7 +58,7 @@ int main(int args, char **argv)
     //     std::cout << "token: " << token.lexical << " tokentype: " << static_cast<int>(token.tokenType) << "\n";
     // }
     Parser parser(file_path, tokens);
-    auto asts = parser.parseTokens();
+    auto unit = parser.parseUnit();
     std::vector<std::shared_ptr<ASTNode>> exec_nodes;
     if (parser.hasError())
     {
@@ -66,22 +66,24 @@ int main(int args, char **argv)
         return 1;
     }
     Stack stack;
-    for (auto &ast : asts)
+
+    if (displayAst)
     {
-        if (displayAst)
-        {
-            ast->print();
-        }
-        auto func = std::dynamic_pointer_cast<FunctionDefinitionNode>(ast);
-        if (func != nullptr)
-        {
-            stack.addFunction(func);
-        }
-        else
-        {
-            exec_nodes.push_back(ast);
-        }
+        unit->print();
     }
+
+    if (parser.hasError())
+    {
+        parser.printErrors(std::cerr);
+        return 1;
+    }
+
+    for (auto &func : unit->getFunctionDefinitions())
+    {
+        stack.addFunction(func);
+    }
+
+    unit->eval(stack, std::cout);
 
     for (auto &ast : exec_nodes)
     {

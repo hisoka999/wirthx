@@ -11,6 +11,7 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 file(GLOB SRC 
     src/compare.cpp
+    src/ast/VariableDefinition.cpp
     src/ast/ASTNode.cpp
     src/ast/PrintNode.cpp
     src/ast/NumberNode.cpp
@@ -27,6 +28,7 @@ file(GLOB SRC
     src/ast/ReturnNode.cpp
     src/ast/FunctionCallNode.cpp
     src/ast/BlockNode.cpp
+    src/ast/UnitNode.cpp
     src/ast/SystemFunctionCallNode.cpp
     src/interpreter/Stack.cpp
     src/interpreter/interpreter.cpp

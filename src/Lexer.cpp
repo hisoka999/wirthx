@@ -34,6 +34,12 @@ std::vector<Token> Lexer::tokenize(std::string_view content)
         bool found = find_comment(content, i, &endPosition);
         if (found)
         {
+            // count lines
+            for (size_t start = i; start < endPosition; start++)
+            {
+                if (content[start] == '\n')
+                    row++;
+            }
             int offset = endPosition - i;
             i = endPosition;
             column += offset + 1;

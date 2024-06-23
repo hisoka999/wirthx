@@ -1,23 +1,17 @@
 #pragma once
 #include "Lexer.h"
 #include "ast/ASTNode.h"
+#include "ast/UnitNode.h"
+#include "ast/VariableDefinition.h"
 #include "ast/VariableType.h"
 #include <filesystem>
 #include <memory>
 #include <vector>
-
 struct ParserError
 {
     std::string file_name;
     Token token;
     std::string message;
-};
-
-struct VariableDefinition
-{
-    VariableType variableType;
-    std::string variableName;
-    size_t scopeId;
 };
 
 class Parser
@@ -45,7 +39,7 @@ private:
     void parseVariableAssignment(const Token &currentToken, size_t currentScope, std::vector<std::shared_ptr<ASTNode>> &nodes);
     std::shared_ptr<ASTNode> parseComparrision(const Token &currentToken, size_t currentScope, std::vector<std::shared_ptr<ASTNode>> &nodes);
     std::shared_ptr<ASTNode> parseExpression(const Token &currentToken, size_t currentScope);
-    std::shared_ptr<ASTNode> parseBlock(const Token &currentToken, size_t scope);
+    std::shared_ptr<BlockNode> parseBlock(const Token &currentToken, size_t scope);
 
 public:
     Parser(const std::filesystem::path &path, std::vector<Token> &tokens);
@@ -53,5 +47,5 @@ public:
     bool hasError() const;
     void printErrors(std::ostream &outputStream);
 
-    std::vector<std::shared_ptr<ASTNode>> parseTokens();
+    std::unique_ptr<UnitNode> parseUnit();
 };
