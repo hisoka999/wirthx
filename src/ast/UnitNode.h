@@ -29,4 +29,5 @@ public:
     std::vector<std::shared_ptr<FunctionDefinitionNode>> getFunctionDefinitions();
     void addFunctionDefinition(const std::shared_ptr<FunctionDefinitionNode> &functionDefinition);
     std::string getUnitName();
+    llvm::Value *codegen(std::unique_ptr<Context> &context) override;
 };

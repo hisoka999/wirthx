@@ -32,3 +32,8 @@ void PrintNode::eval(Stack &stack, std::ostream &outputStream)
         outputStream << std::get<std::string_view>(value) << "\n";
     }
 }
+
+llvm::Value *PrintNode::codegen(std::unique_ptr<Context> &context)
+{
+    return nullptr;
+}

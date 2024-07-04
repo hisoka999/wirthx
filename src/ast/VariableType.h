@@ -1,6 +1,6 @@
 #pragma once
+#include <memory>
 #include <string>
-
 enum class VariableBaseType
 {
     Integer,
@@ -12,8 +12,19 @@ enum class VariableBaseType
     Unknown
 };
 
+namespace llvm
+{
+    class Type;
+    class Value;
+    class AllocaInst;
+}
+
+class Context;
+
 struct VariableType
 {
     VariableBaseType baseType = VariableBaseType::Unknown;
     std::string typeName = "";
+
+    llvm::Type *generateLlvmType(std::unique_ptr<Context> &context);
 };

@@ -369,10 +369,10 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
         std::vector<std::shared_ptr<ASTNode>> functionBody;
         // parse function body
 
-        functionBody.emplace_back(parseBlock(current(), scope + 1));
+        auto body = parseBlock(current(), scope + 1);
         consume(TokenType::SEMICOLON);
 
-        nodes.push_back(std::make_shared<FunctionDefinitionNode>(functionName, functionParams, functionBody, true));
+        nodes.push_back(std::make_shared<FunctionDefinitionNode>(functionName, functionParams, body, true));
     }
     else if (iequals(currentToken.lexical, "function"))
     {
@@ -507,10 +507,9 @@ void Parser::parseFunction(size_t scope, std::vector<std::shared_ptr<ASTNode>> &
     consume(TokenType::SEMICOLON);
     tryConsume(TokenType::ENDLINE);
 
-    std::vector<std::shared_ptr<ASTNode>> functionBody;
-    // parse function body
+        // parse function body
 
-    functionBody.emplace_back(parseBlock(current(), scope + 1));
+    auto functionBody = parseBlock(current(), scope + 1);
     consume(TokenType::SEMICOLON);
 
     nodes.push_back(std::make_shared<FunctionDefinitionNode>(functionName, functionParams, functionBody, false, returnType));

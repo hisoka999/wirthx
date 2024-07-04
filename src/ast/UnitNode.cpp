@@ -1,4 +1,5 @@
 #include "ast/UnitNode.h"
+#include "compiler/Context.h"
 #include <iostream>
 
 UnitNode::UnitNode(UnitType unitType, const std::string unitName, std::vector<std::shared_ptr<FunctionDefinitionNode>> functionDefinitions, const std::shared_ptr<BlockNode> &blockNode)
@@ -43,4 +44,29 @@ void UnitNode::addFunctionDefinition(const std::shared_ptr<FunctionDefinitionNod
 std::string UnitNode::getUnitName()
 {
     return m_unitName;
+}
+
+llvm::Value *UnitNode::codegen(std::unique_ptr<Context> &context)
+{
+    std::vector<llvm::Type *> params;
+
+    for (auto &fdef : m_functionDefinitions)
+    {
+        fdef->codegen(context);
+    }
+    llvm::FunctionType *FT =
+        llvm::FunctionType::get(llvm::Type::getInt32Ty(*context->TheContext), params, false);
+
+    llvm::Function *F =
+        llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "_start", context->TheModule.get());
+
+    context->TopLevelFunction = F;
+    m_blockNode->setBlockName("entry");
+    // Create a new basic block to start insertion into.
+    m_blockNode->codegen(context);
+    verifyFunction(*F);
+
+    context->Builder->CreateRet(llvm::ConstantInt::get(*context->TheContext, llvm::APInt(32, 0)));
+
+    return nullptr;
 }

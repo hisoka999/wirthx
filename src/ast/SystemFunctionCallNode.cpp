@@ -1,10 +1,11 @@
 #include "SystemFunctionCallNode.h"
 #include "../compare.h"
+#include "compiler/Context.h"
 #include "interpreter/Stack.h"
 #include <iostream>
 #include <vector>
 
-static std::vector<std::string> knownSystemCalls = {"writeln", "write"};
+static std::vector<std::string> knownSystemCalls = {"writeln", "write", "printf", "exit"};
 
 bool isKnownSystemCall(const std::string &name)
 {
@@ -38,4 +39,10 @@ void SystemFunctionCallNode::eval(Stack &stack, std::ostream &outputStream)
             outputStream << std::get<std::string_view>(value) << "\n";
         }
     }
+}
+
+llvm::Value *SystemFunctionCallNode::codegen(std::unique_ptr<Context> &context)
+{
+
+    return FunctionCallNode::codegen(context);
 }

@@ -25,3 +25,8 @@ void WhileNode::eval(Stack &stack, std::ostream &outputStream)
         }
     }
 }
+
+llvm::Value *WhileNode::codegen(std::unique_ptr<Context> &context)
+{
+    return nullptr;
+}

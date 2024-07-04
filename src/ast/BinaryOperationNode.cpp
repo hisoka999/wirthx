@@ -1,4 +1,5 @@
 #include "BinaryOperationNode.h"
+#include "compiler/Context.h"
 #include "interpreter/Stack.h"
 #include <iostream>
 
@@ -32,4 +33,24 @@ void BinaryOperationNode::eval(Stack &stack, [[maybe_unused]] std::ostream &outp
         stack.push_back(lhs * rhs);
         break;
     }
+}
+
+llvm::Value *BinaryOperationNode::codegen(std::unique_ptr<Context> &context)
+{
+
+    llvm::Value *L = m_lhs->codegen(context);
+    llvm::Value *R = m_rhs->codegen(context);
+    if (!L || !R)
+        return nullptr;
+
+    switch (m_operator)
+    {
+    case Operator::PLUS:
+        return context->Builder->CreateAdd(L, R, "addtmp");
+    case Operator::MINUS:
+        return context->Builder->CreateSub(L, R, "subtmp");
+    case Operator::MUL:
+        return context->Builder->CreateMul(L, R, "multmp");
+    }
+    return nullptr;
 }

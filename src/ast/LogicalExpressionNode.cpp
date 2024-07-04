@@ -1,4 +1,5 @@
 #include "LogicalExpressionNode.h"
+#include "compiler/Context.h"
 #include "interpreter/Stack.h"
 #include <iostream>
 
@@ -77,4 +78,8 @@ void LogicalExpressionNode::eval(Stack &stack, std::ostream &outputStream)
     default:
         break;
     }
+}
+
+llvm::Value *LogicalExpressionNode::codegen(std::unique_ptr<Context> &context)
+{
 }

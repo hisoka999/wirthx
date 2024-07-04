@@ -1,6 +1,7 @@
 #include "Lexer.h"
 #include "Parser.h"
 #include "ast/FunctionDefinitionNode.h"
+#include "compiler/Compiler.h"
 #include "interpreter/Stack.h"
 #include <cstring>
 #include <filesystem>
@@ -53,41 +54,43 @@ int main(int args, char **argv)
     Lexer lexer;
 
     auto tokens = lexer.tokenize(std::string_view{buffer});
-    // for (auto &token : tokens)
+
+    compile_file(file_path, std::cerr, std::cout);
+    // // for (auto &token : tokens)
+    // // {
+    // //     std::cout << "token: " << token.lexical << " tokentype: " << static_cast<int>(token.tokenType) << "\n";
+    // // }
+    // Parser parser(file_path, tokens);
+    // auto unit = parser.parseUnit();
+    // std::vector<std::shared_ptr<ASTNode>> exec_nodes;
+    // if (parser.hasError())
     // {
-    //     std::cout << "token: " << token.lexical << " tokentype: " << static_cast<int>(token.tokenType) << "\n";
+    //     parser.printErrors(std::cerr);
+    //     return 1;
     // }
-    Parser parser(file_path, tokens);
-    auto unit = parser.parseUnit();
-    std::vector<std::shared_ptr<ASTNode>> exec_nodes;
-    if (parser.hasError())
-    {
-        parser.printErrors(std::cerr);
-        return 1;
-    }
-    Stack stack;
+    // Stack stack;
 
-    if (displayAst)
-    {
-        unit->print();
-    }
+    // if (displayAst)
+    // {
+    //     unit->print();
+    // }
 
-    if (parser.hasError())
-    {
-        parser.printErrors(std::cerr);
-        return 1;
-    }
+    // if (parser.hasError())
+    // {
+    //     parser.printErrors(std::cerr);
+    //     return 1;
+    // }
 
-    for (auto &func : unit->getFunctionDefinitions())
-    {
-        stack.addFunction(func);
-    }
+    // for (auto &func : unit->getFunctionDefinitions())
+    // {
+    //     stack.addFunction(func);
+    // }
 
-    unit->eval(stack, std::cout);
+    // unit->eval(stack, std::cout);
 
-    for (auto &ast : exec_nodes)
-    {
-        ast->eval(stack, std::cout);
-    }
+    // for (auto &ast : exec_nodes)
+    // {
+    //     ast->eval(stack, std::cout);
+    // }
     return 0;
 }

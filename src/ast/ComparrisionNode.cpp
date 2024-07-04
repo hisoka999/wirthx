@@ -1,4 +1,5 @@
 #include "ComparissionNode.h"
+#include "compiler/Context.h"
 #include "interpreter/Stack.h"
 #include <iostream>
 
@@ -96,4 +97,8 @@ void ComparrisionNode::eval(Stack &stack, std::ostream &outputStream)
     {
         compare_str(m_operator, lhs, rhs, stack);
     }
+}
+llvm::Value *ComparrisionNode::codegen(std::unique_ptr<Context> &context)
+{
+    return nullptr;
 }

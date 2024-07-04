@@ -21,3 +21,8 @@ void InputNode::eval(Stack &stack, std::ostream &outputStream)
     std::cin >> input;
     stack.set_var(m_variableName, input);
 }
+
+llvm::Value *InputNode::codegen(std::unique_ptr<Context> &context)
+{
+    return nullptr;
+}

@@ -9,6 +9,10 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 
+find_package(LLVM REQUIRED)
+message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+
 file(GLOB SRC 
     src/compare.cpp
     src/ast/VariableDefinition.cpp
@@ -30,12 +34,21 @@ file(GLOB SRC
     src/ast/BlockNode.cpp
     src/ast/UnitNode.cpp
     src/ast/SystemFunctionCallNode.cpp
+    src/ast/VariableType.cpp
     src/interpreter/Stack.cpp
     src/interpreter/interpreter.cpp
+    src/compiler/Context.cpp
+    src/compiler/Compiler.cpp
     src/Lexer.cpp
     src/Parser.cpp
     main.cpp )
 INCLUDE_DIRECTORIES("src")
+
+include_directories(${LLVM_INCLUDE_DIRS})
+separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+
+add_definitions(${LLVM_DEFINITIONS_LIST})
+llvm_map_components_to_libnames(llvm_libs support core irreader mc mcjit native nativecodegen)
 
 include(FetchContent)
 
@@ -65,4 +78,6 @@ elseif(${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
     target_compile_definitions(${PROJECT_NAME} PRIVATE WIN_EXPORT)
 endif()
 
+
 add_executable(${PROJECT_NAME} "main.cpp" ${SRC} )
+target_link_libraries(${PROJECT_NAME} ${llvm_libs})

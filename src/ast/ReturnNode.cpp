@@ -1,4 +1,5 @@
 #include "ReturnNode.h"
+#include "compiler/Context.h"
 #include "interpreter/Stack.h"
 #include <iostream>
 
@@ -18,4 +19,11 @@ void ReturnNode::eval(Stack &stack, std::ostream &outputStream)
     m_expression->eval(stack, outputStream);
 
     // TODO sowas wie call stacks existieren noch nicht
+}
+
+llvm::Value *ReturnNode::codegen(std::unique_ptr<Context> &context)
+{
+    auto RetVal = m_expression->codegen(context);
+    context->Builder->CreateRet(RetVal);
+    return nullptr;
 }
