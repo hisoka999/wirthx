@@ -12,8 +12,18 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 find_package(LLVM REQUIRED)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID}")
+
+
+if (${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
+    # G++
+    file(GLOB LINKER_SRC src/linker/unix/pascal_linker.cpp src/os/unix/command.cpp)
+elseif(${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
+set(LINKER_SRC )
+endif()
 
 file(GLOB SRC 
+    ${LINKER_SRC}
     src/compare.cpp
     src/ast/VariableDefinition.cpp
     src/ast/ASTNode.cpp
@@ -67,9 +77,9 @@ if(BUILD_TESTS)
 endif()
 
 # Let's set compiler-specific flags
-if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+if (${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
     # G++
-    add_compile_options(-Wall -Wextra -Werror)
+    add_compile_options(-Wall -Werror)
 elseif(${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
     # MSVC
     target_compile_options(${PROJECT_NAME} PRIVATE /EHsc /MTd /W2 /c)
