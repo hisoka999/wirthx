@@ -19,12 +19,15 @@ namespace llvm
     class AllocaInst;
 }
 
-class Context;
+struct Context;
 
-struct VariableType
+class VariableType
 {
+public:
     VariableBaseType baseType = VariableBaseType::Unknown;
     std::string typeName = "";
 
     llvm::Type *generateLlvmType(std::unique_ptr<Context> &context);
+    static VariableType getInteger();
+    static VariableType getString();
 };

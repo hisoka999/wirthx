@@ -27,6 +27,16 @@ llvm::Value *VariableAssignmentNode::codegen(std::unique_ptr<Context> &context)
     // Look this variable up in the function.
     llvm::AllocaInst *V = context->NamedValues[m_variableName];
     if (!V)
+    {
+        if (context->TopLevelFunction->getName() == m_variableName)
+        {
+            auto result = m_expression->codegen(context);
+
+            return context->Builder->CreateRet(result);
+        }
+    }
+
+    if (!V)
         return LogErrorV("Unknown variable name");
 
     auto result = m_expression->codegen(context);

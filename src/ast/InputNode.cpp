@@ -22,7 +22,7 @@ void InputNode::eval(Stack &stack, std::ostream &outputStream)
     stack.set_var(m_variableName, input);
 }
 
-llvm::Value *InputNode::codegen(std::unique_ptr<Context> &context)
+llvm::Value *InputNode::codegen([[maybe_unused]] std::unique_ptr<Context> &context)
 {
     return nullptr;
 }

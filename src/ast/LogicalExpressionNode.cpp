@@ -82,4 +82,5 @@ void LogicalExpressionNode::eval(Stack &stack, std::ostream &outputStream)
 
 llvm::Value *LogicalExpressionNode::codegen(std::unique_ptr<Context> &context)
 {
+    return nullptr;
 }

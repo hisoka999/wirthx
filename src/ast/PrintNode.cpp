@@ -33,7 +33,7 @@ void PrintNode::eval(Stack &stack, std::ostream &outputStream)
     }
 }
 
-llvm::Value *PrintNode::codegen(std::unique_ptr<Context> &context)
+llvm::Value *PrintNode::codegen([[maybe_unused]] std::unique_ptr<Context> &context)
 {
     return nullptr;
 }

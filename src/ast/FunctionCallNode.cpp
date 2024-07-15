@@ -34,14 +34,34 @@ void FunctionCallNode::eval(Stack &stack, std::ostream &outputStream)
 llvm::Value *FunctionCallNode::codegen(std::unique_ptr<Context> &context)
 {
     // Look up the name in the global module table.
-    llvm::Function *CalleeF = context->TheModule->getFunction(m_name);
+    std::string functionName = m_name;
+    llvm::Function *CalleeF = context->TheModule->getFunction(functionName);
+
+    if (!CalleeF && m_args.size() > 0)
+    {
+        // look for alternative name
+        auto arg1 = m_args.at(0)->resolveType(context);
+        switch (arg1.baseType)
+        {
+        case VariableBaseType::Integer:
+            functionName += "_int";
+            break;
+        case VariableBaseType::String:
+            functionName += "_str";
+            break;
+        default:
+            break;
+        }
+        CalleeF = context->TheModule->getFunction(functionName);
+    }
+
     if (!CalleeF)
         return LogErrorV("Unknown function referenced");
 
     // If argument mismatch error.
     if (CalleeF->arg_size() != m_args.size() && !CalleeF->isVarArg())
     {
-        std::cerr << "incorrect argumentsize for call " << m_name << "(" << m_args.size() << ") != " << CalleeF->arg_size() << "\n";
+        std::cerr << "incorrect argumentsize for call " << functionName << "(" << m_args.size() << ") != " << CalleeF->arg_size() << "\n";
         return LogErrorV("Incorrect # arguments passed");
     }
     std::vector<llvm::Value *> ArgsV;

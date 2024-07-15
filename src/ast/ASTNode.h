@@ -1,13 +1,13 @@
 #pragma once
+#include "VariableType.h"
 #include <memory>
 #include <vector>
-
 namespace llvm
 {
     class Value;
 
 };
-class Context;
+struct Context;
 // static std::unique_ptr<LLVMContext> TheContext;
 
 class Stack;
@@ -21,4 +21,6 @@ public:
     virtual void print() = 0;
     virtual void eval(Stack &stack, std::ostream &outputStream) = 0;
     virtual llvm::Value *codegen(std::unique_ptr<Context> &context) = 0;
+
+    virtual VariableType resolveType(std::unique_ptr<Context> &context);
 };

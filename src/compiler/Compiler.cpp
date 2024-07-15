@@ -3,9 +3,9 @@
 #include "Parser.h"
 #include "ast/FunctionDefinitionNode.h"
 #include "compiler/Context.h"
+#include "linker/pascal_linker.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/MC/TargetRegistry.h"
-
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
@@ -17,17 +17,6 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#ifdef _WIN32
-#define DLLEXPORT __declspec(dllexport)
-#else
-#define DLLEXPORT
-#endif
-
-/// printd - printf that takes a double prints it as "%f\n", returning 0.
-extern "C" DLLEXPORT void writeln(double X)
-{
-    fprintf(stdout, "%f\n", X);
-}
 
 std::unique_ptr<Context> InitializeModule(const char *module_name)
 {
@@ -38,7 +27,7 @@ std::unique_ptr<Context> InitializeModule(const char *module_name)
 
     // Create a new builder for the module.
     context->Builder = std::make_unique<llvm::IRBuilder<>>(*context->TheContext);
-    return std::move<>(context);
+    return context;
 }
 
 void createSystemCall(std::unique_ptr<Context> &context, std::string functionName, std::vector<FunctionArgument> functionparams)
@@ -105,6 +94,89 @@ void createSystemCall(std::unique_ptr<Context> &context, std::string functionNam
     }
 }
 
+void writeLnCodegen(std::unique_ptr<Context> &context)
+{
+    std::vector<llvm::Type *> params;
+    std::string m_name = "writeln_int";
+    llvm::Type *resultType;
+    VariableType type = {.baseType = VariableBaseType::Integer, .typeName = "integer"};
+    params.push_back(type.generateLlvmType(context));
+
+    resultType = llvm::Type::getVoidTy(*context->TheContext);
+    llvm::FunctionType *FT =
+        llvm::FunctionType::get(resultType, params, false);
+
+    llvm::Function *F =
+        llvm::Function::Create(FT, llvm::Function::ExternalLinkage, m_name, context->TheModule.get());
+
+    // Set names for all arguments.
+    for (auto &arg : F->args())
+        arg.setName("arg");
+
+    // Create a new basic block to start insertion into.
+
+    llvm::BasicBlock *BB = llvm::BasicBlock::Create(*context->TheContext, m_name, F);
+
+    context->Builder->SetInsertPoint(BB);
+
+    llvm::Function *CalleeF = context->TheModule->getFunction("printf");
+    if (!CalleeF)
+        LogErrorV("Unknown function referenced");
+
+    std::vector<llvm::Value *> ArgsV;
+    ArgsV.push_back(context->Builder->CreateGlobalString("%d\n"));
+    for (auto &arg : F->args())
+        ArgsV.push_back(F->getArg(arg.getArgNo()));
+
+    context->Builder->CreateCall(CalleeF, ArgsV);
+
+    context->Builder->CreateRetVoid();
+
+    verifyFunction(*F, &llvm::errs());
+    context->FunctionDefinitions[m_name] = F;
+}
+
+void writeLnStrCodegen(std::unique_ptr<Context> &context)
+{
+    std::vector<llvm::Type *> params;
+    std::string m_name = "writeln_str";
+    llvm::Type *resultType;
+    VariableType type = {.baseType = VariableBaseType::String, .typeName = "string"};
+    params.push_back(type.generateLlvmType(context));
+
+    resultType = llvm::Type::getVoidTy(*context->TheContext);
+    llvm::FunctionType *FT =
+        llvm::FunctionType::get(resultType, params, true);
+
+    llvm::Function *F =
+        llvm::Function::Create(FT, llvm::Function::ExternalLinkage, m_name, context->TheModule.get());
+
+    // Set names for all arguments.
+    for (auto &arg : F->args())
+        arg.setName("arg");
+
+    // Create a new basic block to start insertion into.
+
+    llvm::BasicBlock *BB = llvm::BasicBlock::Create(*context->TheContext, m_name, F);
+
+    context->Builder->SetInsertPoint(BB);
+
+    llvm::Function *CalleeF = context->TheModule->getFunction("printf");
+    if (!CalleeF)
+        LogErrorV("Unknown function referenced");
+
+    std::vector<llvm::Value *> ArgsV;
+    ArgsV.push_back(context->Builder->CreateGlobalString("%s\n"));
+    for (auto &arg : F->args())
+        ArgsV.push_back(F->getArg(arg.getArgNo()));
+
+    context->Builder->CreateCall(CalleeF, ArgsV);
+
+    context->Builder->CreateRetVoid();
+
+    verifyFunction(*F, &llvm::errs());
+    context->FunctionDefinitions[m_name] = F;
+}
 void compile_file(std::filesystem::path inputPath, std::ostream &errorStream, std::ostream &outputStream)
 {
     std::ifstream file;
@@ -134,7 +206,14 @@ void compile_file(std::filesystem::path inputPath, std::ostream &errorStream, st
     }
     auto context = InitializeModule(unit->getUnitName().c_str());
     VariableType intType{.baseType = VariableBaseType::Integer, .typeName = "integer"};
+    llvm::Intrinsic::getDeclaration(context->TheModule.get(), llvm::Intrinsic::vastart);
+    llvm::Intrinsic::getDeclaration(context->TheModule.get(), llvm::Intrinsic::vacopy);
+
+    llvm::Intrinsic::getDeclaration(context->TheModule.get(), llvm::Intrinsic::vaend);
+
     createPrintfCall(context);
+    writeLnCodegen(context);
+    writeLnStrCodegen(context);
     createSystemCall(context, "exit", {FunctionArgument{.type = intType, .argumentName = "X", .isReference = false}});
 
     unit->codegen(context);
@@ -179,6 +258,8 @@ void compile_file(std::filesystem::path inputPath, std::ostream &errorStream, st
     context->TheModule->setDataLayout(TheTargetMachine->createDataLayout());
 
     auto Filename = unit->getUnitName() + ".o";
+    std::vector<std::string> objectFiles;
+    objectFiles.emplace_back(Filename);
     std::error_code EC;
     raw_fd_ostream dest(Filename, EC, sys::fs::OF_None);
 
@@ -201,4 +282,7 @@ void compile_file(std::filesystem::path inputPath, std::ostream &errorStream, st
     dest.flush();
 
     outs() << "Wrote " << Filename << "\n";
+    // TODO link object files
+    auto basePath = std::filesystem::current_path();
+    pascal_link_modules(basePath, unit->getUnitName(), {"-lc"}, objectFiles);
 }

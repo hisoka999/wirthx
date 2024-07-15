@@ -21,3 +21,8 @@ llvm::Value *NumberNode::codegen(std::unique_ptr<Context> &context)
 {
     return llvm::ConstantInt::get(*context->TheContext, llvm::APInt(64, m_value));
 }
+
+VariableType NumberNode::resolveType([[maybe_unused]] std::unique_ptr<Context> &context)
+{
+    return VariableType::getInteger();
+}

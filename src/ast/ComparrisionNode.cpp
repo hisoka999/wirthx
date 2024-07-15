@@ -100,5 +100,30 @@ void ComparrisionNode::eval(Stack &stack, std::ostream &outputStream)
 }
 llvm::Value *ComparrisionNode::codegen(std::unique_ptr<Context> &context)
 {
-    return nullptr;
+    auto lhs = m_lhs->codegen(context);
+    auto rhs = m_rhs->codegen(context);
+
+    llvm::CmpInst::Predicate pred = llvm::CmpInst::ICMP_EQ;
+    switch (m_operator)
+    {
+    case CMPOperator::EQUALS:
+
+        break;
+    case CMPOperator::GREATER:
+        pred = llvm::CmpInst::ICMP_SGT;
+        break;
+    case CMPOperator::GREATER_EQUAL:
+        pred = llvm::CmpInst::ICMP_SGE;
+        break;
+    case CMPOperator::LESS:
+        pred = llvm::CmpInst::ICMP_SLT;
+        break;
+    case CMPOperator::LESS_EQUAL:
+        pred = llvm::CmpInst::ICMP_SLT;
+        break;
+    default:
+        break;
+    }
+
+    return context->Builder->CreateCmp(pred, lhs, rhs);
 }

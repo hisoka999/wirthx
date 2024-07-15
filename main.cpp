@@ -2,7 +2,7 @@
 #include "Parser.h"
 #include "ast/FunctionDefinitionNode.h"
 #include "compiler/Compiler.h"
-#include "interpreter/Stack.h"
+#include "interpreter/interpreter.h"
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -11,29 +11,64 @@
 
 using namespace std::literals;
 
+enum class CompileOption
+{
+    INTERPRETE,
+    COMPILE,
+    JIT
+};
+
+std::string shiftarg(std::vector<std::string> &args)
+{
+    auto result = args.front();
+    args.erase(args.begin());
+    return result;
+}
+
 int main(int args, char **argv)
 {
-    bool displayAst = false;
-    size_t fileArg = 1;
-    if (args == 2)
+    // bool displayAst = false;
+    // size_t fileArg = 1;
+    std::vector<std::string> argList;
+    for (int i = 0; i < args; i++)
     {
-        if (argv[1] == "--version"sv || argv[1] == "-v"sv)
+        argList.emplace_back(argv[i]);
+    }
+    auto compilerPath = shiftarg(argList);
+
+    if (argList.size() == 1)
+    {
+        if (argList[0] == "--version"sv || argv[1] == "-v"sv)
         {
             std::cout << "Version: 0.1\n";
             return 0;
         }
     }
-    else if (argv[1] == "--ast"sv)
+    CompileOption option = CompileOption::COMPILE;
+
+    while (argList.size() > 1)
     {
-        displayAst = true;
-        fileArg++;
+        auto arg = shiftarg(argList);
+        if (arg == "--ast"sv)
+        {
+            // displayAst = true;
+            // fileArg++;
+        }
+        else if (arg == "-i")
+        {
+            option = CompileOption::INTERPRETE;
+        }
+        else if (arg == "-c")
+        {
+            option = CompileOption::COMPILE;
+        }
     }
 
     std::ifstream file;
     std::istringstream is;
     std::string s;
     std::string group;
-    std::filesystem::path file_path(argv[fileArg]);
+    std::filesystem::path file_path(argList[0]);
     if (!std::filesystem::exists(file_path))
     {
         std::cerr << "the first argument is not a valid input file\n";
@@ -55,42 +90,14 @@ int main(int args, char **argv)
 
     auto tokens = lexer.tokenize(std::string_view{buffer});
 
-    compile_file(file_path, std::cerr, std::cout);
-    // // for (auto &token : tokens)
-    // // {
-    // //     std::cout << "token: " << token.lexical << " tokentype: " << static_cast<int>(token.tokenType) << "\n";
-    // // }
-    // Parser parser(file_path, tokens);
-    // auto unit = parser.parseUnit();
-    // std::vector<std::shared_ptr<ASTNode>> exec_nodes;
-    // if (parser.hasError())
-    // {
-    //     parser.printErrors(std::cerr);
-    //     return 1;
-    // }
-    // Stack stack;
-
-    // if (displayAst)
-    // {
-    //     unit->print();
-    // }
-
-    // if (parser.hasError())
-    // {
-    //     parser.printErrors(std::cerr);
-    //     return 1;
-    // }
-
-    // for (auto &func : unit->getFunctionDefinitions())
-    // {
-    //     stack.addFunction(func);
-    // }
-
-    // unit->eval(stack, std::cout);
-
-    // for (auto &ast : exec_nodes)
-    // {
-    //     ast->eval(stack, std::cout);
-    // }
+    switch (option)
+    {
+    case CompileOption::COMPILE:
+        compile_file(file_path, std::cerr, std::cout);
+        break;
+    case CompileOption::INTERPRETE:
+    case CompileOption::JIT:
+        interprete_file(file_path, std::cerr, std::cout);
+    }
     return 0;
 }

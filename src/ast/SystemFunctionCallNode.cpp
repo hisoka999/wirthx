@@ -43,6 +43,5 @@ void SystemFunctionCallNode::eval(Stack &stack, std::ostream &outputStream)
 
 llvm::Value *SystemFunctionCallNode::codegen(std::unique_ptr<Context> &context)
 {
-
     return FunctionCallNode::codegen(context);
 }

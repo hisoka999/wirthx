@@ -1,4 +1,5 @@
-#include "interpreter/interpreter.h"
+#include "compiler/Compiler.h"
+#include "os/command.h"
 #include <fstream>
 #include <gtest/gtest.h>
 #include <iostream>
@@ -7,11 +8,11 @@
 
 using namespace std::literals;
 
-class InterpreterTest : public testing::TestWithParam<std::string>
+class CompilerTest : public testing::TestWithParam<std::string>
 {
 };
 
-TEST_P(InterpreterTest, TestNoError)
+TEST_P(CompilerTest, TestNoError)
 {
     // Inside a test, access the test parameter with the GetParam() method
     // of the TestWithParam<T> class:
@@ -22,12 +23,14 @@ TEST_P(InterpreterTest, TestNoError)
     ASSERT_TRUE(std::filesystem::exists(output_path));
     std::stringstream ostream;
     std::stringstream erstream;
-    interprete_file(input_path, erstream, ostream);
+    compile_file(input_path, erstream, std::cout);
 
     std::ifstream file;
     std::istringstream is;
     std::string s;
     std::string group;
+
+    execute_command(ostream, (std::filesystem::current_path() / name).string());
 
     file.open(output_path, std::ios::in);
 
@@ -49,6 +52,6 @@ TEST_P(InterpreterTest, TestNoError)
     ASSERT_GT(ostream.str().size(), 0);
 }
 
-INSTANTIATE_TEST_SUITE_P(TestNoError,
-                         InterpreterTest,
+INSTANTIATE_TEST_SUITE_P(CompilerTestNoError,
+                         CompilerTest,
                          testing::Values("helloworld", "functions", "math", "includetest", "whileloop", "conditions"));

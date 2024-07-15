@@ -7,7 +7,7 @@ class BlockNode : public ASTNode
 private:
     const std::vector<std::shared_ptr<ASTNode>> m_expressions;
     const std::vector<VariableDefinition> m_variableDefinitions;
-    std::string m_blockname = "entry";
+    std::string m_blockname = "";
 
 public:
     BlockNode(const std::vector<VariableDefinition> variableDefinitions, const std::vector<std::shared_ptr<ASTNode>> &expressions);

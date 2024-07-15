@@ -87,7 +87,7 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
     // Create a new basic block to start insertion into.
 
     context->TopLevelFunction = F;
-
+    m_body->setBlockName(m_name + "_block");
     m_body->codegen(context);
 
     if (m_isProcedure)

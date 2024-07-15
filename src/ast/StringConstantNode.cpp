@@ -52,3 +52,8 @@ llvm::Value *StringConstantNode::codegen(std::unique_ptr<Context> &context)
     // return llvm::ConstantDataArray::getRaw(m_literal, m_literal.size(), arrayType);
     return context->Builder->CreateGlobalString(result);
 }
+
+VariableType StringConstantNode::resolveType([[maybe_unused]] std::unique_ptr<Context> &context)
+{
+    return VariableType::getString();
+}

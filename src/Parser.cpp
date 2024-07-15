@@ -152,6 +152,8 @@ std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, size_t currentSc
             bool isSysCall = isKnownSystemCall(functionName);
             if (!isSysCall && std::find(m_known_function_names.begin(), m_known_function_names.end(), functionName) == std::end(m_known_function_names))
             {
+                for (auto &fun : m_known_function_names)
+                    std::cerr << "func: " << fun << "\n";
                 m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = token, .message = "a function with the name '" + std::string(token.lexical) + "' is not yet defined!"});
             }
             consume(TokenType::LEFT_CURLY);
@@ -269,7 +271,9 @@ std::shared_ptr<BlockNode> Parser::parseBlock([[maybe_unused]] const Token &curr
             next();
             continue;
         }
-        nodes.emplace_back(parseExpression(current(), scope));
+        auto expr = parseExpression(current(), scope);
+        if (expr)
+            nodes.emplace_back(expr);
         tryConsume(TokenType::SEMICOLON);
         tryConsume(TokenType::ENDLINE);
         if (current().tokenType == TokenType::T_EOF)
@@ -297,7 +301,8 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
         }
         else
         {
-            ifExpressions.push_back(parseExpression(current(), scope));
+
+            ifExpressions.push_back(parseExpression(next(), scope));
         }
         tryConsume(TokenType::ENDLINE);
         if (tryConsumeKeyWord("else"))
@@ -500,14 +505,23 @@ void Parser::parseFunction(size_t scope, std::vector<std::shared_ptr<ASTNode>> &
     VariableType returnType;
     if (consume(TokenType::NAMEDTOKEN))
     {
-        returnType.typeName = {current().lexical.begin(), current().lexical.end()};
+        auto typeName = std::string{current().lexical.begin(), current().lexical.end()};
+        auto type = determinVariableTypeByName(typeName);
+        if (!type)
+        {
+            m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = current(), .message = "A return type " + typeName + " of function could not be determined!"});
+        }
+        else
+        {
+            returnType = type.value();
+        }
 
         m_known_variable_definitions.push_back(VariableDefinition{.variableType = returnType, .variableName = functionName, .scopeId = scope});
     }
     consume(TokenType::SEMICOLON);
     tryConsume(TokenType::ENDLINE);
 
-        // parse function body
+    // parse function body
 
     auto functionBody = parseBlock(current(), scope + 1);
     consume(TokenType::SEMICOLON);

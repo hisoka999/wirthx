@@ -40,16 +40,19 @@ llvm::Value *BlockNode::codegen(std::unique_ptr<Context> &context)
 {
     llvm::Function *TheFunction = context->TopLevelFunction;
 
-    // Create a new basic block to start insertion into.
-    llvm::BasicBlock *BB = llvm::BasicBlock::Create(*context->TheContext, m_blockname, TheFunction);
+    if (!m_blockname.empty())
+    {
 
+        // Create a new basic block to start insertion into.
+        llvm::BasicBlock *BB = llvm::BasicBlock::Create(*context->TheContext, m_blockname, TheFunction);
+        context->Builder->SetInsertPoint(BB);
+    }
     for (auto &def : m_variableDefinitions)
     {
 
         context->NamedValues[def.variableName] = def.generateCode(context);
     }
     std::vector<llvm::Value *> values;
-    context->Builder->SetInsertPoint(BB);
 
     for (auto &exp : m_expressions)
     {

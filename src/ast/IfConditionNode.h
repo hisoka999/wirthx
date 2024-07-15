@@ -10,6 +10,9 @@ private:
     std::vector<std::shared_ptr<ASTNode>> m_ifExpressions;
     std::vector<std::shared_ptr<ASTNode>> m_elseExpressions;
 
+    llvm::Value *codegenIf(std::unique_ptr<Context> &context);
+    llvm::Value *codegenIfElse(std::unique_ptr<Context> &context);
+
 public:
     IfConditionNode(std::shared_ptr<ASTNode> conditionNode, std::vector<std::shared_ptr<ASTNode>> ifExpressions, std::vector<std::shared_ptr<ASTNode>> elseExpressions);
     ~IfConditionNode() = default;
