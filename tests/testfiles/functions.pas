@@ -20,4 +20,6 @@ begin
     println('Print a line');
     x := xadd(11,-5);
     writeln(x);
+
+    writeln(xadd(12,-7));
 end.

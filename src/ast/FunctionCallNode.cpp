@@ -74,3 +74,20 @@ llvm::Value *FunctionCallNode::codegen(std::unique_ptr<Context> &context)
 
     return context->Builder->CreateCall(CalleeF, ArgsV);
 }
+
+VariableType FunctionCallNode::resolveType(std::unique_ptr<Context> &context)
+{
+    llvm::Function *functionCallNode = context->TheModule->getFunction(m_name);
+
+    auto type = functionCallNode->getReturnType();
+
+    if (type->isIntegerTy())
+    {
+        return VariableType::getInteger();
+    }
+    else if (type->isPointerTy())
+    {
+        return VariableType::getString();
+    }
+    return VariableType{};
+}

@@ -78,6 +78,7 @@ bool Parser::consume(TokenType tokenType)
     else
     {
         m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = m_tokens[m_current + 1], .message = "expected token  '" + std::string(magic_enum::enum_name(tokenType)) + "' but found " + std::string(magic_enum::enum_name(m_tokens[m_current + 1].tokenType)) + "!"});
+        throw ParserException(m_errors);
     }
     return false;
 }
@@ -89,7 +90,7 @@ bool Parser::consumeKeyWord(const std::string &keyword)
         return true;
     }
     m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = m_tokens[m_current + 1], .message = "expected token  '" + keyword + "' but found " + std::string(m_tokens[m_current + 1].lexical) + "!"});
-    return false;
+    throw ParserException(m_errors);
 }
 
 bool Parser::canConsumeKeyWord(const std::string &keyword)
@@ -162,19 +163,17 @@ std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, size_t currentSc
 
             Token subToken = next();
             std::vector<std::shared_ptr<ASTNode>> callArgs;
-            while (subToken.tokenType != TokenType::RIGHT_CURLY)
+            while (subToken.tokenType != TokenType::RIGHT_CURLY && subToken.tokenType != TokenType::SEMICOLON)
             {
                 switch (subToken.tokenType)
                 {
                 case TokenType::NAMEDTOKEN:
+                {
+                    auto node = parseToken(subToken, currentScope, {});
 
-                    if (!isVariableDefined(subToken.lexical, currentScope))
-                    {
-                        m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = subToken, .message = "a variable with the name '" + std::string(subToken.lexical) + "' is not yet defined!"});
-                        return nullptr;
-                    }
-                    callArgs.push_back(std::make_shared<VariableAccessNode>(subToken.lexical));
-                    break;
+                    callArgs.push_back(node);
+                }
+                break;
                 case TokenType::COMMA:
                     break;
                 default:
@@ -203,8 +202,8 @@ std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, size_t currentSc
         break;
     }
     default:
-        m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = token, .message = std::string("token type '" + std::string(token.lexical) + "' not yet implemented")});
-        break;
+        m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = token, .message = std::string("token type '" + std::string(magic_enum::enum_name(token.tokenType)) + "' not yet implemented")});
+        throw ParserException(m_errors);
     }
     return nullptr;
 }
@@ -731,52 +730,59 @@ void Parser::parseVariableAssignment(const Token &currentToken, size_t currentSc
 
 std::unique_ptr<UnitNode> Parser::parseUnit()
 {
-    std::vector<std::shared_ptr<ASTNode>> nodes;
-
-    Token currentToken = current();
-    int scope = 0;
-
-    if (iequals(currentToken.lexical, "program") || iequals(currentToken.lexical, "unit"))
+    try
     {
-        UnitType unitType = UnitType::UNIT;
-        if (iequals(currentToken.lexical, "program"))
-            unitType = UnitType::PROGRAM;
+        std::vector<std::shared_ptr<ASTNode>> nodes;
 
-        if (consume(TokenType::NAMEDTOKEN))
+        Token currentToken = current();
+        int scope = 0;
+
+        if (iequals(currentToken.lexical, "program") || iequals(currentToken.lexical, "unit"))
         {
-            auto functionName = std::string(current().lexical);
-            consume(TokenType::SEMICOLON);
-            while (canConsume(TokenType::ENDLINE))
-            {
-                consume(TokenType::ENDLINE);
-            }
-            while (!canConsumeKeyWord("begin") && !canConsumeKeyWord("var"))
-            {
-                parseKeyWord(next(), nodes, scope + 1);
+            UnitType unitType = UnitType::UNIT;
+            if (iequals(currentToken.lexical, "program"))
+                unitType = UnitType::PROGRAM;
 
+            if (consume(TokenType::NAMEDTOKEN))
+            {
+                auto functionName = std::string(current().lexical);
+                consume(TokenType::SEMICOLON);
                 while (canConsume(TokenType::ENDLINE))
                 {
                     consume(TokenType::ENDLINE);
                 }
-            }
-            auto block = parseBlock(current(), 0);
-
-            consume(TokenType::DOT);
-
-            std::vector<std::shared_ptr<FunctionDefinitionNode>> functionDefinitions;
-            for (auto &node : nodes)
-            {
-                auto func = std::dynamic_pointer_cast<FunctionDefinitionNode>(node);
-                if (func != nullptr)
+                while (!canConsumeKeyWord("begin") && !canConsumeKeyWord("var"))
                 {
-                    functionDefinitions.emplace_back(func);
-                }
-            }
+                    parseKeyWord(next(), nodes, scope + 1);
 
-            return std::make_unique<UnitNode>(unitType, functionName, functionDefinitions, block);
+                    while (canConsume(TokenType::ENDLINE))
+                    {
+                        consume(TokenType::ENDLINE);
+                    }
+                }
+                auto block = parseBlock(current(), 0);
+
+                consume(TokenType::DOT);
+
+                std::vector<std::shared_ptr<FunctionDefinitionNode>> functionDefinitions;
+                for (auto &node : nodes)
+                {
+                    auto func = std::dynamic_pointer_cast<FunctionDefinitionNode>(node);
+                    if (func != nullptr)
+                    {
+                        functionDefinitions.emplace_back(func);
+                    }
+                }
+
+                return std::make_unique<UnitNode>(unitType, functionName, functionDefinitions, block);
+            }
         }
+        m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = m_tokens[m_current + 1], .message = "Unexpected token " + std::string(m_tokens[m_current + 1].lexical) + "!"});
     }
-    m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = m_tokens[m_current + 1], .message = "Unexpected token " + std::string(m_tokens[m_current + 1].lexical) + "!"});
+    catch (ParserException e)
+    {
+        std::cerr << e.what();
+    }
     return nullptr;
 }
 

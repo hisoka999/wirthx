@@ -4,14 +4,38 @@
 #include "ast/UnitNode.h"
 #include "ast/VariableDefinition.h"
 #include "ast/VariableType.h"
+#include <exception>
 #include <filesystem>
 #include <memory>
 #include <vector>
+
 struct ParserError
 {
     std::string file_name;
     Token token;
     std::string message;
+};
+
+class ParserException : public std::exception
+{
+private:
+    char *mesasage;
+
+public:
+    ParserException(std::vector<ParserError> errors)
+    {
+        std::stringstream outputStream;
+        for (auto &error : errors)
+        {
+            outputStream << error.file_name << ":" << error.token.row << ":" << error.token.col << ": " << error.message << "\n";
+        }
+        mesasage = outputStream.str().data();
+    }
+
+    const char *what() const noexcept override
+    {
+        return mesasage;
+    }
 };
 
 class Parser
