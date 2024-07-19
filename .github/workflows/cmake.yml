@@ -29,8 +29,8 @@ jobs:
           - name: Ubuntu (Clang)
             os: ubuntu-24.04
             triplet: x64-linux
-            cc: clang
-            cxx: clang++
+            cc: clang-16
+            cxx: clang++-16
             arch: amd64
             experimental: false
 
@@ -50,7 +50,7 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y llvm llvm-dev
+          sudo apt-get install -y llvm-16 llvm-16-dev
         if: matrix.triplet == 'x64-linux'
 
       - name: Show content of workspace after cache has been restored
