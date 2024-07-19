@@ -8,17 +8,23 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
+SET(CMAKE_FIND_PACKAGE_SORT_ORDER NATURAL)
+SET(CMAKE_FIND_PACKAGE_SORT_DIRECTION ASC)
 
-find_package(LLVM REQUIRED)
+
+find_package(LLVM 16.0.0 REQUIRED)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+message(STATUS "Found LLVM ${CUSTOM_LLVM_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID}")
 
-
-if (${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
+message(STATUS "Clang VERSION: ${CLANG_VERSION_STRING}")
+if (UNIX)
     # G++
     file(GLOB LINKER_SRC src/linker/unix/pascal_linker.cpp src/os/unix/command.cpp)
-elseif(${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
+elseif(WIN32)
+message(ERROR "Windows is not yet supported")
+
 set(LINKER_SRC )
 endif()
 
@@ -69,7 +75,7 @@ option(BUILD_TESTS "Build test programs" ON)
 if(BUILD_TESTS)
     FetchContent_Declare(
     googletest
-    URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+    URL https://github.com/google/googletest/archive/refs/tags/v1.15.0.zip
     )
     # For Windows: Prevent overriding the parent project's compiler/linker settings
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
@@ -81,6 +87,9 @@ endif()
 
 # Let's set compiler-specific flags
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
+    # Clang
+    add_compile_options(-Wall -Werror)
+elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
     # G++
     add_compile_options(-Wall -Werror)
 elseif(${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
