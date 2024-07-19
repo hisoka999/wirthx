@@ -54,6 +54,6 @@ endmacro()
 
 
 package_add_test(wirthx_test lexer_test.cpp interpreter_test.cpp compiler_test.cpp)
-add_custom_command(TARGET wirthx_test PRE_BUILD
+add_custom_command(TARGET wirthx_test POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_directory
                        ${CMAKE_SOURCE_DIR}/tests/testfiles/ $<TARGET_FILE_DIR:wirthx_test>/testfiles/)

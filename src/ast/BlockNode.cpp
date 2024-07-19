@@ -50,7 +50,7 @@ llvm::Value *BlockNode::codegen(std::unique_ptr<Context> &context)
     for (auto &def : m_variableDefinitions)
     {
 
-        context->NamedValues[def.variableName] = def.generateCode(context);
+        context->NamedAllocations[def.variableName] = def.generateCode(context);
     }
     std::vector<llvm::Value *> values;
 
@@ -62,7 +62,7 @@ llvm::Value *BlockNode::codegen(std::unique_ptr<Context> &context)
     for (auto &def : m_variableDefinitions)
     {
 
-        context->NamedValues[def.variableName] = nullptr;
+        context->NamedAllocations[def.variableName] = nullptr;
     }
     return llvm::Constant::getNullValue(llvm::Type::getDoubleTy(*context->TheContext));
 }

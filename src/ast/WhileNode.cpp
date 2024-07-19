@@ -23,6 +23,8 @@ void WhileNode::eval(Stack &stack, std::ostream &outputStream)
         for (auto &node : m_nodes)
         {
             node->eval(stack, outputStream);
+            if (stack.stopBreakIfActive())
+                return;
         }
     }
 }

@@ -12,9 +12,12 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
 
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/StandardInstrumentations.h"
 // namespace llvm
 // {
 //     class LLVMContext;
@@ -29,9 +32,19 @@ struct Context
     std::unique_ptr<llvm::LLVMContext> TheContext;
     std::unique_ptr<llvm::Module> TheModule;
     std::unique_ptr<llvm::IRBuilder<>> Builder;
-    std::map<std::string, llvm::AllocaInst *> NamedValues;
+    std::map<std::string, llvm::AllocaInst *> NamedAllocations;
+    std::map<std::string, llvm::Value *> NamedValues;
     llvm::Function *TopLevelFunction;
     std::map<std::string, llvm::Function *> FunctionDefinitions;
+    llvm::BasicBlock *BreakBlock = nullptr;
+
+    std::unique_ptr<llvm::FunctionPassManager> TheFPM;
+    std::unique_ptr<llvm::LoopAnalysisManager> TheLAM;
+    std::unique_ptr<llvm::FunctionAnalysisManager> TheFAM;
+    std::unique_ptr<llvm::CGSCCAnalysisManager> TheCGAM;
+    std::unique_ptr<llvm::ModuleAnalysisManager> TheMAM;
+    std::unique_ptr<llvm::PassInstrumentationCallbacks> ThePIC;
+    std::unique_ptr<llvm::StandardInstrumentations> TheSI;
 };
 
 void LogError(const char *Str);

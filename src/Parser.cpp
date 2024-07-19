@@ -9,7 +9,9 @@
 #include "Lexer.h"
 #include "ast/BinaryOperationNode.h"
 #include "ast/BlockNode.h"
+#include "ast/BreakNode.h"
 #include "ast/ComparissionNode.h"
+#include "ast/ForNode.h"
 #include "ast/FunctionCallNode.h"
 #include "ast/FunctionDefinitionNode.h"
 #include "ast/IfConditionNode.h"
@@ -181,6 +183,7 @@ std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, size_t currentSc
 
                 subToken = next();
             }
+            next();
             if (isSysCall)
             {
                 return std::make_shared<SystemFunctionCallNode>(functionName, callArgs);
@@ -304,7 +307,8 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
 
             ifExpressions.push_back(parseExpression(next(), scope));
         }
-        tryConsume(TokenType::ENDLINE);
+        while (canConsume(TokenType::ENDLINE))
+            tryConsume(TokenType::ENDLINE);
         if (tryConsumeKeyWord("else"))
         {
             tryConsume(TokenType::ENDLINE);
@@ -314,7 +318,7 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
             }
             else
             {
-                elseExpressions.push_back(parseExpression(current(), scope));
+                elseExpressions.push_back(parseExpression(next(), scope));
             }
         }
 
@@ -448,6 +452,42 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
         whileNodes.push_back(parseBlock(current(), 0));
 
         nodes.push_back(std::make_shared<WhileNode>(expression, whileNodes));
+    }
+    else if (iequals(currentToken.lexical, "for"))
+    {
+        consume(TokenType::NAMEDTOKEN);
+        auto loopVariable = std::string(current().lexical);
+        consume(TokenType::COLON);
+        consume(TokenType::EQUAL);
+        auto loopStart = parseToken(next(), 0, nodes);
+
+        consumeKeyWord("to");
+        auto loopEnd = parseToken(next(), 0, nodes);
+
+        std::vector<std::shared_ptr<ASTNode>> whileNodes;
+
+        consumeKeyWord("do");
+
+        while (canConsume(TokenType::ENDLINE))
+        {
+            consume(TokenType::ENDLINE);
+        }
+        while (!canConsumeKeyWord("begin") && !canConsumeKeyWord("var"))
+        {
+            parseKeyWord(next(), whileNodes, scope + 1);
+
+            while (canConsume(TokenType::ENDLINE))
+            {
+                consume(TokenType::ENDLINE);
+            }
+        }
+        whileNodes.push_back(parseBlock(current(), 0));
+
+        nodes.push_back(std::make_shared<ForNode>(loopVariable, loopStart, loopEnd, whileNodes));
+    }
+    else if (iequals(currentToken.lexical, "break"))
+    {
+        nodes.push_back(std::make_shared<BreakNode>());
     }
     else
     {

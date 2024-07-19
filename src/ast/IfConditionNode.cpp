@@ -55,7 +55,7 @@ llvm::Value *IfConditionNode::codegenIf(std::unique_ptr<Context> &context)
     llvm::Value *CondV = m_conditionNode->codegen(context);
     if (!CondV)
         return nullptr;
-    CondV = context->Builder->CreateICmpNE(CondV, context->Builder->getInt1(0), "ifcond");
+    CondV = context->Builder->CreateICmpEQ(CondV, context->Builder->getInt1(1), "ifcond");
 
     llvm::Function *TheFunction = context->Builder->GetInsertBlock()->getParent();
     llvm::BasicBlock *ThenBB = llvm::BasicBlock::Create(*context->TheContext, "then", TheFunction);
@@ -69,8 +69,8 @@ llvm::Value *IfConditionNode::codegenIf(std::unique_ptr<Context> &context)
     {
         exp->codegen(context);
     }
-
-    context->Builder->CreateBr(MergeBB);
+    if (context->BreakBlock == nullptr)
+        context->Builder->CreateBr(MergeBB);
     TheFunction->insert(TheFunction->end(), MergeBB);
     context->Builder->SetInsertPoint(MergeBB);
 
@@ -84,7 +84,7 @@ llvm::Value *IfConditionNode::codegenIfElse(std::unique_ptr<Context> &context)
         return nullptr;
 
     // Convert condition to a bool by comparing non-equal to 0.0.
-    CondV = context->Builder->CreateICmpNE(CondV, context->Builder->getInt1(0), "ifcond");
+    CondV = context->Builder->CreateICmpEQ(CondV, context->Builder->getInt1(1), "ifcond");
     llvm::Function *TheFunction = context->Builder->GetInsertBlock()->getParent();
 
     // Create blocks for the then and else cases.  Insert the 'then' block at the
@@ -102,8 +102,8 @@ llvm::Value *IfConditionNode::codegenIfElse(std::unique_ptr<Context> &context)
     {
         exp->codegen(context);
     }
-
-    context->Builder->CreateBr(MergeBB);
+    if (context->BreakBlock == nullptr)
+        context->Builder->CreateBr(MergeBB);
     // Codegen of 'Then' can change the current block, update ThenBB for the PHI.
     ThenBB = context->Builder->GetInsertBlock();
 
@@ -115,8 +115,8 @@ llvm::Value *IfConditionNode::codegenIfElse(std::unique_ptr<Context> &context)
     {
         exp->codegen(context);
     }
-
-    context->Builder->CreateBr(MergeBB);
+    if (context->BreakBlock == nullptr)
+        context->Builder->CreateBr(MergeBB);
     // Codegen of 'Else' can change the current block, update ElseBB for the PHI.
     ElseBB = context->Builder->GetInsertBlock();
 

@@ -5,13 +5,23 @@
 #include "compiler/Context.h"
 #include "linker/pascal_linker.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/Transforms/InstCombine/InstCombine.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Scalar/Reassociate.h"
+#include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -27,6 +37,32 @@ std::unique_ptr<Context> InitializeModule(const char *module_name)
 
     // Create a new builder for the module.
     context->Builder = std::make_unique<llvm::IRBuilder<>>(*context->TheContext);
+    // Create new pass and analysis managers.
+    context->TheFPM = std::make_unique<llvm::FunctionPassManager>();
+    context->TheLAM = std::make_unique<llvm::LoopAnalysisManager>();
+    context->TheFAM = std::make_unique<llvm::FunctionAnalysisManager>();
+    context->TheCGAM = std::make_unique<llvm::CGSCCAnalysisManager>();
+    context->TheMAM = std::make_unique<llvm::ModuleAnalysisManager>();
+    context->ThePIC = std::make_unique<llvm::PassInstrumentationCallbacks>();
+    context->TheSI = std::make_unique<llvm::StandardInstrumentations>(*context->TheContext,
+                                                                      /*DebugLogging*/ true);
+    context->TheSI->registerCallbacks(*context->ThePIC, context->TheFAM.get());
+
+    // Add transform passes.
+    // Do simple "peephole" optimizations and bit-twiddling optzns.
+    context->TheFPM->addPass(llvm::InstCombinePass());
+    // Reassociate expressions.
+    context->TheFPM->addPass(llvm::ReassociatePass());
+    // Eliminate Common SubExpressions.
+    context->TheFPM->addPass(llvm::GVNPass());
+    // Simplify the control flow graph (deleting unreachable blocks, etc).
+    context->TheFPM->addPass(llvm::SimplifyCFGPass());
+
+    // Register analysis passes used in these transform passes.
+    llvm::PassBuilder PB;
+    PB.registerModuleAnalyses(*context->TheMAM);
+    PB.registerFunctionAnalyses(*context->TheFAM);
+    PB.crossRegisterProxies(*context->TheLAM, *context->TheFAM, *context->TheCGAM, *context->TheMAM);
     return context;
 }
 
@@ -218,7 +254,8 @@ void compile_file(std::filesystem::path inputPath, std::ostream &errorStream, st
 
     unit->codegen(context);
     std::cerr << "start printing code\n";
-    context->TheModule->print(llvm::errs(), nullptr, false, true);
+
+    context->TheModule->print(llvm::errs(), nullptr, false, false);
 
     using namespace llvm;
     using namespace llvm::sys;

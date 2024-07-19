@@ -20,7 +20,7 @@ void VariableAccessNode::eval([[maybe_unused]] Stack &stack, [[maybe_unused]] st
 
 llvm::Value *VariableAccessNode::codegen(std::unique_ptr<Context> &context)
 {
-    llvm::AllocaInst *A = context->NamedValues[m_variableName];
+    llvm::AllocaInst *A = context->NamedAllocations[m_variableName];
 
     if (!A)
     {
@@ -40,7 +40,7 @@ llvm::Value *VariableAccessNode::codegen(std::unique_ptr<Context> &context)
 
 VariableType VariableAccessNode::resolveType(std::unique_ptr<Context> &context)
 {
-    llvm::AllocaInst *A = context->NamedValues[m_variableName];
+    llvm::AllocaInst *A = context->NamedAllocations[m_variableName];
 
     llvm::Type *type;
     if (A)

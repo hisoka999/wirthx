@@ -45,6 +45,8 @@ file(GLOB SRC
     src/ast/UnitNode.cpp
     src/ast/SystemFunctionCallNode.cpp
     src/ast/VariableType.cpp
+    src/ast/ForNode.cpp
+    src/ast/BreakNode.cpp
     src/interpreter/Stack.cpp
     src/interpreter/interpreter.cpp
     src/compiler/Context.cpp
@@ -58,7 +60,8 @@ include_directories(${LLVM_INCLUDE_DIRS})
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 
 add_definitions(${LLVM_DEFINITIONS_LIST})
-llvm_map_components_to_libnames(llvm_libs support core irreader mc mcjit native nativecodegen)
+
+llvm_map_components_to_libnames(llvm_libs support core irreader mc mcjit native nativecodegen linker passes )
 
 include(FetchContent)
 

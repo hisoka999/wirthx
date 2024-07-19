@@ -95,11 +95,15 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
         context->Builder->CreateRetVoid();
 
         verifyFunction(*F);
+        context->TheFPM->run(*F, *context->TheFAM);
+
         return F;
     }
     // Finish off the function.
 
     // Validate the generated code, checking for consistency.
+    verifyFunction(*F);
+    context->TheFPM->run(*F, *context->TheFAM);
 
     return F;
 }

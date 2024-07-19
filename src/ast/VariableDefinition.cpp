@@ -33,8 +33,12 @@ llvm::AllocaInst *VariableDefinition::generateCode(std::unique_ptr<Context> &con
     switch (this->variableType.baseType)
     {
     case VariableBaseType::Integer:
-        return TmpB.CreateAlloca(llvm::Type::getInt64Ty(*context->TheContext), nullptr,
-                                 this->variableName);
+    {
+        auto allocation = TmpB.CreateAlloca(llvm::Type::getInt64Ty(*context->TheContext), nullptr,
+                                            this->variableName);
+        TmpB.CreateStore(TmpB.getInt64(0), allocation);
+        return allocation;
+    }
     case VariableBaseType::Float:
     case VariableBaseType::Real:
         return TmpB.CreateAlloca(llvm::Type::getDoubleTy(*context->TheContext), nullptr,

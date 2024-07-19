@@ -18,6 +18,7 @@ private:
     size_t stackPointer;
     std::map<std::string, StackObject> m_variables;
     std::map<std::string, std::shared_ptr<FunctionDefinitionNode>> m_functions;
+    bool m_break = false;
 
 public:
     Stack(/* args */);
@@ -46,5 +47,13 @@ public:
     {
         auto value = pop_front();
         return std::get<T>(value);
+    }
+    void startBreak() { m_break = true; }
+    bool stopBreakIfActive()
+    {
+        bool old = m_break;
+        if (m_break)
+            m_break = false;
+        return old;
     }
 };

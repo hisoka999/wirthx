@@ -64,7 +64,6 @@ llvm::Value *UnitNode::codegen(std::unique_ptr<Context> &context)
     m_blockNode->setBlockName("entry");
     // Create a new basic block to start insertion into.
     m_blockNode->codegen(context);
-    verifyFunction(*F, &llvm::errs());
 
     llvm::Function *exitCall = context->TheModule->getFunction("exit");
     std::vector<llvm::Value *> exitArgs;
@@ -73,6 +72,8 @@ llvm::Value *UnitNode::codegen(std::unique_ptr<Context> &context)
     context->Builder->CreateCall(exitCall, exitArgs);
 
     context->Builder->CreateRet(llvm::ConstantInt::get(*context->TheContext, llvm::APInt(32, 0)));
+    verifyFunction(*F, &llvm::errs());
+    context->TheFPM->run(*F, *context->TheFAM);
 
     return nullptr;
 }
