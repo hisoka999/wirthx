@@ -1,0 +1,87 @@
+name: CI
+on: [push]
+jobs:
+  job:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # - name: Windows (x64)
+          #   os: windows-latest
+          #   triplet: x64-windows
+          #   arch: x64
+          #   experimental: false
+          # - name: Windows (x86)
+          #   os: windows-latest
+          #   triplet: x86-windows
+          #   experimental: false
+          #   arch: Win32
+          - name: Ubuntu (GCC)
+            os: ubuntu-latest
+            triplet: x64-linux
+            cc: gcc
+            cxx: g++
+            arch: amd64
+            experimental: false
+          - name: Ubuntu (Clang)
+            os: ubuntu-latest
+            triplet: x64-linux
+            cc: clang
+            cxx: clang++
+            arch: amd64
+            experimental: false
+
+    env:
+      # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+      BUILD_TYPE: Debug
+      # Indicates the CMake build directory where project files and binaries are being produced.
+      CMAKE_BUILD_DIR: ${{ github.workspace }}/build/
+      # Indicates the location of the vcpkg as a Git submodule of the project repository.
+      #VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y llvm llvm-dev
+        if: matrix.os == 'ubuntu-latest'
+
+      - name: Show content of workspace after cache has been restored
+        run: find $RUNNER_WORKSPACE
+        shell: bash
+
+      # On Windows runners, let's ensure to have the Developer Command Prompt environment setup correctly. As used here the Developer Command Prompt created is targeting x64 and using the default the Windows SDK.
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+              arch: ${{ matrix.arch }}
+        if: matrix.os == 'windows-latest'
+
+      # Run CMake to generate Ninja project files, using the vcpkg's toolchain file to resolve and install the dependencies as specified in vcpkg.json.
+      - name: Install dependencies and generate project files (Linux)
+        run: |
+          cmake -B "${{ env.CMAKE_BUILD_DIR }}" -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+        if: matrix.os == 'ubuntu-latest'
+      - name: Install dependencies and generate project files (Windows)
+        run: |
+          cmake -B "${{ env.CMAKE_BUILD_DIR }}"  -A ${{matrix.arch}}
+        if: matrix.os == 'windows-latest'
+      # Build the whole project with Ninja (which is spawn by CMake).
+      - name: Build
+        run: |
+          cmake --build "${{ env.CMAKE_BUILD_DIR }}" --target wirtx --config ${{env.BUILD_TYPE}}
+      - name: Show content of workspace at its completion
+        run: find $RUNNER_WORKSPACE
+        shell: bash
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        # Execute tests defined by the CMake configuration.
+        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+        run: ctest -C ${{env.BUILD_TYPE}}
+  
