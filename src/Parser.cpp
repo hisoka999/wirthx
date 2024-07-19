@@ -779,7 +779,7 @@ std::unique_ptr<UnitNode> Parser::parseUnit()
         }
         m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = m_tokens[m_current + 1], .message = "Unexpected token " + std::string(m_tokens[m_current + 1].lexical) + "!"});
     }
-    catch (ParserException e)
+    catch (const ParserException &e)
     {
         std::cerr << e.what();
     }
