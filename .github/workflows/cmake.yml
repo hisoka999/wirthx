@@ -20,14 +20,14 @@ jobs:
           #   experimental: false
           #   arch: Win32
           - name: Ubuntu (GCC)
-            os: ubuntu-latest
+            os: ubuntu-24.04
             triplet: x64-linux
             cc: gcc
             cxx: g++
             arch: amd64
             experimental: false
           - name: Ubuntu (Clang)
-            os: ubuntu-latest
+            os: ubuntu-24.04
             triplet: x64-linux
             cc: clang
             cxx: clang++
@@ -51,7 +51,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y llvm llvm-dev
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.triplet == 'x64-linux'
 
       - name: Show content of workspace after cache has been restored
         run: find $RUNNER_WORKSPACE
@@ -67,7 +67,7 @@ jobs:
       - name: Install dependencies and generate project files (Linux)
         run: |
           cmake -B "${{ env.CMAKE_BUILD_DIR }}" -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.triplet == 'x64-linux'
       - name: Install dependencies and generate project files (Windows)
         run: |
           cmake -B "${{ env.CMAKE_BUILD_DIR }}"  -A ${{matrix.arch}}
