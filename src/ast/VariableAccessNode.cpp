@@ -1,21 +1,50 @@
 #include "VariableAccessNode.h"
-#include "compiler/Context.h"
-#include "interpreter/Stack.h"
 #include <iostream>
+#include "FunctionCallNode.h"
+#include "UnitNode.h"
+#include "compiler/Context.h"
+#include "interpreter/InterpreterContext.h"
 
-VariableAccessNode::VariableAccessNode(const std::string_view variableName) : m_variableName(variableName)
+VariableAccessNode::VariableAccessNode(const std::string_view variableName) : m_variableName(variableName) {}
+
+void VariableAccessNode::print() { std::cout << m_variableName; }
+
+void VariableAccessNode::eval(InterpreterContext &context, [[maybe_unused]] std::ostream &outputStream)
 {
-}
+    VariableBaseType baseType = VariableBaseType::Unknown;
 
-void VariableAccessNode::print()
-{
-    std::cout << m_variableName;
-}
+    if (context.parent != nullptr)
+    {
+        if (FunctionCallNode *functionCall = dynamic_cast<FunctionCallNode *>(context.parent))
+        {
+            auto functionDefinition = context.unit->getFunctionDefinition(functionCall->name());
+            if (functionDefinition)
+            {
+                auto param = functionDefinition.value()->getParam(m_variableName);
+                if (param)
+                {
+                    baseType = param.value().type->baseType;
+                }
+            }
+        }
+        else
+        {
+            baseType = context.unit->getVariableDefinition(m_variableName).value().variableType->baseType;
+        }
+    }
+    else
+    {
+        baseType = context.unit->getVariableDefinition(m_variableName).value().variableType->baseType;
+    }
 
-void VariableAccessNode::eval([[maybe_unused]] Stack &stack, [[maybe_unused]] std::ostream &outputStream)
-{
-
-    stack.push_back(stack.get_var(m_variableName));
+    if (baseType == VariableBaseType::String)
+    {
+        context.stack.push_back(context.stack.get_var<std::string_view>(m_variableName));
+    }
+    else if (baseType == VariableBaseType::Integer)
+    {
+        context.stack.push_back(context.stack.get_var<int64_t>(m_variableName));
+    }
 }
 
 llvm::Value *VariableAccessNode::codegen(std::unique_ptr<Context> &context)
@@ -24,7 +53,7 @@ llvm::Value *VariableAccessNode::codegen(std::unique_ptr<Context> &context)
 
     if (!A)
     {
-        for (auto &arg : context->TopLevelFunction->args())
+        for (auto &arg: context->TopLevelFunction->args())
         {
             if (arg.getName() == m_variableName)
             {
@@ -38,37 +67,34 @@ llvm::Value *VariableAccessNode::codegen(std::unique_ptr<Context> &context)
     return context->Builder->CreateLoad(A->getAllocatedType(), A, m_variableName.c_str());
 }
 
-VariableType VariableAccessNode::resolveType(std::unique_ptr<Context> &context)
+std::shared_ptr<VariableType> VariableAccessNode::resolveType(const std::unique_ptr<UnitNode> &unit, ASTNode *parent)
 {
-    llvm::AllocaInst *A = context->NamedAllocations[m_variableName];
-
-    llvm::Type *type;
-    if (A)
+    if (FunctionDefinitionNode *functionDefinition = dynamic_cast<FunctionDefinitionNode *>(parent))
     {
-        type = A->getAllocatedType();
-    }
-    else
-    {
-        for (auto &arg : context->TopLevelFunction->args())
+        auto param = functionDefinition->getParam(m_variableName);
+        if (param)
         {
-            if (arg.getName() == m_variableName)
+            return param.value().type;
+        }
+    }
+
+    if (FunctionCallNode *functionCall = dynamic_cast<FunctionCallNode *>(parent))
+    {
+        auto functionDefinition = unit->getFunctionDefinition(functionCall->name());
+        if (functionDefinition)
+        {
+            auto param = functionDefinition.value()->getParam(m_variableName);
+            if (param)
             {
-                type = arg.getType();
-                break;
+                return param.value().type;
             }
         }
     }
-    if (type->isIntegerTy())
-    {
-        return VariableType::getInteger();
-    }
-    else if (type->isPointerTy())
-    {
-        return VariableType::getString();
-    }
-    else
-    {
-    }
 
-    return VariableType{};
+    auto definition = unit->getVariableDefinition(m_variableName);
+    if (definition)
+    {
+        return definition.value().variableType;
+    }
+    return std::make_shared<VariableType>();
 }

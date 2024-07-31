@@ -1,20 +1,16 @@
 #include "StringConstantNode.h"
-#include "compiler/Context.h"
-#include "interpreter/Stack.h"
 #include <iostream>
+#include "compiler/Context.h"
+#include "interpreter/InterpreterContext.h"
 
-StringConstantNode::StringConstantNode(std::string_view literal) : ASTNode(), m_literal(literal)
-{
-}
+StringConstantNode::StringConstantNode(std::string_view literal) : ASTNode(), m_literal(literal) {}
 
-void StringConstantNode::print()
-{
-    std::cout << "\'" << m_literal << "\'";
-}
+void StringConstantNode::print() { std::cout << "\'" << m_literal << "\'"; }
 
-void StringConstantNode::eval(Stack &stack, [[maybe_unused]] std::ostream &outputStream)
+void StringConstantNode::eval(InterpreterContext &context, 
+                              [[maybe_unused]] std::ostream &outputStream)
 {
-    stack.push_back(m_literal);
+    context.stack.push_back(m_literal);
 }
 
 llvm::Value *StringConstantNode::codegen(std::unique_ptr<Context> &context)
@@ -32,12 +28,12 @@ llvm::Value *StringConstantNode::codegen(std::unique_ptr<Context> &context)
         {
             switch (m_literal[i])
             {
-            case 'n':
-                result += 10;
-                break;
-            case 'r':
-                result += 13;
-                break;
+                case 'n':
+                    result += 10;
+                    break;
+                case 'r':
+                    result += 13;
+                    break;
             }
             isEscape = false;
         }
@@ -46,14 +42,11 @@ llvm::Value *StringConstantNode::codegen(std::unique_ptr<Context> &context)
             result += m_literal[i];
         }
     }
-
-    // auto arrayType = llvm::ArrayType::get(llvm::Type::getInt8Ty(*context->TheContext), m_literal.size());
-
-    // return llvm::ConstantDataArray::getRaw(m_literal, m_literal.size(), arrayType);
     return context->Builder->CreateGlobalString(result);
 }
 
-VariableType StringConstantNode::resolveType([[maybe_unused]] std::unique_ptr<Context> &context)
+std::shared_ptr<VariableType> StringConstantNode::resolveType([[maybe_unused]] const std::unique_ptr<UnitNode> &unit,
+                                                              ASTNode *parentNode)
 {
     return VariableType::getString();
 }

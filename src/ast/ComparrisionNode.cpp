@@ -1,7 +1,7 @@
+#include <iostream>
 #include "ComparissionNode.h"
 #include "compiler/Context.h"
-#include "interpreter/Stack.h"
-#include <iostream>
+#include "interpreter/InterpreterContext.h"
 
 ComparrisionNode::ComparrisionNode(CMPOperator op, const std::shared_ptr<ASTNode> &lhs,
                                    const std::shared_ptr<ASTNode> &rhs) : m_lhs(lhs), m_rhs(rhs), m_operator(op)
@@ -13,89 +13,89 @@ void ComparrisionNode::print()
     m_lhs->print();
     switch (m_operator)
     {
-    case CMPOperator::EQUALS:
-        std::cout << "=";
-        break;
-    case CMPOperator::GREATER:
-        std::cout << ">";
-        break;
-    case CMPOperator::GREATER_EQUAL:
-        std::cout << ">=";
-        break;
-    case CMPOperator::LESS:
-        std::cout << "<";
-        break;
-    case CMPOperator::LESS_EQUAL:
-        std::cout << "<=";
-        break;
-    default:
-        break;
+        case CMPOperator::EQUALS:
+            std::cout << "=";
+            break;
+        case CMPOperator::GREATER:
+            std::cout << ">";
+            break;
+        case CMPOperator::GREATER_EQUAL:
+            std::cout << ">=";
+            break;
+        case CMPOperator::LESS:
+            std::cout << "<";
+            break;
+        case CMPOperator::LESS_EQUAL:
+            std::cout << "<=";
+            break;
+        default:
+            break;
     }
     m_rhs->print();
 }
 
-void compare_int(CMPOperator op, StackObject lhs, StackObject rhs, Stack &stack)
+void compare_int(CMPOperator op, int64_t lhs, int64_t rhs, Stack &stack)
 {
-
-    auto lhs_ = std::get<int64_t>(lhs);
-    auto rhs_ = std::get<int64_t>(rhs);
     switch (op)
     {
-    case CMPOperator::EQUALS:
-        stack.push_back(static_cast<int64_t>(lhs_ == rhs_));
-        break;
-    case CMPOperator::GREATER:
-        stack.push_back(static_cast<int64_t>(lhs_ > rhs_));
-        break;
-    case CMPOperator::GREATER_EQUAL:
-        stack.push_back(static_cast<int64_t>(lhs_ >= rhs_));
-        break;
-    case CMPOperator::LESS:
-        stack.push_back(static_cast<int64_t>(lhs_ < rhs_));
-        break;
-    case CMPOperator::LESS_EQUAL:
-        stack.push_back(static_cast<int64_t>(lhs_ <= rhs_));
-        break;
+        case CMPOperator::EQUALS:
+            stack.push_back(static_cast<int64_t>(lhs == rhs));
+            break;
+        case CMPOperator::GREATER:
+            stack.push_back(static_cast<int64_t>(lhs > rhs));
+            break;
+        case CMPOperator::GREATER_EQUAL:
+            stack.push_back(static_cast<int64_t>(lhs >= rhs));
+            break;
+        case CMPOperator::LESS:
+            stack.push_back(static_cast<int64_t>(lhs < rhs));
+            break;
+        case CMPOperator::LESS_EQUAL:
+            stack.push_back(static_cast<int64_t>(lhs <= rhs));
+            break;
     }
 }
 
-void compare_str(CMPOperator op, StackObject lhs, StackObject rhs, Stack &stack)
+void compare_str(CMPOperator op, std::string_view lhs, std::string_view rhs, Stack &stack)
 {
 
-    auto lhs_ = std::get<std::string_view>(lhs);
-    auto rhs_ = std::get<std::string_view>(rhs);
+
     switch (op)
     {
-    case CMPOperator::EQUALS:
-        stack.push_back(static_cast<int64_t>(lhs_ == rhs_));
-        break;
-    case CMPOperator::GREATER:
-        stack.push_back(static_cast<int64_t>(lhs_ > rhs_));
-        break;
-    case CMPOperator::GREATER_EQUAL:
-        stack.push_back(static_cast<int64_t>(lhs_ >= rhs_));
-        break;
-    case CMPOperator::LESS:
-        stack.push_back(static_cast<int64_t>(lhs_ < rhs_));
-        break;
-    case CMPOperator::LESS_EQUAL:
-        stack.push_back(static_cast<int64_t>(lhs_ <= rhs_));
-        break;
+        case CMPOperator::EQUALS:
+            stack.push_back(static_cast<int64_t>(lhs == rhs));
+            break;
+        case CMPOperator::GREATER:
+            stack.push_back(static_cast<int64_t>(lhs > rhs));
+            break;
+        case CMPOperator::GREATER_EQUAL:
+            stack.push_back(static_cast<int64_t>(lhs >= rhs));
+            break;
+        case CMPOperator::LESS:
+            stack.push_back(static_cast<int64_t>(lhs < rhs));
+            break;
+        case CMPOperator::LESS_EQUAL:
+            stack.push_back(static_cast<int64_t>(lhs <= rhs));
+            break;
     }
 }
-void ComparrisionNode::eval(Stack &stack, std::ostream &outputStream)
+void ComparrisionNode::eval(InterpreterContext &context, std::ostream &outputStream)
 {
-    m_lhs->eval(stack, outputStream);
-    m_rhs->eval(stack, outputStream);
-    auto lhs = stack.pop_front();
-    auto rhs = stack.pop_front();
-    if (std::holds_alternative<int64_t>(lhs) && std::holds_alternative<int64_t>(rhs))
+    m_lhs->eval(context, outputStream);
+    m_rhs->eval(context, outputStream);
+
+
+    if (m_lhs->resolveType(context.unit, context.parent)->baseType == VariableBaseType::Integer)
     {
-        compare_int(m_operator, lhs, rhs, stack);
+        auto lhs = context.stack.pop_front<int64_t>();
+        auto rhs = context.stack.pop_front<int64_t>();
+        compare_int(m_operator, lhs, rhs, context.stack);
     }
     else
     {
-        compare_str(m_operator, lhs, rhs, stack);
+        auto lhs = context.stack.pop_front<std::string_view>();
+        auto rhs = context.stack.pop_front<std::string_view>();
+        compare_str(m_operator, lhs, rhs, context.stack);
     }
 }
 llvm::Value *ComparrisionNode::codegen(std::unique_ptr<Context> &context)
@@ -106,23 +106,23 @@ llvm::Value *ComparrisionNode::codegen(std::unique_ptr<Context> &context)
     llvm::CmpInst::Predicate pred = llvm::CmpInst::ICMP_EQ;
     switch (m_operator)
     {
-    case CMPOperator::EQUALS:
+        case CMPOperator::EQUALS:
 
-        break;
-    case CMPOperator::GREATER:
-        pred = llvm::CmpInst::ICMP_SGT;
-        break;
-    case CMPOperator::GREATER_EQUAL:
-        pred = llvm::CmpInst::ICMP_SGE;
-        break;
-    case CMPOperator::LESS:
-        pred = llvm::CmpInst::ICMP_SLT;
-        break;
-    case CMPOperator::LESS_EQUAL:
-        pred = llvm::CmpInst::ICMP_SLT;
-        break;
-    default:
-        break;
+            break;
+        case CMPOperator::GREATER:
+            pred = llvm::CmpInst::ICMP_SGT;
+            break;
+        case CMPOperator::GREATER_EQUAL:
+            pred = llvm::CmpInst::ICMP_SGE;
+            break;
+        case CMPOperator::LESS:
+            pred = llvm::CmpInst::ICMP_SLT;
+            break;
+        case CMPOperator::LESS_EQUAL:
+            pred = llvm::CmpInst::ICMP_SLT;
+            break;
+        default:
+            break;
     }
 
     return context->Builder->CreateCmp(pred, lhs, rhs);

@@ -7,6 +7,8 @@
 #include <string>
 
 #include "Lexer.h"
+#include "ast/ArrayAccessNode.h"
+#include "ast/ArrayAssignmentNode.h"
 #include "ast/BinaryOperationNode.h"
 #include "ast/BlockNode.h"
 #include "ast/BreakNode.h"
@@ -30,6 +32,9 @@
 
 Parser::Parser(const std::filesystem::path &path, std::vector<Token> &tokens) : m_file_path(path), m_tokens(tokens)
 {
+
+    m_typeDefinitions["integer"] = std::make_shared<VariableType>(VariableBaseType::Integer, "integer");
+    m_typeDefinitions["string"] = std::make_shared<VariableType>(VariableBaseType::String, "string");
 }
 
 Parser::~Parser()
@@ -107,6 +112,15 @@ bool Parser::tryConsumeKeyWord(const std::string &keyword)
     }
     return false;
 }
+
+std::optional<std::shared_ptr<VariableType>> Parser::determinVariableTypeByName(const std::string &name)
+{
+    if (m_typeDefinitions.contains(name))
+        return m_typeDefinitions.at(name);
+
+    return std::nullopt;
+}
+
 std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, size_t currentScope, std::vector<std::shared_ptr<ASTNode>> nodes)
 {
     std::vector<std::shared_ptr<ASTNode>> args;
@@ -189,11 +203,24 @@ std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, size_t currentSc
             }
             return std::make_shared<FunctionCallNode>(functionName, callArgs);
         }
+        else if (canConsume(TokenType::LEFT_SQUAR))
+        {
+            auto arrayName = std::string(token.lexical);
+            if (!isVariableDefined(token.lexical, currentScope))
+            {
+                m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = token, .message = "A variable with the name '" + std::string(token.lexical) + "' is not yet defined!"});
+                return nullptr;
+            }
+            consume(TokenType::LEFT_SQUAR);
+            auto indexNode = parseToken(next(), currentScope, {});
+            consume(TokenType::RIGHT_SQUAR);
+            return std::make_shared<ArrayAccessNode>(arrayName, indexNode);
+        }
         else
         {
             if (!isVariableDefined(token.lexical, currentScope))
             {
-                m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = token, .message = "a variable with the name '" + std::string(token.lexical) + "' is not yet defined!"});
+                m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = token, .message = "A variable with the name '" + std::string(token.lexical) + "' is not yet defined!"});
                 return nullptr;
             }
             return std::make_shared<VariableAccessNode>(token.lexical);
@@ -202,7 +229,7 @@ std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, size_t currentSc
         break;
     }
     default:
-        m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = token, .message = std::string("token type '" + std::string(magic_enum::enum_name(token.tokenType)) + "' not yet implemented")});
+        m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = token, .message = std::string("Token type '" + std::string(magic_enum::enum_name(token.tokenType)) + "' not yet implemented")});
         throw ParserException(m_errors);
     }
     return nullptr;
@@ -541,7 +568,7 @@ void Parser::parseFunction(size_t scope, std::vector<std::shared_ptr<ASTNode>> &
         token = next();
     }
     consume(TokenType::COLON);
-    VariableType returnType;
+    std::shared_ptr<VariableType> returnType;
     if (consume(TokenType::NAMEDTOKEN))
     {
         auto typeName = std::string{current().lexical.begin(), current().lexical.end()};
@@ -626,7 +653,7 @@ std::shared_ptr<ASTNode> Parser::parseExpression(const Token &currentToken, size
             break;
         case TokenType::NAMEDTOKEN:
         {
-            if (canConsume(TokenType::COLON))
+            if (canConsume(TokenType::COLON) || canConsume(TokenType::LEFT_SQUAR))
             {
                 parseVariableAssignment(token, currentScope, nodes);
             }
@@ -704,28 +731,51 @@ std::shared_ptr<ASTNode> Parser::parseExpression(const Token &currentToken, size
 
 void Parser::parseVariableAssignment(const Token &currentToken, size_t currentScope, [[maybe_unused]] std::vector<std::shared_ptr<ASTNode>> &nodes)
 {
-    auto variableName = currentToken.lexical;
+    auto variableName = std::string(currentToken.lexical);
 
-    if (!consume(TokenType::COLON))
+    if (canConsume(TokenType::COLON))
     {
-    }
+        if (!consume(TokenType::COLON))
+        {
+        }
 
-    if (!consume(TokenType::EQUAL))
+        if (!consume(TokenType::EQUAL))
+        {
+            m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = currentToken, .message = "missing assignment for varaible!"});
+            return;
+        }
+
+        if (!isVariableDefined(variableName, currentScope))
+        {
+            m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = currentToken, .message = "The variable " + std::string(variableName) + " is not yet declared!"});
+            return;
+        }
+
+        // parse expression
+        auto expression = parseExpression(next(), currentScope);
+
+        nodes.push_back(std::make_shared<VariableAssignmentNode>(variableName, expression));
+    }
+    else
     {
-        m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = currentToken, .message = "missing assignment for varaible!"});
-        return;
-    }
+        consume(TokenType::LEFT_SQUAR);
+        auto index = parseToken(next(), currentScope, {});
+        consume(TokenType::RIGHT_SQUAR);
+        consume(TokenType::COLON);
+        if (!consume(TokenType::EQUAL))
+        {
+            m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = currentToken, .message = "missing assignment for varaible!"});
+            return;
+        }
 
-    if (!isVariableDefined(variableName, currentScope))
-    {
-        m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = currentToken, .message = "The variable " + std::string(variableName) + " is not yet declared!"});
-        return;
+        if (!isVariableDefined(variableName, currentScope))
+        {
+            m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = currentToken, .message = "The variable " + std::string(variableName) + " is not yet declared!"});
+            return;
+        }
+        auto expression = parseExpression(next(), currentScope);
+        nodes.push_back(std::make_shared<ArrayAssignmentNode>(variableName, index, expression));
     }
-
-    // parse expression
-    auto expression = parseExpression(next(), currentScope);
-    // TODO m_known_variable_names.push_back(variableName);
-    nodes.push_back(std::make_shared<VariableAssignmentNode>(variableName, expression));
 }
 
 std::unique_ptr<UnitNode> Parser::parseUnit()
@@ -751,6 +801,9 @@ std::unique_ptr<UnitNode> Parser::parseUnit()
                 {
                     consume(TokenType::ENDLINE);
                 }
+
+                parseTypeDefinitions(scope);
+
                 while (!canConsumeKeyWord("begin") && !canConsumeKeyWord("var"))
                 {
                     parseKeyWord(next(), nodes, scope + 1);
@@ -774,7 +827,7 @@ std::unique_ptr<UnitNode> Parser::parseUnit()
                     }
                 }
 
-                return std::make_unique<UnitNode>(unitType, functionName, functionDefinitions, block);
+                return std::make_unique<UnitNode>(unitType, functionName, functionDefinitions, m_typeDefinitions, block);
             }
         }
         m_errors.push_back(ParserError{.file_name = m_file_path.string(), .token = m_tokens[m_current + 1], .message = "Unexpected token " + std::string(m_tokens[m_current + 1].lexical) + "!"});
@@ -784,6 +837,52 @@ std::unique_ptr<UnitNode> Parser::parseUnit()
         std::cerr << e.what();
     }
     return nullptr;
+}
+
+void Parser::parseTypeDefinitions(int scope)
+{
+    if (tryConsumeKeyWord("type"))
+    {
+        while (canConsume(TokenType::ENDLINE))
+        {
+            consume(TokenType::ENDLINE);
+        }
+        next();
+        // parse type definitions
+        while (current().tokenType == TokenType::NAMEDTOKEN)
+        {
+
+            auto typeName = std::string(current().lexical);
+            consume(TokenType::EQUAL);
+            // parse type
+            if (tryConsumeKeyWord("array"))
+            {
+                consume(TokenType::LEFT_SQUAR);
+                size_t arrayStart = 0;
+                auto arrayStartNode = parseToken(next(), scope, {});
+                if (auto node = std::dynamic_pointer_cast<NumberNode>(arrayStartNode))
+                {
+                    arrayStart = node->getValue();
+                }
+                consume(TokenType::DOT);
+                consume(TokenType::DOT);
+                size_t arrayEnd = 0;
+                auto arrayEndNode = parseToken(next(), scope, {});
+                if (auto node = std::dynamic_pointer_cast<NumberNode>(arrayEndNode))
+                {
+                    arrayEnd = node->getValue();
+                }
+                consume(TokenType::RIGHT_SQUAR);
+                consumeKeyWord("of");
+                consume(TokenType::NAMEDTOKEN);
+                auto internalTypeName = std::string(current().lexical);
+                auto internalType = determinVariableTypeByName(internalTypeName);
+                consume(TokenType::SEMICOLON);
+                tryConsume(TokenType::ENDLINE);
+                m_typeDefinitions[typeName] = ArrayType::getArray(arrayStart, arrayEnd, internalType.value()->baseType);
+            }
+        }
+    }
 }
 
 bool Parser::hasError() const

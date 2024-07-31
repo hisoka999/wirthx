@@ -1,29 +1,28 @@
 #include "WhileNode.h"
+#include <interpreter/InterpreterContext.h>
 #include "compiler/Context.h"
-#include <interpreter/Stack.h>
 
-WhileNode::WhileNode(std::shared_ptr<ASTNode> loopCondition, std::vector<std::shared_ptr<ASTNode>> nodes) : m_loopCondition(loopCondition), m_nodes(nodes)
+WhileNode::WhileNode(std::shared_ptr<ASTNode> loopCondition, std::vector<std::shared_ptr<ASTNode>> nodes) :
+    m_loopCondition(loopCondition), m_nodes(nodes)
 {
 }
 
-void WhileNode::print()
-{
-}
+void WhileNode::print() {}
 
-void WhileNode::eval(Stack &stack, std::ostream &outputStream)
+void WhileNode::eval(InterpreterContext &context, std::ostream &outputStream)
 {
 
     while (true)
     {
-        m_loopCondition->eval(stack, outputStream);
-        auto value = stack.pop_front();
-        if (std::get<int64_t>(value) == 0)
+        m_loopCondition->eval(context, outputStream);
+        auto value = context.stack.pop_front<int64_t>();
+        if (value == 0)
             break;
 
-        for (auto &node : m_nodes)
+        for (auto &node: m_nodes)
         {
-            node->eval(stack, outputStream);
-            if (stack.stopBreakIfActive())
+            node->eval(context, outputStream);
+            if (context.stack.stopBreakIfActive())
                 return;
         }
     }
@@ -42,7 +41,7 @@ llvm::Value *WhileNode::codegen(std::unique_ptr<Context> &context)
     // Emit the body of the loop.  This, like any other expr, can change the
     // current BB.  Note that we ignore the value computed by the body, but don't
     // allow an error.
-    for (auto &node : m_nodes)
+    for (auto &node: m_nodes)
     {
         node->codegen(context);
     }
@@ -56,8 +55,7 @@ llvm::Value *WhileNode::codegen(std::unique_ptr<Context> &context)
     if (!EndCond)
         return nullptr;
 
-    llvm::BasicBlock *AfterBB =
-        llvm::BasicBlock::Create(*context->TheContext, "afterloop", context->TopLevelFunction);
+    llvm::BasicBlock *AfterBB = llvm::BasicBlock::Create(*context->TheContext, "afterloop", context->TopLevelFunction);
 
     // Insert the conditional branch into the end of LoopEndBB.
     context->Builder->CreateCondBr(EndCond, LoopBB, AfterBB);

@@ -1,6 +1,11 @@
 #include "ast/VariableType.h"
 #include "compiler/Context.h"
 
+VariableType::VariableType(VariableBaseType baseType, std::string typeName)
+    : baseType(baseType), typeName(typeName)
+{
+}
+
 llvm::Type *VariableType::generateLlvmType(std::unique_ptr<Context> &context)
 {
     switch (this->baseType)
@@ -17,12 +22,21 @@ llvm::Type *VariableType::generateLlvmType(std::unique_ptr<Context> &context)
     }
 }
 
-VariableType VariableType::getInteger()
+std::shared_ptr<VariableType> VariableType::getInteger()
 {
-    return VariableType{.baseType = VariableBaseType::Integer, .typeName = "integer"};
+    return std::make_shared<VariableType>(VariableBaseType::Integer, "integer");
 }
 
-VariableType VariableType::getString()
+std::shared_ptr<VariableType> VariableType::getString()
 {
-    return VariableType{.baseType = VariableBaseType::String, .typeName = "string"};
+    return std::make_shared<VariableType>(VariableBaseType::String, "string");
+}
+
+std::shared_ptr<ArrayType> ArrayType::getArray(size_t low, size_t heigh, VariableBaseType baseType)
+{
+    auto type = std::make_shared<ArrayType>();
+    type->baseType = baseType;
+    type->low = low;
+    type->heigh = heigh;
+    return type;
 }

@@ -3,34 +3,23 @@
 #include "compiler/Context.h"
 using namespace std::literals;
 
-std::optional<VariableType> determinVariableTypeByName(const std::string &name)
-{
-    auto integer = "integer"s;
-    auto string = "string"s;
-    auto real = "real"s;
-    if (iequals(name, integer))
-    {
-        return VariableType{.baseType = VariableBaseType::Integer, .typeName = integer};
-    }
-    else if (iequals(name, string))
-    {
-        return VariableType{.baseType = VariableBaseType::String, .typeName = string};
-    }
-    else if (iequals(name, real))
-    {
-        return VariableType{.baseType = VariableBaseType::Real, .typeName = real};
-    }
-
-    return std::nullopt;
-}
-
 llvm::AllocaInst *VariableDefinition::generateCode(std::unique_ptr<Context> &context) const
 {
     llvm::Function *TheFunction = context->TopLevelFunction;
     llvm::IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
                            TheFunction->getEntryBlock().begin());
 
-    switch (this->variableType.baseType)
+    auto array = std::dynamic_pointer_cast<ArrayType>(this->variableType);
+    if (array != nullptr)
+    {
+
+        auto arraySize = array->heigh - array->low + 1;
+        auto type = array->generateLlvmType(context);
+
+        return TmpB.CreateAlloca(llvm::ArrayType::get(type, arraySize), nullptr, this->variableName);
+    }
+
+    switch (this->variableType->baseType)
     {
     case VariableBaseType::Integer:
     {

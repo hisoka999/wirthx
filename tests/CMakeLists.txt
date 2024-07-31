@@ -19,8 +19,6 @@ file(GLOB_RECURSE TEST_SRC  ${PROJECT_SOURCE_DIR}/src/*)
 macro(package_add_test TESTNAME)
     #INCLUDE_DIRECTORIES()
 
-
-    message("TEST_SRC = ${TEST_SRC}" )
     include_directories(${PROJECT_SOURCE_DIR} )
     # create an exectuable in which the tests will be stored
     add_executable(${TESTNAME}  ${TEST_SRC} ${ARGN})

@@ -1,10 +1,12 @@
 #include "IfConditionNode.h"
-#include "compiler/Context.h"
-#include "interpreter/Stack.h"
 #include <iostream>
+#include "compiler/Context.h"
+#include "interpreter/InterpreterContext.h"
 
-IfConditionNode::IfConditionNode(std::shared_ptr<ASTNode> conditionNode, std::vector<std::shared_ptr<ASTNode>> ifExpressions, std::vector<std::shared_ptr<ASTNode>> elseExpressions)
-    : m_conditionNode(conditionNode), m_ifExpressions(ifExpressions), m_elseExpressions(elseExpressions)
+IfConditionNode::IfConditionNode(std::shared_ptr<ASTNode> conditionNode,
+                                 std::vector<std::shared_ptr<ASTNode>> ifExpressions,
+                                 std::vector<std::shared_ptr<ASTNode>> elseExpressions) :
+    m_conditionNode(conditionNode), m_ifExpressions(ifExpressions), m_elseExpressions(elseExpressions)
 {
 }
 
@@ -14,14 +16,14 @@ void IfConditionNode::print()
     m_conditionNode->print();
     std::cout << " then\n";
 
-    for (auto &exp : m_ifExpressions)
+    for (auto &exp: m_ifExpressions)
     {
         exp->print();
     }
     if (m_elseExpressions.size() > 0)
     {
         std::cout << "else\n";
-        for (auto &exp : m_elseExpressions)
+        for (auto &exp: m_elseExpressions)
         {
             exp->print();
         }
@@ -29,23 +31,23 @@ void IfConditionNode::print()
     }
 }
 
-void IfConditionNode::eval(Stack &stack, std::ostream &outputStream)
+void IfConditionNode::eval(InterpreterContext &context, std::ostream &outputStream)
 {
-    m_conditionNode->eval(stack, outputStream);
+    m_conditionNode->eval(context, outputStream);
     // check result
-    auto result = stack.pop_front<int64_t>();
+    auto result = context.stack.pop_front<int64_t>();
     if (result)
     {
-        for (auto &exp : m_ifExpressions)
+        for (auto &exp: m_ifExpressions)
         {
-            exp->eval(stack, outputStream);
+            exp->eval(context, outputStream);
         }
     }
     else
     {
-        for (auto &exp : m_elseExpressions)
+        for (auto &exp: m_elseExpressions)
         {
-            exp->eval(stack, outputStream);
+            exp->eval(context, outputStream);
         }
     }
 }
@@ -65,7 +67,7 @@ llvm::Value *IfConditionNode::codegenIf(std::unique_ptr<Context> &context)
 
     context->Builder->SetInsertPoint(ThenBB);
 
-    for (auto &exp : m_ifExpressions)
+    for (auto &exp: m_ifExpressions)
     {
         exp->codegen(context);
     }
@@ -89,8 +91,7 @@ llvm::Value *IfConditionNode::codegenIfElse(std::unique_ptr<Context> &context)
 
     // Create blocks for the then and else cases.  Insert the 'then' block at the
     // end of the function.
-    llvm::BasicBlock *ThenBB =
-        llvm::BasicBlock::Create(*context->TheContext, "then", TheFunction);
+    llvm::BasicBlock *ThenBB = llvm::BasicBlock::Create(*context->TheContext, "then", TheFunction);
     llvm::BasicBlock *ElseBB = llvm::BasicBlock::Create(*context->TheContext, "else");
     llvm::BasicBlock *MergeBB = llvm::BasicBlock::Create(*context->TheContext, "ifcont");
     context->Builder->CreateCondBr(CondV, ThenBB, ElseBB);
@@ -98,7 +99,7 @@ llvm::Value *IfConditionNode::codegenIfElse(std::unique_ptr<Context> &context)
     // Emit then value.
     context->Builder->SetInsertPoint(ThenBB);
 
-    for (auto &exp : m_ifExpressions)
+    for (auto &exp: m_ifExpressions)
     {
         exp->codegen(context);
     }
@@ -111,7 +112,7 @@ llvm::Value *IfConditionNode::codegenIfElse(std::unique_ptr<Context> &context)
     TheFunction->insert(TheFunction->end(), ElseBB);
     context->Builder->SetInsertPoint(ElseBB);
 
-    for (auto &exp : m_elseExpressions)
+    for (auto &exp: m_elseExpressions)
     {
         exp->codegen(context);
     }

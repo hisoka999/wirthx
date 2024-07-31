@@ -112,6 +112,12 @@ std::vector<Token> Lexer::tokenize(std::string_view content)
         case ')':
             tokens.push_back(Token{.lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::RIGHT_CURLY});
             break;
+        case '[':
+            tokens.push_back(Token{.lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::LEFT_SQUAR});
+            break;
+        case ']':
+            tokens.push_back(Token{.lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::RIGHT_SQUAR});
+            break;
         case '=':
             tokens.push_back(Token{.lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::EQUAL});
             break;

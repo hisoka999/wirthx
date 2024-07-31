@@ -18,11 +18,10 @@ private:
     CMPOperator m_operator;
 
 public:
-    ComparrisionNode(CMPOperator op, const std::shared_ptr<ASTNode> &lhs,
-                     const std::shared_ptr<ASTNode> &rhs);
+    ComparrisionNode(CMPOperator op, const std::shared_ptr<ASTNode> &lhs, const std::shared_ptr<ASTNode> &rhs);
     ~ComparrisionNode() = default;
 
     void print() override;
-    void eval(Stack &stack, std::ostream &outputStream) override;
+    void eval(InterpreterContext &context, std::ostream &outputStream) override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
 };

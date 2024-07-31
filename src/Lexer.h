@@ -14,6 +14,8 @@ enum class TokenType
     MUL,
     LEFT_CURLY,
     RIGHT_CURLY,
+    LEFT_SQUAR,
+    RIGHT_SQUAR,
     EQUAL,
     GREATER,
     LESS,
@@ -34,7 +36,7 @@ struct Token
 };
 
 inline auto possible_tokens = {
-    "program", "unit", "uses", "begin", "end", "procedure", "function", "var", "if", "then", "else", "while", "do", "for", "to", "break"};
+    "program", "unit", "uses", "begin", "end", "procedure", "function", "var", "if", "then", "else", "while", "do", "for", "to", "break", "type", "array", "of"};
 
 class Lexer
 {

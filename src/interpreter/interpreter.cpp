@@ -1,13 +1,14 @@
 #include "interpreter.h"
-#include "Lexer.h"
-#include "Parser.h"
-#include "ast/FunctionDefinitionNode.h"
-#include "interpreter/Stack.h"
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include "Lexer.h"
+#include "Parser.h"
+#include "ast/FunctionDefinitionNode.h"
+#include "interpreter/InterpreterContext.h"
+#include "interpreter/Stack.h"
 
 void interprete_file(std::filesystem::path inputPath, std::ostream &errorStream, std::ostream &outputStream)
 {
@@ -30,17 +31,18 @@ void interprete_file(std::filesystem::path inputPath, std::ostream &errorStream,
     auto tokens = lexer.tokenize(std::string_view{buffer});
 
     Parser parser(inputPath, tokens);
-    auto unit = parser.parseUnit();
+    InterpreterContext context;
+    context.unit = parser.parseUnit();
     if (parser.hasError())
     {
         parser.printErrors(errorStream);
         return;
     }
-    Stack stack;
-    for (auto &func : unit->getFunctionDefinitions())
+
+    for (auto &func: context.unit->getFunctionDefinitions())
     {
-        stack.addFunction(func);
+        context.stack.addFunction(func);
     }
 
-    unit->eval(stack, outputStream);
+    context.unit->eval(context, outputStream);
 }

@@ -1,6 +1,6 @@
 #pragma once
-#include "ASTNode.h"
 #include <string>
+#include "ASTNode.h"
 
 class InputNode : public ASTNode
 {
@@ -12,6 +12,6 @@ public:
     InputNode(std::shared_ptr<ASTNode> outputTextNode, const std::string_view variableName);
     ~InputNode() = default;
     void print() override;
-    void eval(Stack &stack, std::ostream &outputStream) override;
+    void eval(InterpreterContext &context, std::ostream &outputStream) override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
 };

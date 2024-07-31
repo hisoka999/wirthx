@@ -27,6 +27,8 @@
 //     class Value;
 // };
 
+class UnitNode;
+
 struct Context
 {
     std::unique_ptr<llvm::LLVMContext> TheContext;
@@ -45,6 +47,8 @@ struct Context
     std::unique_ptr<llvm::ModuleAnalysisManager> TheMAM;
     std::unique_ptr<llvm::PassInstrumentationCallbacks> ThePIC;
     std::unique_ptr<llvm::StandardInstrumentations> TheSI;
+
+    std::unique_ptr<UnitNode> ProgramUnit;
 };
 
 void LogError(const char *Str);

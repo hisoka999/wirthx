@@ -1,18 +1,21 @@
 #pragma once
 
+#include <cstddef>
 #include <string>
 #include "ASTNode.h"
 
-class StringConstantNode : public ASTNode
+class ArrayAccessNode : public ASTNode
 {
 private:
-    std::string_view m_literal;
+    std::string m_arrayName;
+    std::shared_ptr<ASTNode> m_indexNode;
 
 public:
-    StringConstantNode(std::string_view literal);
-    ~StringConstantNode() = default;
+    ArrayAccessNode(const std::string_view arrayName, const std::shared_ptr<ASTNode> &indexNode);
+    ~ArrayAccessNode() = default;
     void print() override;
     void eval(InterpreterContext &context, std::ostream &outputStream) override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
+
     std::shared_ptr<VariableType> resolveType(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode) override;
 };

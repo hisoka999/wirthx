@@ -2,15 +2,17 @@
 #include <string>
 #include "ASTNode.h"
 
-class VariableAssignmentNode : public ASTNode
+class ArrayAssignmentNode : public ASTNode
 {
 private:
     std::string m_variableName;
+    std::shared_ptr<ASTNode> m_indexNode;
     std::shared_ptr<ASTNode> m_expression;
 
 public:
-    VariableAssignmentNode(const std::string_view variableName, const std::shared_ptr<ASTNode> &expression);
-    ~VariableAssignmentNode() = default;
+    ArrayAssignmentNode(const std::string variableNam, const std::shared_ptr<ASTNode> &indexNode,
+                        const std::shared_ptr<ASTNode> &expression);
+    ~ArrayAssignmentNode() = default;
     void print() override;
     void eval(InterpreterContext &context, std::ostream &outputStream) override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;

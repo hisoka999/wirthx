@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include "ASTNode.h"
 #include "ast/BlockNode.h"
 #include "ast/FunctionDefinitionNode.h"
@@ -16,18 +17,23 @@ private:
     UnitType m_unitType;
     std::string m_unitName;
     std::vector<std::shared_ptr<FunctionDefinitionNode>> m_functionDefinitions;
-
+    std::map<std::string, std::shared_ptr<VariableType>> m_typeDefinitions;
     std::shared_ptr<BlockNode> m_blockNode;
 
 public:
-    UnitNode(UnitType unitType, const std::string unitName, std::vector<std::shared_ptr<FunctionDefinitionNode>> m_functionDefinitions, const std::shared_ptr<BlockNode> &m_blockNode);
+    UnitNode(UnitType unitType, const std::string unitName,
+             std::vector<std::shared_ptr<FunctionDefinitionNode>> functionDefinitions,
+             std::map<std::string, std::shared_ptr<VariableType>> typeDefinitions,
+             const std::shared_ptr<BlockNode> &blockNode);
     ~UnitNode() = default;
 
     void print() override;
-    void eval(Stack &stack, std::ostream &outputStream) override;
+    void eval(InterpreterContext &context, std::ostream &outputStream) override;
 
     std::vector<std::shared_ptr<FunctionDefinitionNode>> getFunctionDefinitions();
+    std::optional<std::shared_ptr<FunctionDefinitionNode>> getFunctionDefinition(const std::string &functionName);
     void addFunctionDefinition(const std::shared_ptr<FunctionDefinitionNode> &functionDefinition);
     std::string getUnitName();
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
+    std::optional<VariableDefinition> getVariableDefinition(const std::string &name);
 };

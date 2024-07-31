@@ -1,9 +1,13 @@
 #include "ast/UnitNode.h"
-#include "compiler/Context.h"
 #include <iostream>
+#include "compiler/Context.h"
 
-UnitNode::UnitNode(UnitType unitType, const std::string unitName, std::vector<std::shared_ptr<FunctionDefinitionNode>> functionDefinitions, const std::shared_ptr<BlockNode> &blockNode)
-    : m_unitType(unitType), m_unitName(unitName), m_functionDefinitions(functionDefinitions), m_blockNode(blockNode)
+UnitNode::UnitNode(UnitType unitType, const std::string unitName,
+                   std::vector<std::shared_ptr<FunctionDefinitionNode>> functionDefinitions,
+                   std::map<std::string, std::shared_ptr<VariableType>> typeDefinitions,
+                   const std::shared_ptr<BlockNode> &blockNode) :
+    m_unitType(unitType), m_unitName(unitName), m_functionDefinitions(functionDefinitions),
+    m_typeDefinitions(typeDefinitions), m_blockNode(blockNode)
 {
 }
 
@@ -18,7 +22,7 @@ void UnitNode::print()
         std::cout << "unit ";
     }
     std::cout << m_unitName << "\n";
-    for (auto def : m_functionDefinitions)
+    for (auto def: m_functionDefinitions)
     {
         def->print();
     }
@@ -26,9 +30,9 @@ void UnitNode::print()
     m_blockNode->print();
 }
 
-void UnitNode::eval(Stack &stack, std::ostream &outputStream)
+void UnitNode::eval(InterpreterContext &context, std::ostream &outputStream)
 {
-    m_blockNode->eval(stack, outputStream);
+    m_blockNode->eval(context, outputStream);
 }
 
 std::vector<std::shared_ptr<FunctionDefinitionNode>> UnitNode::getFunctionDefinitions()
@@ -36,29 +40,43 @@ std::vector<std::shared_ptr<FunctionDefinitionNode>> UnitNode::getFunctionDefini
     return m_functionDefinitions;
 }
 
+std::optional<std::shared_ptr<FunctionDefinitionNode>> UnitNode::getFunctionDefinition(const std::string &functionName)
+{
+    for (auto &def: m_functionDefinitions)
+    {
+        if (def->name() == functionName)
+        {
+            return def;
+        }
+    }
+    return std::nullopt;
+}
+
 void UnitNode::addFunctionDefinition(const std::shared_ptr<FunctionDefinitionNode> &functionDefinition)
 {
     m_functionDefinitions.push_back(functionDefinition);
 }
 
-std::string UnitNode::getUnitName()
-{
-    return m_unitName;
-}
+std::string UnitNode::getUnitName() { return m_unitName; }
 
 llvm::Value *UnitNode::codegen(std::unique_ptr<Context> &context)
 {
     std::vector<llvm::Type *> params;
 
-    for (auto &fdef : m_functionDefinitions)
+    for (auto &fdef: m_functionDefinitions)
     {
         fdef->codegen(context);
     }
-    llvm::FunctionType *FT =
-        llvm::FunctionType::get(llvm::Type::getInt32Ty(*context->TheContext), params, false);
+    llvm::FunctionType *FT = llvm::FunctionType::get(llvm::Type::getInt32Ty(*context->TheContext), params, false);
+
+    std::string functionName = m_unitName;
+    if (m_unitType == UnitType::PROGRAM)
+    {
+        functionName = "_start";
+    }
 
     llvm::Function *F =
-        llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "_start", context->TheModule.get());
+            llvm::Function::Create(FT, llvm::Function::ExternalLinkage, functionName, context->TheModule.get());
 
     context->TopLevelFunction = F;
     m_blockNode->setBlockName("entry");
@@ -76,4 +94,9 @@ llvm::Value *UnitNode::codegen(std::unique_ptr<Context> &context)
     context->TheFPM->run(*F, *context->TheFAM);
 
     return nullptr;
+}
+
+std::optional<VariableDefinition> UnitNode::getVariableDefinition(const std::string &name)
+{
+    return m_blockNode->getVariableDefinition(name);
 }

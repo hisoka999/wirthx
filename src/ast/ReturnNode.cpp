@@ -1,11 +1,9 @@
 #include "ReturnNode.h"
+#include <iostream>
 #include "compiler/Context.h"
 #include "interpreter/Stack.h"
-#include <iostream>
 
-ReturnNode::ReturnNode(std::shared_ptr<ASTNode> expression) : m_expression(expression)
-{
-}
+ReturnNode::ReturnNode(std::shared_ptr<ASTNode> expression) : m_expression(expression) {}
 
 void ReturnNode::print()
 {
@@ -14,9 +12,9 @@ void ReturnNode::print()
     std::cout << "\n";
 }
 
-void ReturnNode::eval(Stack &stack, std::ostream &outputStream)
+void ReturnNode::eval(InterpreterContext &context, std::ostream &outputStream)
 {
-    m_expression->eval(stack, outputStream);
+    m_expression->eval(context, outputStream);
 
     // TODO sowas wie call stacks existieren noch nicht
 }

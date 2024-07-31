@@ -54,4 +54,4 @@ TEST_P(CompilerTest, TestNoError)
 
 INSTANTIATE_TEST_SUITE_P(CompilerTestNoError,
                          CompilerTest,
-                         testing::Values("helloworld", "functions", "math", "includetest", "whileloop", "conditions", "forloop"));
+                         testing::Values("helloworld", "functions", "math", "includetest", "whileloop", "conditions", "forloop", "arraytest"));

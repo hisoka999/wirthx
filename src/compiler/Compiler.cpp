@@ -28,12 +28,12 @@
 #include <iostream>
 #include <sstream>
 
-std::unique_ptr<Context> InitializeModule(const char *module_name)
+std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit)
 {
     auto context = std::make_unique<Context>();
     // Open a new context and module.
     context->TheContext = std::make_unique<llvm::LLVMContext>();
-    context->TheModule = std::make_unique<llvm::Module>(module_name, *context->TheContext);
+    context->TheModule = std::make_unique<llvm::Module>(unit->getUnitName(), *context->TheContext);
 
     // Create a new builder for the module.
     context->Builder = std::make_unique<llvm::IRBuilder<>>(*context->TheContext);
@@ -63,6 +63,7 @@ std::unique_ptr<Context> InitializeModule(const char *module_name)
     PB.registerModuleAnalyses(*context->TheMAM);
     PB.registerFunctionAnalyses(*context->TheFAM);
     PB.crossRegisterProxies(*context->TheLAM, *context->TheFAM, *context->TheCGAM, *context->TheMAM);
+    context->ProgramUnit = std::move(unit);
     return context;
 }
 
@@ -74,7 +75,7 @@ void createSystemCall(std::unique_ptr<Context> &context, std::string functionNam
         std::vector<llvm::Type *> params;
         for (auto &param : functionparams)
         {
-            params.push_back(param.type.generateLlvmType(context));
+            params.push_back(param.type->generateLlvmType(context));
         }
         llvm::Type *resultType = llvm::Type::getVoidTy(*context->TheContext);
 
@@ -113,7 +114,7 @@ void createSystemCall(std::unique_ptr<Context> &context, std::string functionNam
         std::vector<llvm::Type *> params;
         for (auto &param : functionparams)
         {
-            params.push_back(param.type.generateLlvmType(context));
+            params.push_back(param.type->generateLlvmType(context));
         }
         llvm::Type *resultType = returnType.generateLlvmType(context);
 
@@ -135,8 +136,8 @@ void writeLnCodegen(std::unique_ptr<Context> &context)
     std::vector<llvm::Type *> params;
     std::string m_name = "writeln_int";
     llvm::Type *resultType;
-    VariableType type = {.baseType = VariableBaseType::Integer, .typeName = "integer"};
-    params.push_back(type.generateLlvmType(context));
+    auto type = VariableType::getInteger();
+    params.push_back(type->generateLlvmType(context));
 
     resultType = llvm::Type::getVoidTy(*context->TheContext);
     llvm::FunctionType *FT =
@@ -177,8 +178,8 @@ void writeLnStrCodegen(std::unique_ptr<Context> &context)
     std::vector<llvm::Type *> params;
     std::string m_name = "writeln_str";
     llvm::Type *resultType;
-    VariableType type = {.baseType = VariableBaseType::String, .typeName = "string"};
-    params.push_back(type.generateLlvmType(context));
+    auto type = VariableType::getString();
+    params.push_back(type->generateLlvmType(context));
 
     resultType = llvm::Type::getVoidTy(*context->TheContext);
     llvm::FunctionType *FT =
@@ -240,8 +241,8 @@ void compile_file(std::filesystem::path inputPath, std::ostream &errorStream, st
         parser.printErrors(errorStream);
         return;
     }
-    auto context = InitializeModule(unit->getUnitName().c_str());
-    VariableType intType{.baseType = VariableBaseType::Integer, .typeName = "integer"};
+    auto context = InitializeModule(unit);
+    auto intType = std::make_shared<VariableType>(VariableBaseType::Integer, "integer");
     llvm::Intrinsic::getDeclaration(context->TheModule.get(), llvm::Intrinsic::vastart);
     llvm::Intrinsic::getDeclaration(context->TheModule.get(), llvm::Intrinsic::vacopy);
 
@@ -252,7 +253,7 @@ void compile_file(std::filesystem::path inputPath, std::ostream &errorStream, st
     writeLnStrCodegen(context);
     createSystemCall(context, "exit", {FunctionArgument{.type = intType, .argumentName = "X", .isReference = false}});
 
-    unit->codegen(context);
+    context->ProgramUnit->codegen(context);
     std::cerr << "start printing code\n";
 
     context->TheModule->print(llvm::errs(), nullptr, false, false);
@@ -294,7 +295,7 @@ void compile_file(std::filesystem::path inputPath, std::ostream &errorStream, st
 
     context->TheModule->setDataLayout(TheTargetMachine->createDataLayout());
 
-    auto Filename = unit->getUnitName() + ".o";
+    auto Filename = context->ProgramUnit->getUnitName() + ".o";
     std::vector<std::string> objectFiles;
     objectFiles.emplace_back(Filename);
     std::error_code EC;
@@ -321,5 +322,5 @@ void compile_file(std::filesystem::path inputPath, std::ostream &errorStream, st
     outs() << "Wrote " << Filename << "\n";
     // TODO link object files
     auto basePath = std::filesystem::current_path();
-    pascal_link_modules(basePath, unit->getUnitName(), {"-lc"}, objectFiles);
+    pascal_link_modules(basePath, context->ProgramUnit->getUnitName(), {"-lc"}, objectFiles);
 }

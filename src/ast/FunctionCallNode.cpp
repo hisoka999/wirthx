@@ -1,17 +1,19 @@
 #include "FunctionCallNode.h"
-#include "FunctionDefinitionNode.h"
-#include "compiler/Context.h"
-#include "interpreter/Stack.h"
 #include <iostream>
+#include "FunctionDefinitionNode.h"
+#include "UnitNode.h"
+#include "compiler/Context.h"
+#include "interpreter/InterpreterContext.h"
 
-FunctionCallNode::FunctionCallNode(std::string name, std::vector<std::shared_ptr<ASTNode>> args) : m_name(name), m_args(args)
+FunctionCallNode::FunctionCallNode(std::string name, std::vector<std::shared_ptr<ASTNode>> args) :
+    m_name(name), m_args(args)
 {
 }
 
 void FunctionCallNode::print()
 {
     std::cout << m_name << "(";
-    for (auto &arg : m_args)
+    for (auto &arg: m_args)
     {
         arg->print();
         std::cout << ",";
@@ -19,38 +21,58 @@ void FunctionCallNode::print()
     std::cout << ");\n";
 }
 
-void FunctionCallNode::eval(Stack &stack, std::ostream &outputStream)
+void FunctionCallNode::eval(InterpreterContext &context, std::ostream &outputStream)
 {
-    for (auto &arg : m_args)
+    context.parent = this;
+    for (auto &arg: m_args)
     {
-        arg->eval(stack, outputStream);
+        arg->eval(context, outputStream);
     }
-    auto &func = stack.getFunction(m_name);
-    func->eval(stack, outputStream);
-    if (stack.has_var(m_name))
-        stack.push_back(stack.get_var(m_name));
+    auto &func = context.stack.getFunction(m_name);
+    func->eval(context, outputStream);
+    if (context.stack.has_var(m_name))
+    {
+        auto functionDefinition = context.unit->getFunctionDefinition(m_name);
+        if (functionDefinition.value()->returnType()->baseType == VariableBaseType::Integer)
+            context.stack.push_back(context.stack.get_var<int64_t>(m_name));
+        else if (functionDefinition.value()->returnType()->baseType == VariableBaseType::String)
+        {
+            context.stack.push_back(context.stack.get_var<std::string_view>(m_name));
+        }
+    }
+    context.parent = nullptr;
 }
 
 llvm::Value *FunctionCallNode::codegen(std::unique_ptr<Context> &context)
 {
     // Look up the name in the global module table.
     std::string functionName = m_name;
+
     llvm::Function *CalleeF = context->TheModule->getFunction(functionName);
 
     if (!CalleeF && m_args.size() > 0)
     {
-        // look for alternative name
-        auto arg1 = m_args.at(0)->resolveType(context);
-        switch (arg1.baseType)
+        ASTNode *parent = context.get()->ProgramUnit.get();
+        if (context->TopLevelFunction)
         {
-        case VariableBaseType::Integer:
-            functionName += "_int";
-            break;
-        case VariableBaseType::String:
-            functionName += "_str";
-            break;
-        default:
-            break;
+            auto def = context->ProgramUnit->getFunctionDefinition(std::string(context->TopLevelFunction->getName()));
+            if (def)
+            {
+                parent = def.value().get();
+            }
+        }
+        // look for alternative name
+        auto arg1 = m_args.at(0)->resolveType(context->ProgramUnit, parent);
+        switch (arg1->baseType)
+        {
+            case VariableBaseType::Integer:
+                functionName += "_int";
+                break;
+            case VariableBaseType::String:
+                functionName += "_str";
+                break;
+            default:
+                break;
         }
         CalleeF = context->TheModule->getFunction(functionName);
     }
@@ -61,7 +83,8 @@ llvm::Value *FunctionCallNode::codegen(std::unique_ptr<Context> &context)
     // If argument mismatch error.
     if (CalleeF->arg_size() != m_args.size() && !CalleeF->isVarArg())
     {
-        std::cerr << "incorrect argumentsize for call " << functionName << "(" << m_args.size() << ") != " << CalleeF->arg_size() << "\n";
+        std::cerr << "incorrect argumentsize for call " << functionName << "(" << m_args.size()
+                  << ") != " << CalleeF->arg_size() << "\n";
         return LogErrorV("Incorrect # arguments passed");
     }
     std::vector<llvm::Value *> ArgsV;
@@ -75,19 +98,15 @@ llvm::Value *FunctionCallNode::codegen(std::unique_ptr<Context> &context)
     return context->Builder->CreateCall(CalleeF, ArgsV);
 }
 
-VariableType FunctionCallNode::resolveType(std::unique_ptr<Context> &context)
+std::shared_ptr<VariableType> FunctionCallNode::resolveType(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
 {
-    llvm::Function *functionCallNode = context->TheModule->getFunction(m_name);
-
-    auto type = functionCallNode->getReturnType();
-
-    if (type->isIntegerTy())
+    auto functionDefinition = unit->getFunctionDefinition(m_name);
+    if (!functionDefinition)
     {
-        return VariableType::getInteger();
+        return std::make_shared<VariableType>();
     }
-    else if (type->isPointerTy())
-    {
-        return VariableType::getString();
-    }
-    return VariableType{};
+    return functionDefinition.value()->returnType();
 }
+
+
+std::string FunctionCallNode::name() { return m_name; }

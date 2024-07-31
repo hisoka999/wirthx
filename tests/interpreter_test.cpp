@@ -51,4 +51,4 @@ TEST_P(InterpreterTest, TestNoError)
 
 INSTANTIATE_TEST_SUITE_P(TestNoError,
                          InterpreterTest,
-                         testing::Values("helloworld", "functions", "math", "includetest", "whileloop", "conditions", "forloop"));
+                         testing::Values("helloworld", "functions", "math", "includetest", "whileloop", "conditions", "forloop", "arraytest"));

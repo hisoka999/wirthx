@@ -1,42 +1,44 @@
 #include "SystemFunctionCallNode.h"
-#include "../compare.h"
-#include "compiler/Context.h"
-#include "interpreter/Stack.h"
 #include <iostream>
 #include <vector>
+#include "../compare.h"
+#include "compiler/Context.h"
+#include "interpreter/InterpreterContext.h"
 
 static std::vector<std::string> knownSystemCalls = {"writeln", "write", "printf", "exit"};
 
 bool isKnownSystemCall(const std::string &name)
 {
-    for (auto &call : knownSystemCalls)
+    for (auto &call: knownSystemCalls)
         if (iequals(call, name))
             return true;
     return false;
 }
 
-SystemFunctionCallNode::SystemFunctionCallNode(std::string name, std::vector<std::shared_ptr<ASTNode>> args)
-    : FunctionCallNode(name, args)
+SystemFunctionCallNode::SystemFunctionCallNode(std::string name, std::vector<std::shared_ptr<ASTNode>> args) :
+    FunctionCallNode(name, args)
 {
 }
 
-void SystemFunctionCallNode::eval(Stack &stack, std::ostream &outputStream)
+void SystemFunctionCallNode::eval(InterpreterContext &context, std::ostream &outputStream)
 {
     if (iequals(m_name, "writeln"))
     {
-        for (auto &arg : m_args)
+        VariableBaseType baseType;
+        for (auto &arg: m_args)
         {
-            arg->eval(stack, outputStream);
+            arg->eval(context, outputStream);
+            baseType = arg->resolveType(context.unit, context.parent)->baseType;
         }
         // todo get elements from stack
-        auto value = stack.pop_front();
-        if (std::holds_alternative<int64_t>(value))
+
+        if (baseType == VariableBaseType::Integer)
         {
-            outputStream << std::get<int64_t>(value) << "\n";
+            outputStream << context.stack.pop_front<int64_t>() << "\n";
         }
         else
         {
-            outputStream << std::get<std::string_view>(value) << "\n";
+            outputStream << context.stack.pop_front<std::string_view>() << "\n";
         }
     }
 }

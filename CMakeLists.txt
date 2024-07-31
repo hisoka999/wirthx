@@ -14,7 +14,6 @@ SET(CMAKE_FIND_PACKAGE_SORT_DIRECTION ASC)
 
 find_package(LLVM 16.0.0 REQUIRED)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
-message(STATUS "Found LLVM ${CUSTOM_LLVM_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID}")
 
@@ -31,6 +30,8 @@ endif()
 file(GLOB SRC 
     ${LINKER_SRC}
     src/compare.cpp
+    src/ast/ArrayAccessNode.cpp
+    src/ast/ArrayAssignmentNode.cpp
     src/ast/VariableDefinition.cpp
     src/ast/ASTNode.cpp
     src/ast/PrintNode.cpp

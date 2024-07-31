@@ -1,10 +1,9 @@
 #include "ASTNode.h"
 
-ASTNode::ASTNode()
-{
-}
+ASTNode::ASTNode() {}
 
-VariableType ASTNode::resolveType([[maybe_unused]] std::unique_ptr<Context> &context)
+std::shared_ptr<VariableType> ASTNode::resolveType([[maybe_unused]] const std::unique_ptr<UnitNode> &unit,
+                                                   ASTNode *parentNode)
 {
-    return VariableType{};
+    return std::make_shared<VariableType>();
 }

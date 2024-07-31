@@ -1,15 +1,16 @@
 #include "LogicalExpressionNode.h"
-#include "compiler/Context.h"
-#include "interpreter/Stack.h"
 #include <iostream>
+#include "compiler/Context.h"
+#include "interpreter/InterpreterContext.h"
 
 LogicalExpressionNode::LogicalExpressionNode(LogicalOperator op, const std::shared_ptr<ASTNode> &lhs,
-                                             const std::shared_ptr<ASTNode> &rhs) : m_lhs(lhs), m_rhs(rhs), m_operator(op)
+                                             const std::shared_ptr<ASTNode> &rhs) :
+    m_lhs(lhs), m_rhs(rhs), m_operator(op)
 {
 }
 
-LogicalExpressionNode::LogicalExpressionNode(LogicalOperator op,
-                                             const std::shared_ptr<ASTNode> &rhs) : m_lhs(nullptr), m_rhs(rhs), m_operator(op)
+LogicalExpressionNode::LogicalExpressionNode(LogicalOperator op, const std::shared_ptr<ASTNode> &rhs) :
+    m_lhs(nullptr), m_rhs(rhs), m_operator(op)
 {
 }
 
@@ -17,70 +18,67 @@ void LogicalExpressionNode::print()
 {
     switch (m_operator)
     {
-    case LogicalOperator::AND:
-    {
-        m_lhs->print();
-        std::cout << " and ";
-        m_rhs->print();
-    }
-    break;
-    case LogicalOperator::OR:
-    {
-        m_lhs->print();
-        std::cout << " or ";
-        m_rhs->print();
-    }
-    break;
-    case LogicalOperator::NOT:
-    {
-
-        std::cout << " not ";
-        m_rhs->print();
-    }
-    break;
-    default:
+        case LogicalOperator::AND:
+        {
+            m_lhs->print();
+            std::cout << " and ";
+            m_rhs->print();
+        }
         break;
+        case LogicalOperator::OR:
+        {
+            m_lhs->print();
+            std::cout << " or ";
+            m_rhs->print();
+        }
+        break;
+        case LogicalOperator::NOT:
+        {
+
+            std::cout << " not ";
+            m_rhs->print();
+        }
+        break;
+        default:
+            break;
     }
 }
 
-void LogicalExpressionNode::eval(Stack &stack, std::ostream &outputStream)
+void LogicalExpressionNode::eval(InterpreterContext &context, std::ostream &outputStream)
 {
 
     switch (m_operator)
     {
-    case LogicalOperator::AND:
-    {
-        m_lhs->eval(stack, outputStream);
-        auto lhs = stack.pop_front<int64_t>();
-        m_rhs->eval(stack, outputStream);
-        auto rhs = stack.pop_front<int64_t>();
+        case LogicalOperator::AND:
+        {
+            m_lhs->eval(context, outputStream);
+            auto lhs = context.stack.pop_front<int64_t>();
+            m_rhs->eval(context, outputStream);
+            auto rhs = context.stack.pop_front<int64_t>();
 
-        stack.push_back(static_cast<int64_t>(lhs && rhs));
-    }
-    break;
-    case LogicalOperator::OR:
-    {
-        m_lhs->eval(stack, outputStream);
-        auto lhs = stack.pop_front<int64_t>();
-        m_rhs->eval(stack, outputStream);
-        auto rhs = stack.pop_front<int64_t>();
-
-        stack.push_back(static_cast<int64_t>(lhs || rhs));
-    }
-    break;
-    case LogicalOperator::NOT:
-    {
-        m_rhs->eval(stack, outputStream);
-        auto rhs = stack.pop_front<int64_t>();
-        stack.push_back(static_cast<int64_t>(!rhs));
-    }
-    break;
-    default:
+            context.stack.push_back(static_cast<int64_t>(lhs && rhs));
+        }
         break;
+        case LogicalOperator::OR:
+        {
+            m_lhs->eval(context, outputStream);
+            auto lhs = context.stack.pop_front<int64_t>();
+            m_rhs->eval(context, outputStream);
+            auto rhs = context.stack.pop_front<int64_t>();
+
+            context.stack.push_back(static_cast<int64_t>(lhs || rhs));
+        }
+        break;
+        case LogicalOperator::NOT:
+        {
+            m_rhs->eval(context, outputStream);
+            auto rhs = context.stack.pop_front<int64_t>();
+            context.stack.push_back(static_cast<int64_t>(!rhs));
+        }
+        break;
+        default:
+            break;
     }
 }
 
-llvm::Value *LogicalExpressionNode::codegen(std::unique_ptr<Context> &context)
-{
-    return nullptr;
-}
+llvm::Value *LogicalExpressionNode::codegen(std::unique_ptr<Context> &context) { return nullptr; }

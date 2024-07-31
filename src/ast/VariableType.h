@@ -1,6 +1,8 @@
 #pragma once
+#include <cstddef>
 #include <memory>
 #include <string>
+
 enum class VariableBaseType
 {
     Integer,
@@ -24,10 +26,21 @@ struct Context;
 class VariableType
 {
 public:
+    VariableType(VariableBaseType baseType = VariableBaseType::Unknown, std::string typeName = "");
+    virtual ~VariableType() = default;
     VariableBaseType baseType = VariableBaseType::Unknown;
     std::string typeName = "";
 
     llvm::Type *generateLlvmType(std::unique_ptr<Context> &context);
-    static VariableType getInteger();
-    static VariableType getString();
+    static std::shared_ptr<VariableType> getInteger();
+    static std::shared_ptr<VariableType> getString();
+};
+
+class ArrayType : public VariableType
+{
+public:
+    size_t low;
+    size_t heigh;
+
+    static std::shared_ptr<ArrayType> getArray(size_t low, size_t heigh, VariableBaseType baseType);
 };
