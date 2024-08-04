@@ -35,8 +35,9 @@ struct Token
     TokenType tokenType;
 };
 
-inline auto possible_tokens = {
-    "program", "unit", "uses", "begin", "end", "procedure", "function", "var", "if", "then", "else", "while", "do", "for", "to", "break", "type", "array", "of"};
+inline auto possible_tokens = {"program", "unit",  "uses", "begin", "end",   "procedure", "function",
+                               "var",     "if",    "then", "else",  "while", "do",        "for",
+                               "to",      "break", "type", "array", "of",    "const"};
 
 class Lexer
 {

@@ -60,6 +60,13 @@ llvm::Value *VariableAccessNode::codegen(std::unique_ptr<Context> &context)
                 return context->TopLevelFunction->getArg(arg.getArgNo());
             }
         }
+
+        llvm::Value *V = context->NamedValues[m_variableName];
+        if (V)
+        {
+            return V;
+        }
+
         return LogErrorV("Unknown variable name");
     }
 

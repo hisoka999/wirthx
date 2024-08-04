@@ -261,6 +261,79 @@ std::shared_ptr<BlockNode> Parser::parseBlock([[maybe_unused]] const Token &curr
 {
     Token _currentToken = currentToken;
     std::vector<VariableDefinition> blockVariableDefinitions;
+
+    if (canConsumeKeyWord("const"))
+    {
+        consumeKeyWord("const");
+        tryConsume(TokenType::ENDLINE);
+
+        _currentToken = current();
+        while (!canConsumeKeyWord("begin"))
+        {
+            if (canConsume(TokenType::ENDLINE))
+            {
+                consume(TokenType::ENDLINE);
+                continue;
+            }
+            // consume var declarations
+            consume(TokenType::NAMEDTOKEN);
+            _currentToken = current();
+            auto varName = std::string(_currentToken.lexical);
+
+
+            std::optional<std::shared_ptr<VariableType>> type;
+            std::string varType;
+
+            if (tryConsume(TokenType::COLON))
+            {
+                consume(TokenType::NAMEDTOKEN);
+                _currentToken = current();
+                varType = std::string(_currentToken.lexical);
+                type = determinVariableTypeByName(varType);
+            }
+            std::shared_ptr<ASTNode> value;
+            if (consume(TokenType::EQUAL))
+            {
+                value = parseToken(next(), scope, {});
+
+                // determin the type from the parsed token
+                type = value->resolveType(nullptr, nullptr);
+                if (type.has_value())
+                    varType = type.value()->typeName;
+            }
+
+            consume(TokenType::SEMICOLON);
+            consume(TokenType::ENDLINE);
+            if (isVariableDefined(varName, scope))
+            {
+                m_errors.push_back(ParserError{.file_name = m_file_path.string(),
+                                               .token = currentToken,
+                                               .message = "A variable or constant with the name " + varName +
+                                                          " was allready defined!"});
+                continue;
+            }
+            else if (!type.has_value())
+            {
+                m_errors.push_back(ParserError{.file_name = m_file_path.string(),
+                                               .token = currentToken,
+                                               .message = "A type " + varType + " of the variable " + varName +
+                                                          " could not be determined!"});
+                continue;
+            }
+
+            m_known_variable_definitions.push_back(VariableDefinition{.variableType = type.value(),
+                                                                      .variableName = varName,
+                                                                      .scopeId = scope,
+                                                                      .value = value,
+                                                                      .constant = true});
+            blockVariableDefinitions.push_back(VariableDefinition{.variableType = type.value(),
+                                                                  .variableName = varName,
+                                                                  .scopeId = scope,
+                                                                  .value = value,
+                                                                  .constant = true});
+        }
+    }
+
     if (canConsumeKeyWord("var"))
     {
         consumeKeyWord("var");
@@ -269,6 +342,7 @@ std::shared_ptr<BlockNode> Parser::parseBlock([[maybe_unused]] const Token &curr
         _currentToken = current();
         while (!canConsumeKeyWord("begin"))
         {
+
             // consume var declarations
             consume(TokenType::NAMEDTOKEN);
             _currentToken = current();
@@ -873,7 +947,7 @@ std::unique_ptr<UnitNode> Parser::parseUnit()
 
                 parseTypeDefinitions(scope);
 
-                while (!canConsumeKeyWord("begin") && !canConsumeKeyWord("var"))
+                while (!canConsumeKeyWord("begin") && !canConsumeKeyWord("var") && !canConsumeKeyWord("const"))
                 {
                     parseKeyWord(next(), nodes, scope + 1);
 

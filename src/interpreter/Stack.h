@@ -51,14 +51,14 @@ public:
             std::memcpy(pointer, &value, size);
         }
     }
-    void set_var(std::string &varName, const std::string_view value);
-    void set_var(std::string &varName, const int64_t &value);
+    void set_var(const std::string &varName, const std::string_view value);
+    void set_var(const std::string &varName, const int64_t &value);
     void addFunction(std::shared_ptr<FunctionDefinitionNode> &function);
     void addFunction(FunctionDefinitionNode *function);
     std::shared_ptr<FunctionDefinitionNode> &getFunction(const std::string &name);
 
 
-    void set_var(std::string &varName, PascalIntArray &array)
+    void set_var(const std::string &varName, PascalIntArray &array)
     {
         uint8_t *pointer = nullptr;
         if (has_var(varName))

@@ -1,10 +1,10 @@
 #include "compiler/Compiler.h"
-#include "os/command.h"
 #include <fstream>
 #include <gtest/gtest.h>
 #include <iostream>
 #include <string>
 #include <utility>
+#include "os/command.h"
 
 using namespace std::literals;
 
@@ -52,6 +52,6 @@ TEST_P(CompilerTest, TestNoError)
     ASSERT_GT(ostream.str().size(), 0);
 }
 
-INSTANTIATE_TEST_SUITE_P(CompilerTestNoError,
-                         CompilerTest,
-                         testing::Values("helloworld", "functions", "math", "includetest", "whileloop", "conditions", "forloop", "arraytest"));
+INSTANTIATE_TEST_SUITE_P(CompilerTestNoError, CompilerTest,
+                         testing::Values("helloworld", "functions", "math", "includetest", "whileloop", "conditions",
+                                         "forloop", "arraytest", "constantstest"));

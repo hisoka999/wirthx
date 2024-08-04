@@ -14,7 +14,7 @@ uint8_t *Stack::pop_front(const size_t elementSize)
     return result;
 }
 
-void Stack::set_var(std::string &varName, const int64_t &value)
+void Stack::set_var(const std::string &varName, const int64_t &value)
 {
     constexpr size_t size = sizeof(int64_t);
 
@@ -37,7 +37,7 @@ void Stack::set_var(std::string &varName, const int64_t &value)
 uint8_t *Stack::get_var_raw(const std::string &varName) { return &variableData[m_variables[varName]]; }
 
 
-void Stack::set_var(std::string &varName, const std::string_view value)
+void Stack::set_var(const std::string &varName, const std::string_view value)
 {
     if (has_var(varName))
     {

@@ -49,6 +49,6 @@ TEST_P(InterpreterTest, TestNoError)
     ASSERT_GT(ostream.str().size(), 0);
 }
 
-INSTANTIATE_TEST_SUITE_P(TestNoError,
-                         InterpreterTest,
-                         testing::Values("helloworld", "functions", "math", "includetest", "whileloop", "conditions", "forloop", "arraytest"));
+INSTANTIATE_TEST_SUITE_P(TestNoError, InterpreterTest,
+                         testing::Values("helloworld", "functions", "math", "includetest", "whileloop", "conditions",
+                                         "forloop", "arraytest", "constantstest"));
