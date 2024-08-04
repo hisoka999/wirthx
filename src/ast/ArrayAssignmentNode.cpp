@@ -18,7 +18,7 @@ void ArrayAssignmentNode::eval(InterpreterContext &context, std::ostream &output
     if (!context.stack.has_var(m_variableName))
     {
         auto type = std::dynamic_pointer_cast<ArrayType>(arrayDef.value().variableType);
-        PascalIntArray array(type->low, type->heigh);
+        PascalIntArray array(type->low, type->high);
         m_indexNode->eval(context, outputStream);
         auto index = context.stack.pop_front<int64_t>();
         m_expression->eval(context, outputStream);

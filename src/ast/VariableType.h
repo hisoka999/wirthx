@@ -19,7 +19,7 @@ namespace llvm
     class Type;
     class Value;
     class AllocaInst;
-}
+} // namespace llvm
 
 struct Context;
 
@@ -40,7 +40,7 @@ class ArrayType : public VariableType
 {
 public:
     size_t low;
-    size_t heigh;
+    size_t high;
 
     static std::shared_ptr<ArrayType> getArray(size_t low, size_t heigh, VariableBaseType baseType);
 };

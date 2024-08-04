@@ -11,7 +11,7 @@ begin
     begin
         values[idx] := idx * idx;
     end;
-    for idx := 1 to 100 do
+    for idx := low(values) to high(values) do
     begin
         writeln(values[idx]);
     end;

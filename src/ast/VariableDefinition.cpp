@@ -13,7 +13,7 @@ llvm::AllocaInst *VariableDefinition::generateCode(std::unique_ptr<Context> &con
     if (array != nullptr)
     {
 
-        auto arraySize = array->heigh - array->low + 1;
+        auto arraySize = array->high - array->low + 1;
         auto type = array->generateLlvmType(context);
 
         return TmpB.CreateAlloca(llvm::ArrayType::get(type, arraySize), nullptr, this->variableName);
