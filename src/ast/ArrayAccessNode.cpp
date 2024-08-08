@@ -62,11 +62,12 @@ llvm::Value *ArrayAccessNode::codegen(std::unique_ptr<Context> &context)
         auto def = std::dynamic_pointer_cast<ArrayType>(arrayDef->variableType);
         auto index = m_indexNode->codegen(context);
         if (def->low > 0)
-            index = context->Builder->CreateSub(index, context->Builder->getInt64(def->low), "subtmp");
+            index = context->Builder->CreateSub(
+                    index, context->Builder->getIntN(index->getType()->getIntegerBitWidth(), def->low), "subtmp");
 
         llvm::ArrayRef<llvm::Value *> idxList = {context->Builder->getInt64(0), index};
 
-        auto arrayValue = context->Builder->CreateGEP(V->getAllocatedType(), V, idxList, "arrayindex", true);
+        auto arrayValue = context->Builder->CreateGEP(V->getAllocatedType(), V, idxList, "arrayindex", false);
         return context->Builder->CreateLoad(V->getAllocatedType()->getArrayElementType(), arrayValue);
     }
 }

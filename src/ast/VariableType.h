@@ -23,6 +23,8 @@ namespace llvm
 
 struct Context;
 
+class IntegerType;
+
 class VariableType
 {
 public:
@@ -31,8 +33,8 @@ public:
     VariableBaseType baseType = VariableBaseType::Unknown;
     std::string typeName = "";
 
-    llvm::Type *generateLlvmType(std::unique_ptr<Context> &context);
-    static std::shared_ptr<VariableType> getInteger();
+    virtual llvm::Type *generateLlvmType(std::unique_ptr<Context> &context);
+    static std::shared_ptr<IntegerType> getInteger(size_t length = 32);
     static std::shared_ptr<VariableType> getString();
 };
 
@@ -42,5 +44,15 @@ public:
     size_t low;
     size_t high;
 
-    static std::shared_ptr<ArrayType> getArray(size_t low, size_t heigh, VariableBaseType baseType);
+    std::shared_ptr<VariableType> arrayBase;
+
+    static std::shared_ptr<ArrayType> getArray(size_t low, size_t heigh, const std::shared_ptr<VariableType> &baseType);
+};
+
+
+class IntegerType : public VariableType
+{
+public:
+    size_t length;
+    llvm::Type *generateLlvmType(std::unique_ptr<Context> &context) override;
 };

@@ -2,7 +2,7 @@ program conditions;
 
 
 var 
-    con1 : integer;
+    con1 : int64;
     con2 : integer;
 begin
     con1 := 100;

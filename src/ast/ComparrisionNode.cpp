@@ -124,6 +124,22 @@ llvm::Value *ComparrisionNode::codegen(std::unique_ptr<Context> &context)
         default:
             break;
     }
+    if (lhs->getType() != rhs->getType())
+    {
+        if (lhs->getType()->isIntegerTy() && rhs->getType()->isIntegerTy())
+        {
+            size_t maxBitWith = std::max(lhs->getType()->getIntegerBitWidth(), rhs->getType()->getIntegerBitWidth());
+            auto targetType = llvm::IntegerType::get(*context->TheContext, maxBitWith);
+            if (maxBitWith != lhs->getType()->getIntegerBitWidth())
+            {
+                lhs = context->Builder->CreateIntCast(lhs, targetType, true, "lhs_cast");
+            }
+            if (maxBitWith != rhs->getType()->getIntegerBitWidth())
+            {
+                rhs = context->Builder->CreateIntCast(rhs, targetType, true, "rhs_cast");
+            }
+        }
+    }
 
     return context->Builder->CreateCmp(pred, lhs, rhs);
 }

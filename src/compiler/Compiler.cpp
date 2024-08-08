@@ -1,4 +1,9 @@
 #include "compiler/Compiler.h"
+#include <cstring>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <sstream>
 #include "Lexer.h"
 #include "Parser.h"
 #include "ast/FunctionDefinitionNode.h"
@@ -22,11 +27,6 @@
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/Reassociate.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
-#include <cstring>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <sstream>
 
 std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit)
 {
@@ -67,27 +67,27 @@ std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit)
     return context;
 }
 
-void createSystemCall(std::unique_ptr<Context> &context, std::string functionName, std::vector<FunctionArgument> functionparams)
+void createSystemCall(std::unique_ptr<Context> &context, std::string functionName,
+                      std::vector<FunctionArgument> functionparams)
 {
     llvm::Function *F = context->FunctionDefinitions[functionName];
     if (F == nullptr)
     {
         std::vector<llvm::Type *> params;
-        for (auto &param : functionparams)
+        for (auto &param: functionparams)
         {
             params.push_back(param.type->generateLlvmType(context));
         }
         llvm::Type *resultType = llvm::Type::getVoidTy(*context->TheContext);
 
-        llvm::FunctionType *FT =
-            llvm::FunctionType::get(resultType, params, false);
+        llvm::FunctionType *FT = llvm::FunctionType::get(resultType, params, false);
 
         llvm::Function *F =
-            llvm::Function::Create(FT, llvm::Function::ExternalLinkage, functionName, context->TheModule.get());
+                llvm::Function::Create(FT, llvm::Function::ExternalLinkage, functionName, context->TheModule.get());
 
         // Set names for all arguments.
         unsigned idx = 0;
-        for (auto &arg : F->args())
+        for (auto &arg: F->args())
             arg.setName(functionparams[idx++].argumentName);
     }
 }
@@ -97,36 +97,34 @@ void createPrintfCall(std::unique_ptr<Context> &context)
     std::vector<llvm::Type *> params;
     params.push_back(llvm::Type::getInt8PtrTy(*context->TheContext));
     llvm::Type *resultType = llvm::Type::getInt32Ty(*context->TheContext);
-    llvm::FunctionType *FT =
-        llvm::FunctionType::get(resultType, params, true);
-    llvm::Function *F =
-        llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "printf", context->TheModule.get());
-    for (auto &arg : F->args())
+    llvm::FunctionType *FT = llvm::FunctionType::get(resultType, params, true);
+    llvm::Function *F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "printf", context->TheModule.get());
+    for (auto &arg: F->args())
         arg.setName("__fmt");
 }
 
-void createSystemCall(std::unique_ptr<Context> &context, std::string functionName, std::vector<FunctionArgument> functionparams, VariableType returnType)
+void createSystemCall(std::unique_ptr<Context> &context, std::string functionName,
+                      std::vector<FunctionArgument> functionparams, VariableType returnType)
 {
 
     llvm::Function *F = context->FunctionDefinitions[functionName];
     if (F == nullptr)
     {
         std::vector<llvm::Type *> params;
-        for (auto &param : functionparams)
+        for (auto &param: functionparams)
         {
             params.push_back(param.type->generateLlvmType(context));
         }
         llvm::Type *resultType = returnType.generateLlvmType(context);
 
-        llvm::FunctionType *FT =
-            llvm::FunctionType::get(resultType, params, false);
+        llvm::FunctionType *FT = llvm::FunctionType::get(resultType, params, false);
 
         llvm::Function *F =
-            llvm::Function::Create(FT, llvm::Function::ExternalLinkage, functionName, context->TheModule.get());
+                llvm::Function::Create(FT, llvm::Function::ExternalLinkage, functionName, context->TheModule.get());
 
         // Set names for all arguments.
         unsigned idx = 0;
-        for (auto &arg : F->args())
+        for (auto &arg: F->args())
             arg.setName(functionparams[idx++].argumentName);
     }
 }
@@ -136,18 +134,16 @@ void writeLnCodegen(std::unique_ptr<Context> &context)
     std::vector<llvm::Type *> params;
     std::string m_name = "writeln_int";
     llvm::Type *resultType;
-    auto type = VariableType::getInteger();
+    auto type = VariableType::getInteger(64);
     params.push_back(type->generateLlvmType(context));
 
     resultType = llvm::Type::getVoidTy(*context->TheContext);
-    llvm::FunctionType *FT =
-        llvm::FunctionType::get(resultType, params, false);
+    llvm::FunctionType *FT = llvm::FunctionType::get(resultType, params, false);
 
-    llvm::Function *F =
-        llvm::Function::Create(FT, llvm::Function::ExternalLinkage, m_name, context->TheModule.get());
+    llvm::Function *F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, m_name, context->TheModule.get());
 
     // Set names for all arguments.
-    for (auto &arg : F->args())
+    for (auto &arg: F->args())
         arg.setName("arg");
 
     // Create a new basic block to start insertion into.
@@ -162,7 +158,7 @@ void writeLnCodegen(std::unique_ptr<Context> &context)
 
     std::vector<llvm::Value *> ArgsV;
     ArgsV.push_back(context->Builder->CreateGlobalString("%d\n"));
-    for (auto &arg : F->args())
+    for (auto &arg: F->args())
         ArgsV.push_back(F->getArg(arg.getArgNo()));
 
     context->Builder->CreateCall(CalleeF, ArgsV);
@@ -182,14 +178,12 @@ void writeLnStrCodegen(std::unique_ptr<Context> &context)
     params.push_back(type->generateLlvmType(context));
 
     resultType = llvm::Type::getVoidTy(*context->TheContext);
-    llvm::FunctionType *FT =
-        llvm::FunctionType::get(resultType, params, true);
+    llvm::FunctionType *FT = llvm::FunctionType::get(resultType, params, true);
 
-    llvm::Function *F =
-        llvm::Function::Create(FT, llvm::Function::ExternalLinkage, m_name, context->TheModule.get());
+    llvm::Function *F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, m_name, context->TheModule.get());
 
     // Set names for all arguments.
-    for (auto &arg : F->args())
+    for (auto &arg: F->args())
         arg.setName("arg");
 
     // Create a new basic block to start insertion into.
@@ -204,7 +198,7 @@ void writeLnStrCodegen(std::unique_ptr<Context> &context)
 
     std::vector<llvm::Value *> ArgsV;
     ArgsV.push_back(context->Builder->CreateGlobalString("%s\n"));
-    for (auto &arg : F->args())
+    for (auto &arg: F->args())
         ArgsV.push_back(F->getArg(arg.getArgNo()));
 
     context->Builder->CreateCall(CalleeF, ArgsV);
@@ -242,7 +236,7 @@ void compile_file(std::filesystem::path inputPath, std::ostream &errorStream, st
         return;
     }
     auto context = InitializeModule(unit);
-    auto intType = std::make_shared<VariableType>(VariableBaseType::Integer, "integer");
+    auto intType = VariableType::getInteger();
     llvm::Intrinsic::getDeclaration(context->TheModule.get(), llvm::Intrinsic::vastart);
     llvm::Intrinsic::getDeclaration(context->TheModule.get(), llvm::Intrinsic::vacopy);
 
@@ -255,6 +249,8 @@ void compile_file(std::filesystem::path inputPath, std::ostream &errorStream, st
 
     context->ProgramUnit->codegen(context);
     std::cerr << "start printing code\n";
+
+    llvm::verifyModule(*context->TheModule, &llvm::errs());
 
     context->TheModule->print(llvm::errs(), nullptr, false, false);
 
@@ -290,8 +286,7 @@ void compile_file(std::filesystem::path inputPath, std::ostream &errorStream, st
 
     TargetOptions opt;
 
-    auto TheTargetMachine = Target->createTargetMachine(
-        TargetTriple, CPU, Features, opt, Reloc::PIC_);
+    auto TheTargetMachine = Target->createTargetMachine(TargetTriple, CPU, Features, opt, Reloc::PIC_);
 
     context->TheModule->setDataLayout(TheTargetMachine->createDataLayout());
 

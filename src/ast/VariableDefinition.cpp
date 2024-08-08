@@ -14,7 +14,7 @@ llvm::AllocaInst *VariableDefinition::generateCode(std::unique_ptr<Context> &con
     {
 
         auto arraySize = array->high - array->low + 1;
-        auto type = array->generateLlvmType(context);
+        auto type = array->arrayBase->generateLlvmType(context);
 
         return TmpB.CreateAlloca(llvm::ArrayType::get(type, arraySize), nullptr, this->variableName);
     }
@@ -23,8 +23,8 @@ llvm::AllocaInst *VariableDefinition::generateCode(std::unique_ptr<Context> &con
     {
         case VariableBaseType::Integer:
         {
-            auto allocation =
-                    TmpB.CreateAlloca(llvm::Type::getInt64Ty(*context->TheContext), nullptr, this->variableName);
+            auto type = this->variableType->generateLlvmType(context);
+            auto allocation = TmpB.CreateAlloca(type, nullptr, this->variableName);
             TmpB.CreateStore(TmpB.getInt64(0), allocation);
             return allocation;
         }

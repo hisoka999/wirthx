@@ -32,8 +32,13 @@
 
 Parser::Parser(const std::filesystem::path &path, std::vector<Token> &tokens) : m_file_path(path), m_tokens(tokens)
 {
-
-    m_typeDefinitions["integer"] = std::make_shared<VariableType>(VariableBaseType::Integer, "integer");
+    m_typeDefinitions["shortint"] = VariableType::getInteger(8);
+    m_typeDefinitions["byte"] = VariableType::getInteger(8);
+    m_typeDefinitions["smallint"] = VariableType::getInteger(16);
+    m_typeDefinitions["word"] = VariableType::getInteger(16);
+    m_typeDefinitions["longint"] = VariableType::getInteger();
+    m_typeDefinitions["integer"] = VariableType::getInteger();
+    m_typeDefinitions["int64"] = VariableType::getInteger(64);
     m_typeDefinitions["string"] = std::make_shared<VariableType>(VariableBaseType::String, "string");
 }
 
@@ -1026,7 +1031,7 @@ void Parser::parseTypeDefinitions(int scope)
                 auto internalType = determinVariableTypeByName(internalTypeName);
                 consume(TokenType::SEMICOLON);
                 tryConsume(TokenType::ENDLINE);
-                m_typeDefinitions[typeName] = ArrayType::getArray(arrayStart, arrayEnd, internalType.value()->baseType);
+                m_typeDefinitions[typeName] = ArrayType::getArray(arrayStart, arrayEnd, internalType.value());
             }
         }
     }
