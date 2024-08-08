@@ -29,6 +29,12 @@
 
 class UnitNode;
 
+struct BreakBasicBlock
+{
+    llvm::BasicBlock *Block = nullptr;
+    bool BlockUsed = false;
+};
+
 struct Context
 {
     std::unique_ptr<llvm::LLVMContext> TheContext;
@@ -38,7 +44,7 @@ struct Context
     std::map<std::string, llvm::Value *> NamedValues;
     llvm::Function *TopLevelFunction;
     std::map<std::string, llvm::Function *> FunctionDefinitions;
-    llvm::BasicBlock *BreakBlock = nullptr;
+    BreakBasicBlock BreakBlock;
 
     std::unique_ptr<llvm::FunctionPassManager> TheFPM;
     std::unique_ptr<llvm::LoopAnalysisManager> TheLAM;

@@ -262,7 +262,7 @@ bool Parser::isVariableDefined(const std::string_view name, size_t scope)
     return false;
 }
 
-std::shared_ptr<BlockNode> Parser::parseBlock([[maybe_unused]] const Token &currentToken, size_t scope)
+std::shared_ptr<BlockNode> Parser::parseBlock(const Token &currentToken, size_t scope)
 {
     Token _currentToken = currentToken;
     std::vector<VariableDefinition> blockVariableDefinitions;
@@ -302,9 +302,12 @@ std::shared_ptr<BlockNode> Parser::parseBlock([[maybe_unused]] const Token &curr
                 value = parseToken(next(), scope, {});
 
                 // determin the type from the parsed token
-                type = value->resolveType(nullptr, nullptr);
-                if (type.has_value())
-                    varType = type.value()->typeName;
+                if (!type)
+                {
+                    type = value->resolveType(nullptr, nullptr);
+                    if (type.has_value())
+                        varType = type.value()->typeName;
+                }
             }
 
             consume(TokenType::SEMICOLON);
@@ -360,6 +363,12 @@ std::shared_ptr<BlockNode> Parser::parseBlock([[maybe_unused]] const Token &curr
             auto varType = std::string(_currentToken.lexical);
             auto type = determinVariableTypeByName(varType);
 
+            std::shared_ptr<ASTNode> value;
+            if (tryConsume(TokenType::EQUAL))
+            {
+                value = parseToken(next(), scope, {});
+            }
+
             consume(TokenType::SEMICOLON);
             consume(TokenType::ENDLINE);
             if (isVariableDefined(varName, scope))
@@ -379,10 +388,10 @@ std::shared_ptr<BlockNode> Parser::parseBlock([[maybe_unused]] const Token &curr
                 continue;
             }
 
-            m_known_variable_definitions.push_back(
-                    VariableDefinition{.variableType = type.value(), .variableName = varName, .scopeId = scope});
-            blockVariableDefinitions.push_back(
-                    VariableDefinition{.variableType = type.value(), .variableName = varName, .scopeId = scope});
+            m_known_variable_definitions.push_back(VariableDefinition{
+                    .variableType = type.value(), .variableName = varName, .scopeId = scope, .value = value});
+            blockVariableDefinitions.push_back(VariableDefinition{
+                    .variableType = type.value(), .variableName = varName, .scopeId = scope, .value = value});
         }
     }
 
@@ -1032,6 +1041,22 @@ void Parser::parseTypeDefinitions(int scope)
                 consume(TokenType::SEMICOLON);
                 tryConsume(TokenType::ENDLINE);
                 m_typeDefinitions[typeName] = ArrayType::getArray(arrayStart, arrayEnd, internalType.value());
+            }
+            else if (tryConsume(TokenType::NAMEDTOKEN))
+            {
+                auto internalTypeName = std::string(current().lexical);
+                auto internalType = determinVariableTypeByName(internalTypeName);
+                if (!internalType.has_value())
+                {
+                    m_errors.push_back(
+                            ParserError{.file_name = m_file_path.string(),
+                                        .token = current(),
+                                        .message = "The type " + internalTypeName + " could not be determined!"});
+                    continue;
+                }
+                m_typeDefinitions[typeName] = internalType.value();
+                consume(TokenType::SEMICOLON);
+                tryConsume(TokenType::ENDLINE);
             }
         }
     }

@@ -13,6 +13,7 @@ void BreakNode::eval(InterpreterContext &context, std::ostream &outputStream) { 
 llvm::Value *BreakNode::codegen(std::unique_ptr<Context> &context)
 {
 
-    context->Builder->CreateBr(context->BreakBlock);
+    context->Builder->CreateBr(context->BreakBlock.Block);
+    context->BreakBlock.BlockUsed = true;
     return nullptr;
 }

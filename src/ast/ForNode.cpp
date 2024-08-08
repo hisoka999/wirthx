@@ -70,7 +70,8 @@ llvm::Value *ForNode::codegen(std::unique_ptr<Context> &context)
 
     context->NamedValues[m_loopVariable] = Variable;
 
-    context->BreakBlock = afterBB;
+    context->BreakBlock.Block = afterBB;
+    context->BreakBlock.BlockUsed = false;
 
     // Emit the body of the loop.  This, like any other expr, can change the
     // current BB.  Note that we ignore the value computed by the body, but don't
@@ -80,7 +81,7 @@ llvm::Value *ForNode::codegen(std::unique_ptr<Context> &context)
         builder->SetInsertPoint(loopBB);
         exp->codegen(context);
     }
-    context->BreakBlock = nullptr;
+    context->BreakBlock.Block = nullptr;
     // Emit the step value.
     Value *stepValue = builder->getInt64(1);
 

@@ -71,7 +71,7 @@ llvm::Value *IfConditionNode::codegenIf(std::unique_ptr<Context> &context)
     {
         exp->codegen(context);
     }
-    if (context->BreakBlock == nullptr)
+    if (!context->BreakBlock.BlockUsed)
         context->Builder->CreateBr(MergeBB);
     TheFunction->insert(TheFunction->end(), MergeBB);
     context->Builder->SetInsertPoint(MergeBB);
@@ -103,7 +103,7 @@ llvm::Value *IfConditionNode::codegenIfElse(std::unique_ptr<Context> &context)
     {
         exp->codegen(context);
     }
-    if (context->BreakBlock == nullptr)
+    if (!context->BreakBlock.BlockUsed)
         context->Builder->CreateBr(MergeBB);
     // Codegen of 'Then' can change the current block, update ThenBB for the PHI.
     ThenBB = context->Builder->GetInsertBlock();
@@ -116,7 +116,7 @@ llvm::Value *IfConditionNode::codegenIfElse(std::unique_ptr<Context> &context)
     {
         exp->codegen(context);
     }
-    if (context->BreakBlock == nullptr)
+    if (!context->BreakBlock.BlockUsed)
         context->Builder->CreateBr(MergeBB);
     // Codegen of 'Else' can change the current block, update ElseBB for the PHI.
     ElseBB = context->Builder->GetInsertBlock();
