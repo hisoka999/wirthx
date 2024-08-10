@@ -1,43 +1,18 @@
 #pragma once
-#include "Lexer.h"
-#include "ast/ASTNode.h"
-#include "ast/UnitNode.h"
-#include "ast/VariableDefinition.h"
-#include "ast/VariableType.h"
 #include <exception>
 #include <filesystem>
 #include <map>
 #include <memory>
 #include <vector>
+#include "Lexer.h"
+#include "ast/ASTNode.h"
+#include "ast/UnitNode.h"
+#include "ast/VariableDefinition.h"
+#include "ast/VariableType.h"
+#include "exceptions/CompilerException.h"
 
-struct ParserError
-{
-    std::string file_name;
-    Token token;
-    std::string message;
-};
 
-class ParserException : public std::exception
-{
-private:
-    std::string mesasage;
-
-public:
-    ParserException(std::vector<ParserError> errors)
-    {
-        std::stringstream outputStream;
-        for (auto &error : errors)
-        {
-            outputStream << error.file_name << ":" << error.token.row << ":" << error.token.col << ": " << error.message << "\n";
-        }
-        mesasage = outputStream.str();
-    }
-
-    const char *what() const noexcept override
-    {
-        return mesasage.c_str();
-    }
-};
+using ParserException = CompilerException;
 
 class Parser
 {
@@ -60,11 +35,14 @@ private:
     bool tryConsumeKeyWord(const std::string &keyword);
     bool canConsumeKeyWord(const std::string &keyword);
     std::optional<std::shared_ptr<VariableType>> determinVariableTypeByName(const std::string &name);
-    std::shared_ptr<ASTNode> parseToken(const Token &token, size_t currentScope, std::vector<std::shared_ptr<ASTNode>> nodes);
+    std::shared_ptr<ASTNode> parseToken(const Token &token, size_t currentScope,
+                                        std::vector<std::shared_ptr<ASTNode>> nodes);
     bool parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr<ASTNode>> &nodes, size_t scope);
     void parseFunction(size_t scope, std::vector<std::shared_ptr<ASTNode>> &nodes);
-    void parseVariableAssignment(const Token &currentToken, size_t currentScope, std::vector<std::shared_ptr<ASTNode>> &nodes);
-    std::shared_ptr<ASTNode> parseComparrision(const Token &currentToken, size_t currentScope, std::vector<std::shared_ptr<ASTNode>> &nodes);
+    void parseVariableAssignment(const Token &currentToken, size_t currentScope,
+                                 std::vector<std::shared_ptr<ASTNode>> &nodes);
+    std::shared_ptr<ASTNode> parseComparrision(const Token &currentToken, size_t currentScope,
+                                               std::vector<std::shared_ptr<ASTNode>> &nodes);
     std::shared_ptr<ASTNode> parseExpression(const Token &currentToken, size_t currentScope);
     std::shared_ptr<BlockNode> parseBlock(const Token &currentToken, size_t scope);
 

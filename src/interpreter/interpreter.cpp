@@ -38,11 +38,17 @@ void interprete_file(std::filesystem::path inputPath, std::ostream &errorStream,
         parser.printErrors(errorStream);
         return;
     }
-
-    for (auto &func: context.unit->getFunctionDefinitions())
+    try
     {
-        context.stack.addFunction(func);
-    }
+        for (auto &func: context.unit->getFunctionDefinitions())
+        {
+            context.stack.addFunction(func);
+        }
 
-    context.unit->eval(context, outputStream);
+        context.unit->eval(context, outputStream);
+    }
+    catch (CompilerException &e)
+    {
+        errorStream << e.what();
+    }
 }

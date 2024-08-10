@@ -1,39 +1,7 @@
 #pragma once
 #include <string_view>
 #include <vector>
-
-enum class TokenType
-{
-    NUMBER,
-    STRING,
-    KEYWORD,
-    NAMEDTOKEN,
-    PLUS,
-    MINUS,
-    DIV,
-    MUL,
-    LEFT_CURLY,
-    RIGHT_CURLY,
-    LEFT_SQUAR,
-    RIGHT_SQUAR,
-    EQUAL,
-    GREATER,
-    LESS,
-    ENDLINE,
-    T_EOF,
-    COMMA,
-    SEMICOLON,
-    DOT,
-    COLON
-};
-
-struct Token
-{
-    std::string_view lexical;
-    size_t row;
-    size_t col;
-    TokenType tokenType;
-};
+#include "Token.h"
 
 inline auto possible_tokens = {"program", "unit",  "uses", "begin", "end",   "procedure", "function",
                                "var",     "if",    "then", "else",  "while", "do",        "for",

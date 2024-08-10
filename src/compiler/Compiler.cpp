@@ -246,9 +246,16 @@ void compile_file(std::filesystem::path inputPath, std::ostream &errorStream, st
     writeLnCodegen(context);
     writeLnStrCodegen(context);
     createSystemCall(context, "exit", {FunctionArgument{.type = intType, .argumentName = "X", .isReference = false}});
+    try
+    {
+        context->ProgramUnit->codegen(context);
+    }
+    catch (CompilerException &e)
+    {
+        errorStream << e.what();
+        return;
+    }
 
-    context->ProgramUnit->codegen(context);
-    std::cerr << "start printing code\n";
 
     llvm::verifyModule(*context->TheModule, &llvm::errs());
 

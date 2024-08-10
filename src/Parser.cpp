@@ -212,7 +212,7 @@ std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, size_t currentSc
             }
             else if (canConsume(TokenType::LEFT_SQUAR))
             {
-                auto arrayName = std::string(token.lexical);
+                Token arrayName = token;
                 if (!isVariableDefined(token.lexical, currentScope))
                 {
                     m_errors.push_back(ParserError{.file_name = m_file_path.string(),
@@ -224,7 +224,8 @@ std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, size_t currentSc
                 consume(TokenType::LEFT_SQUAR);
                 auto indexNode = parseToken(next(), currentScope, {});
                 consume(TokenType::RIGHT_SQUAR);
-                return std::make_shared<ArrayAccessNode>(arrayName, indexNode);
+                return std::make_shared<ArrayAccessNode>(TokenWithFile{.token = arrayName, .fileName = m_file_path},
+                                                         indexNode);
             }
             else
             {
