@@ -13,6 +13,8 @@ llvm::Type *VariableType::generateLlvmType(std::unique_ptr<Context> &context)
             return llvm::Type::getDoubleTy(*context->TheContext);
         case VariableBaseType::String:
             return llvm::Type::getInt8PtrTy(*context->TheContext);
+        case VariableBaseType::Boolean:
+            return llvm::Type::getInt1Ty(*context->TheContext);
         default:
             assert(false && "unknown base type to generate llvm type for");
     }
@@ -25,6 +27,14 @@ std::shared_ptr<IntegerType> VariableType::getInteger(size_t length)
     integer->length = length;
     integer->typeName = "integer" + std::to_string(length);
     return integer;
+}
+
+std::shared_ptr<VariableType> VariableType::getBoolean()
+{
+    auto boolean = std::make_shared<VariableType>();
+    boolean->baseType = VariableBaseType::Boolean;
+    boolean->typeName = "boolean";
+    return boolean;
 }
 
 std::shared_ptr<VariableType> VariableType::getString()

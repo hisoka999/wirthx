@@ -12,6 +12,7 @@
 #include "ast/ArrayAssignmentNode.h"
 #include "ast/BinaryOperationNode.h"
 #include "ast/BlockNode.h"
+#include "ast/BooleanNode.h"
 #include "ast/BreakNode.h"
 #include "ast/ComparissionNode.h"
 #include "ast/ForNode.h"
@@ -40,6 +41,7 @@ Parser::Parser(const std::filesystem::path &path, std::vector<Token> &tokens) : 
     m_typeDefinitions["integer"] = VariableType::getInteger();
     m_typeDefinitions["int64"] = VariableType::getInteger(64);
     m_typeDefinitions["string"] = std::make_shared<VariableType>(VariableBaseType::String, "string");
+    m_typeDefinitions["boolean"] = VariableType::getBoolean();
 }
 
 Parser::~Parser() {}
@@ -162,8 +164,10 @@ std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, size_t currentSc
             auto lhs = nodes[0];
             return std::make_shared<BinaryOperationNode>(Operator::MUL, lhs, rhs);
         }
+
         case TokenType::NAMEDTOKEN:
         {
+
 
             if (canConsume(TokenType::LEFT_CURLY))
             {
@@ -241,6 +245,17 @@ std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, size_t currentSc
             }
 
             break;
+        }
+        case TokenType::KEYWORD:
+        {
+            if (iequals(token.lexical, "true"))
+            {
+                return std::make_shared<BooleanNode>(true);
+            }
+            else if (iequals(token.lexical, "false"))
+            {
+                return std::make_shared<BooleanNode>(false);
+            }
         }
         default:
             m_errors.push_back(ParserError{.file_name = m_file_path.string(),
@@ -441,6 +456,7 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
         {
 
             ifExpressions.push_back(parseExpression(next(), scope));
+            tryConsume(TokenType::SEMICOLON);
         }
         while (canConsume(TokenType::ENDLINE))
             tryConsume(TokenType::ENDLINE);
@@ -454,6 +470,7 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
             else
             {
                 elseExpressions.push_back(parseExpression(next(), scope));
+                tryConsume(TokenType::SEMICOLON);
             }
         }
 
@@ -832,6 +849,18 @@ std::shared_ptr<ASTNode> Parser::parseExpression(const Token &currentToken, size
                     else if (token.lexical == "and")
                     {
                         op = LogicalOperator::AND;
+                    }
+                    else if (token.lexical == "or")
+                    {
+                        op = LogicalOperator::OR;
+                    }
+                    else if (iequals(token.lexical, "true"))
+                    {
+                        return std::make_shared<BooleanNode>(true);
+                    }
+                    else if (iequals(token.lexical, "false"))
+                    {
+                        return std::make_shared<BooleanNode>(false);
                     }
 
                     else

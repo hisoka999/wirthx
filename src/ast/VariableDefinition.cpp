@@ -28,6 +28,12 @@ llvm::AllocaInst *VariableDefinition::generateCode(std::unique_ptr<Context> &con
             TmpB.CreateStore(TmpB.getInt64(0), allocation);
             return allocation;
         }
+        case VariableBaseType::Boolean:
+        {
+            auto allocation = TmpB.CreateAlloca(TmpB.getInt1Ty(), nullptr, this->variableName);
+            TmpB.CreateStore(TmpB.getFalse(), allocation);
+            return allocation;
+        }
         case VariableBaseType::Float:
         case VariableBaseType::Real:
             return TmpB.CreateAlloca(llvm::Type::getDoubleTy(*context->TheContext), nullptr, this->variableName);

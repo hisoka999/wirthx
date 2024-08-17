@@ -33,7 +33,8 @@ void BlockNode::eval(InterpreterContext &context, std::ostream &outputStream)
         if (def.value)
         {
             def.value->eval(context, outputStream);
-            if (def.variableType->baseType == VariableBaseType::Integer)
+            if (def.variableType->baseType == VariableBaseType::Integer ||
+                def.variableType->baseType == VariableBaseType::Boolean)
             {
                 context.stack.set_var(def.variableName, context.stack.pop_front<int64_t>());
             }

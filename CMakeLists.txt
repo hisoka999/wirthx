@@ -32,6 +32,7 @@ file(GLOB SRC
     src/compare.cpp
     src/ast/ArrayAccessNode.cpp
     src/ast/ArrayAssignmentNode.cpp
+    src/ast/BooleanNode.cpp
     src/ast/VariableDefinition.cpp
     src/ast/ASTNode.cpp
     src/ast/PrintNode.cpp

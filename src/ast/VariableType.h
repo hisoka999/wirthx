@@ -11,6 +11,7 @@ enum class VariableBaseType
     String,
     Struct,
     Class,
+    Boolean,
     Unknown
 };
 
@@ -35,6 +36,7 @@ public:
 
     virtual llvm::Type *generateLlvmType(std::unique_ptr<Context> &context);
     static std::shared_ptr<IntegerType> getInteger(size_t length = 32);
+    static std::shared_ptr<VariableType> getBoolean();
     static std::shared_ptr<VariableType> getString();
 };
 

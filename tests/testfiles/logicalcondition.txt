@@ -1,0 +1,3 @@
+mybool and demo = 50
+not mybool
+demo > 10 || value >= 5000

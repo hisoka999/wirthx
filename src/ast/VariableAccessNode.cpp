@@ -41,7 +41,7 @@ void VariableAccessNode::eval(InterpreterContext &context, [[maybe_unused]] std:
     {
         context.stack.push_back(context.stack.get_var<std::string_view>(m_variableName));
     }
-    else if (baseType == VariableBaseType::Integer)
+    else if (baseType == VariableBaseType::Integer || baseType == VariableBaseType::Boolean)
     {
         context.stack.push_back(context.stack.get_var<int64_t>(m_variableName));
     }

@@ -81,4 +81,30 @@ void LogicalExpressionNode::eval(InterpreterContext &context, std::ostream &outp
     }
 }
 
-llvm::Value *LogicalExpressionNode::codegen(std::unique_ptr<Context> &context) { return nullptr; }
+llvm::Value *LogicalExpressionNode::codegen(std::unique_ptr<Context> &context)
+{
+
+    switch (m_operator)
+    {
+        case LogicalOperator::AND:
+        {
+            llvm::ArrayRef<llvm::Value *> ops = {m_lhs->codegen(context), m_rhs->codegen(context)};
+            return context->Builder->CreateAnd(ops);
+        }
+        break;
+        case LogicalOperator::OR:
+        {
+            llvm::ArrayRef<llvm::Value *> ops = {m_lhs->codegen(context), m_rhs->codegen(context)};
+            return context->Builder->CreateOr(ops);
+        }
+        break;
+        case LogicalOperator::NOT:
+        {
+            return context->Builder->CreateNot(m_rhs->codegen(context));
+        }
+        break;
+        default:
+            break;
+    }
+    return nullptr;
+}
