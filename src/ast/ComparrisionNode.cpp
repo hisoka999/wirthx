@@ -1,8 +1,8 @@
+#include <cassert>
 #include <iostream>
 #include "ComparissionNode.h"
 #include "compiler/Context.h"
 #include "interpreter/InterpreterContext.h"
-
 ComparrisionNode::ComparrisionNode(CMPOperator op, const std::shared_ptr<ASTNode> &lhs,
                                    const std::shared_ptr<ASTNode> &rhs) : m_lhs(lhs), m_rhs(rhs), m_operator(op)
 {
@@ -101,7 +101,9 @@ void ComparrisionNode::eval(InterpreterContext &context, std::ostream &outputStr
 llvm::Value *ComparrisionNode::codegen(std::unique_ptr<Context> &context)
 {
     auto lhs = m_lhs->codegen(context);
+    assert(lhs && "lhs of the comparisson is null");
     auto rhs = m_rhs->codegen(context);
+    assert(rhs && "rhs of the comparisson is null");
 
     llvm::CmpInst::Predicate pred = llvm::CmpInst::ICMP_EQ;
     switch (m_operator)

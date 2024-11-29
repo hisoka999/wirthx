@@ -46,6 +46,7 @@ std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit)
     context->ThePIC = std::make_unique<llvm::PassInstrumentationCallbacks>();
     context->TheSI = std::make_unique<llvm::StandardInstrumentations>(*context->TheContext,
                                                                       /*DebugLogging*/ true);
+
     context->TheSI->registerCallbacks(*context->ThePIC, context->TheFAM.get());
 
     // Add transform passes.
@@ -58,11 +59,13 @@ std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit)
     // Simplify the control flow graph (deleting unreachable blocks, etc).
     context->TheFPM->addPass(llvm::SimplifyCFGPass());
 
+
     // Register analysis passes used in these transform passes.
     llvm::PassBuilder PB;
     PB.registerModuleAnalyses(*context->TheMAM);
     PB.registerFunctionAnalyses(*context->TheFAM);
     PB.crossRegisterProxies(*context->TheLAM, *context->TheFAM, *context->TheCGAM, *context->TheMAM);
+
     context->ProgramUnit = std::move(unit);
     return context;
 }
@@ -129,19 +132,19 @@ void createSystemCall(std::unique_ptr<Context> &context, std::string functionNam
     }
 }
 
-void writeLnCodegen(std::unique_ptr<Context> &context)
+void writeLnCodegen(std::unique_ptr<Context> &context, size_t length)
 {
     std::vector<llvm::Type *> params;
-    std::string m_name = "writeln_int";
+    std::string m_name = "writeln_int" + std::to_string(length);
     llvm::Type *resultType;
-    auto type = VariableType::getInteger(64);
+    auto type = VariableType::getInteger(length);
     params.push_back(type->generateLlvmType(context));
 
     resultType = llvm::Type::getVoidTy(*context->TheContext);
     llvm::FunctionType *FT = llvm::FunctionType::get(resultType, params, false);
 
     llvm::Function *F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, m_name, context->TheModule.get());
-
+    F->addFnAttr(llvm::Attribute::AlwaysInline);
     // Set names for all arguments.
     for (auto &arg: F->args())
         arg.setName("arg");
@@ -157,7 +160,10 @@ void writeLnCodegen(std::unique_ptr<Context> &context)
         LogErrorV("Unknown function referenced");
 
     std::vector<llvm::Value *> ArgsV;
-    ArgsV.push_back(context->Builder->CreateGlobalString("%d\n"));
+    if (length > 32)
+        ArgsV.push_back(context->Builder->CreateGlobalString("%ld\n"));
+    else
+        ArgsV.push_back(context->Builder->CreateGlobalString("%d\n"));
     for (auto &arg: F->args())
         ArgsV.push_back(F->getArg(arg.getArgNo()));
 
@@ -181,7 +187,7 @@ void writeLnStrCodegen(std::unique_ptr<Context> &context)
     llvm::FunctionType *FT = llvm::FunctionType::get(resultType, params, true);
 
     llvm::Function *F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, m_name, context->TheModule.get());
-
+    F->addFnAttr(llvm::Attribute::AlwaysInline);
     // Set names for all arguments.
     for (auto &arg: F->args())
         arg.setName("arg");
@@ -243,7 +249,8 @@ void compile_file(std::filesystem::path inputPath, std::ostream &errorStream, st
     llvm::Intrinsic::getDeclaration(context->TheModule.get(), llvm::Intrinsic::vaend);
 
     createPrintfCall(context);
-    writeLnCodegen(context);
+    writeLnCodegen(context, 32);
+    writeLnCodegen(context, 64);
     writeLnStrCodegen(context);
     createSystemCall(context, "exit", {FunctionArgument{.type = intType, .argumentName = "X", .isReference = false}});
     try

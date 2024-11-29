@@ -30,8 +30,6 @@ endif()
 file(GLOB SRC 
     ${LINKER_SRC}
     src/compare.cpp
-    src/ast/ArrayAccessNode.cpp
-    src/ast/ArrayAssignmentNode.cpp
     src/ast/BooleanNode.cpp
     src/ast/VariableDefinition.cpp
     src/ast/ASTNode.cpp
@@ -42,10 +40,14 @@ file(GLOB SRC
     src/ast/InputNode.cpp
     src/ast/ComparrisionNode.cpp
     src/ast/VariableAccessNode.cpp
+    src/ast/ArrayAccessNode.cpp
+    src/ast/FieldAccessNode.cpp
     src/ast/LogicalExpressionNode.cpp
     src/ast/IfConditionNode.cpp
     src/ast/WhileNode.cpp
     src/ast/VariableAssignmentNode.cpp
+    src/ast/ArrayAssignmentNode.cpp
+    src/ast/FieldAssignmentNode.cpp
     src/ast/FunctionDefinitionNode.cpp
     src/ast/ReturnNode.cpp
     src/ast/FunctionCallNode.cpp
@@ -53,6 +55,7 @@ file(GLOB SRC
     src/ast/UnitNode.cpp
     src/ast/SystemFunctionCallNode.cpp
     src/ast/VariableType.cpp
+    src/ast/RecordType.cpp
     src/ast/ForNode.cpp
     src/ast/BreakNode.cpp
     src/interpreter/Stack.cpp

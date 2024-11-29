@@ -59,3 +59,4 @@ struct Context
 
 void LogError(const char *Str);
 llvm::Value *LogErrorV(const char *Str);
+llvm::Value *LogErrorV(const std::string &Str);

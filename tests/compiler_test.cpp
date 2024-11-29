@@ -97,6 +97,7 @@ TEST_P(CompilerTestError, CompilerTestWithError)
 
 INSTANTIATE_TEST_SUITE_P(CompilerTestNoError, CompilerTest,
                          testing::Values("helloworld", "functions", "math", "includetest", "whileloop", "conditions",
-                                         "forloop", "arraytest", "constantstest", "customint", "logicalcondition"));
+                                         "forloop", "arraytest", "constantstest", "customint", "logicalcondition",
+                                         "basicvec2"));
 
 INSTANTIATE_TEST_SUITE_P(CompilerTestWithError, CompilerTestError, testing::Values("arrayaccess"));

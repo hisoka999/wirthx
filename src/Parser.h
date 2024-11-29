@@ -31,6 +31,7 @@ private:
     bool consume(TokenType tokenType);
     bool tryConsume(TokenType tokenType);
     bool canConsume(TokenType tokenType);
+    bool canConsume(TokenType tokenType, size_t next);
     bool consumeKeyWord(const std::string &keyword);
     bool tryConsumeKeyWord(const std::string &keyword);
     bool canConsumeKeyWord(const std::string &keyword);
@@ -38,9 +39,10 @@ private:
     std::shared_ptr<ASTNode> parseToken(const Token &token, size_t currentScope,
                                         std::vector<std::shared_ptr<ASTNode>> nodes);
     bool parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr<ASTNode>> &nodes, size_t scope);
-    void parseFunction(size_t scope, std::vector<std::shared_ptr<ASTNode>> &nodes);
+    void parseFunction(size_t scope, std::vector<std::shared_ptr<ASTNode>> &nodes, bool isProcedure);
     void parseVariableAssignment(const Token &currentToken, size_t currentScope,
                                  std::vector<std::shared_ptr<ASTNode>> &nodes);
+    std::optional<VariableDefinition> parseVariableDefinitions(const Token &token, size_t scope);
     std::shared_ptr<ASTNode> parseComparrision(const Token &currentToken, size_t currentScope,
                                                std::vector<std::shared_ptr<ASTNode>> &nodes);
     std::shared_ptr<ASTNode> parseExpression(const Token &currentToken, size_t currentScope);

@@ -89,8 +89,8 @@ llvm::Value *BlockNode::codegen(std::unique_ptr<Context> &context)
 
     for (auto &def: m_variableDefinitions)
     {
-
-        context->NamedAllocations[def.variableName] = nullptr;
+        if (!context->TopLevelFunction || def.variableName != context->TopLevelFunction->getName())
+            context->NamedAllocations[def.variableName] = nullptr;
     }
     return llvm::Constant::getNullValue(llvm::Type::getDoubleTy(*context->TheContext));
 }
@@ -105,4 +105,14 @@ std::optional<VariableDefinition> BlockNode::getVariableDefinition(const std::st
         }
     }
     return std::nullopt;
+}
+
+void BlockNode::addVariableDefinition(VariableDefinition definition) { m_variableDefinitions.emplace_back(definition); }
+
+
+void BlockNode::appendExpression(std::shared_ptr<ASTNode> node) { m_expressions.push_back(node); }
+
+void BlockNode::preappendExpression(std::shared_ptr<ASTNode> node)
+{
+    m_expressions.emplace(m_expressions.begin(), node);
 }

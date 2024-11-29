@@ -50,7 +50,9 @@ std::shared_ptr<VariableType> ArrayAccessNode::resolveType(const std::unique_ptr
     auto definition = unit->getVariableDefinition(m_arrayName);
     if (definition)
     {
-        return definition.value().variableType;
+        auto array = std::dynamic_pointer_cast<ArrayType>(definition.value().variableType);
+
+        return array->arrayBase;
     }
     return std::make_shared<VariableType>();
 }

@@ -32,6 +32,7 @@ public:
     std::string &name();
     std::shared_ptr<VariableType> returnType();
     std::optional<FunctionArgument> getParam(const std::string &paramName);
+    std::optional<FunctionArgument> getParam(const size_t index);
     std::shared_ptr<BlockNode> body();
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
 };

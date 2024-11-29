@@ -49,6 +49,13 @@ void VariableAccessNode::eval(InterpreterContext &context, [[maybe_unused]] std:
 
 llvm::Value *VariableAccessNode::codegen(std::unique_ptr<Context> &context)
 {
+
+    llvm::Value *V = context->NamedValues[m_variableName];
+    if (V)
+    {
+        return V;
+    }
+
     llvm::AllocaInst *A = context->NamedAllocations[m_variableName];
 
     if (!A)
@@ -57,20 +64,29 @@ llvm::Value *VariableAccessNode::codegen(std::unique_ptr<Context> &context)
         {
             if (arg.getName() == m_variableName)
             {
-                return context->TopLevelFunction->getArg(arg.getArgNo());
+                auto functionDefinition =
+                        context->ProgramUnit->getFunctionDefinition(context->TopLevelFunction->getName().str());
+
+                const auto argType = functionDefinition.value()->getParam(arg.getArgNo());
+                const auto llvmArgType = argType->type->generateLlvmType(context);
+                auto argValue = context->TopLevelFunction->getArg(arg.getArgNo());
+                if (argType->type->baseType == VariableBaseType::Struct)
+                {
+                    llvm::AllocaInst *alloca =
+                            context->Builder->CreateAlloca(llvmArgType, nullptr, argType->argumentName + "_struct");
+                    return context->Builder->CreateLoad(A->getAllocatedType(), alloca, m_variableName.c_str());
+                }
+                return argValue;
             }
         }
 
-        llvm::Value *V = context->NamedValues[m_variableName];
-        if (V)
-        {
-            return V;
-        }
 
         return LogErrorV("Unknown variable name");
     }
 
     // Load the value.
+    if (A->getAllocatedType()->isStructTy())
+        return A;
     return context->Builder->CreateLoad(A->getAllocatedType(), A, m_variableName.c_str());
 }
 

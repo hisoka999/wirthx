@@ -1,19 +1,21 @@
 #pragma once
 #include <string>
 #include "ASTNode.h"
+#include "Token.h"
 
-
-class ArrayAssignmentNode : public ASTNode
+class FieldAssignmentNode : public ASTNode
 {
 private:
-    std::string m_variableName;
-    std::shared_ptr<ASTNode> m_indexNode;
+    const TokenWithFile m_variable;
+    const std::string m_variableName;
+    const TokenWithFile m_field;
+    const std::string m_fieldName;
     std::shared_ptr<ASTNode> m_expression;
 
 public:
-    ArrayAssignmentNode(const std::string variableNam, const std::shared_ptr<ASTNode> &indexNode,
+    FieldAssignmentNode(const TokenWithFile variable, const TokenWithFile field,
                         const std::shared_ptr<ASTNode> &expression);
-    ~ArrayAssignmentNode() = default;
+    ~FieldAssignmentNode() = default;
     void print() override;
     void eval(InterpreterContext &context, std::ostream &outputStream) override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;

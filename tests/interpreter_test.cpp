@@ -92,6 +92,7 @@ TEST_P(InterpreterWithErrorTest, TestWithError)
 }
 INSTANTIATE_TEST_SUITE_P(TestNoError, InterpreterTest,
                          testing::Values("helloworld", "functions", "math", "includetest", "whileloop", "conditions",
-                                         "forloop", "arraytest", "constantstest", "customint", "logicalcondition"));
+                                         "forloop", "arraytest", "constantstest", "customint", "logicalcondition",
+                                         "basicvec2"));
 
 INSTANTIATE_TEST_SUITE_P(TestWithError, InterpreterWithErrorTest, testing::Values("arrayaccess"));

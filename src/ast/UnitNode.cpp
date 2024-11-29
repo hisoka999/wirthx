@@ -72,12 +72,11 @@ llvm::Value *UnitNode::codegen(std::unique_ptr<Context> &context)
     std::string functionName = m_unitName;
     if (m_unitType == UnitType::PROGRAM)
     {
-        functionName = "_start";
+        functionName = "main";
     }
 
     llvm::Function *F =
             llvm::Function::Create(FT, llvm::Function::ExternalLinkage, functionName, context->TheModule.get());
-
     context->TopLevelFunction = F;
     m_blockNode->setBlockName("entry");
     // Create a new basic block to start insertion into.

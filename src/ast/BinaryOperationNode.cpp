@@ -40,19 +40,31 @@ void BinaryOperationNode::eval(InterpreterContext &context, [[maybe_unused]] std
 llvm::Value *BinaryOperationNode::codegen(std::unique_ptr<Context> &context)
 {
 
-    llvm::Value *L = m_lhs->codegen(context);
-    llvm::Value *R = m_rhs->codegen(context);
-    if (!L || !R)
+    llvm::Value *lhs = m_lhs->codegen(context);
+    llvm::Value *rhs = m_rhs->codegen(context);
+    if (!lhs || !rhs)
         return nullptr;
+
+    size_t maxBitWith = std::max(lhs->getType()->getIntegerBitWidth(), rhs->getType()->getIntegerBitWidth());
+    auto targetType = llvm::IntegerType::get(*context->TheContext, maxBitWith);
+    if (maxBitWith != lhs->getType()->getIntegerBitWidth())
+    {
+        lhs = context->Builder->CreateIntCast(lhs, targetType, true, "lhs_cast");
+    }
+    if (maxBitWith != rhs->getType()->getIntegerBitWidth())
+    {
+        rhs = context->Builder->CreateIntCast(rhs, targetType, true, "rhs_cast");
+    }
+
 
     switch (m_operator)
     {
         case Operator::PLUS:
-            return context->Builder->CreateAdd(L, R, "addtmp");
+            return context->Builder->CreateAdd(lhs, rhs, "addtmp");
         case Operator::MINUS:
-            return context->Builder->CreateSub(L, R, "subtmp");
+            return context->Builder->CreateSub(lhs, rhs, "subtmp");
         case Operator::MUL:
-            return context->Builder->CreateMul(L, R, "multmp");
+            return context->Builder->CreateMul(lhs, rhs, "multmp");
     }
     return nullptr;
 }

@@ -58,20 +58,21 @@ llvm::Value *VariableAssignmentNode::codegen(std::unique_ptr<Context> &context)
 
     // Look this variable up in the function.
     llvm::AllocaInst *V = context->NamedAllocations[m_variableName];
-    if (!V)
-    {
-        if (context->TopLevelFunction->getName() == m_variableName)
-        {
-            auto result = m_expression->codegen(context);
-
-            return context->Builder->CreateRet(result);
-        }
-    }
 
     if (!V)
         return LogErrorV("Unknown variable name");
 
     auto result = m_expression->codegen(context);
+
+    if (V->getAllocatedType()->isIntegerTy() && result->getType()->isIntegerTy())
+    {
+        auto targetType = llvm::IntegerType::get(*context->TheContext, V->getAllocatedType()->getIntegerBitWidth());
+        if (V->getAllocatedType()->getIntegerBitWidth() != result->getType()->getIntegerBitWidth())
+        {
+            result = context->Builder->CreateIntCast(result, targetType, true, "lhs_cast");
+        }
+    }
+
 
     context->Builder->CreateStore(result, V);
     return result;

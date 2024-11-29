@@ -1,18 +1,24 @@
 #pragma once
-#include "ASTNode.h"
 
-class NumberNode : public ASTNode
+#include <cstddef>
+#include <string>
+#include "ASTNode.h"
+#include "Token.h"
+
+class FieldAccessNode : public ASTNode
 {
 private:
-    int64_t m_value;
-    size_t m_numBits;
+    TokenWithFile m_element;
+    std::string m_elementName;
+    TokenWithFile m_field;
+    std::string m_fieldName;
 
 public:
-    NumberNode(int64_t value, size_t numBits);
-    ~NumberNode() {};
+    FieldAccessNode(const TokenWithFile element, const TokenWithFile field);
+    ~FieldAccessNode() = default;
     void print() override;
     void eval(InterpreterContext &context, std::ostream &outputStream) override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
+
     std::shared_ptr<VariableType> resolveType(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode) override;
-    int64_t getValue();
 };
