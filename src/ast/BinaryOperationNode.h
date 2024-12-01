@@ -20,6 +20,5 @@ public:
     ~BinaryOperationNode() = default;
 
     void print() override;
-    void eval(InterpreterContext &context, std::ostream &outputStream) override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
 };

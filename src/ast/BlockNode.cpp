@@ -1,7 +1,7 @@
 #include "BlockNode.h"
 #include <iostream>
 #include "compiler/Context.h"
-#include "interpreter/InterpreterContext.h"
+
 
 BlockNode::BlockNode(std::vector<VariableDefinition> variableDefinitions,
                      const std::vector<std::shared_ptr<ASTNode>> &expressions) :
@@ -26,30 +26,6 @@ void BlockNode::print()
     std::cout << "end;\n";
 }
 
-void BlockNode::eval(InterpreterContext &context, std::ostream &outputStream)
-{
-    for (auto &def: m_variableDefinitions)
-    {
-        if (def.value)
-        {
-            def.value->eval(context, outputStream);
-            if (def.variableType->baseType == VariableBaseType::Integer ||
-                def.variableType->baseType == VariableBaseType::Boolean)
-            {
-                context.stack.set_var(def.variableName, context.stack.pop_front<int64_t>());
-            }
-            else if (def.variableType->baseType == VariableBaseType::String)
-            {
-                context.stack.set_var(def.variableName, context.stack.pop_front<std::string_view>());
-            }
-        }
-    }
-
-    for (auto &exp: m_expressions)
-    {
-        exp->eval(context, outputStream);
-    }
-}
 
 void BlockNode::setBlockName(const std::string &name) { m_blockname = name; }
 

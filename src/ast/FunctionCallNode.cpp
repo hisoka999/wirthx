@@ -1,9 +1,10 @@
 #include "FunctionCallNode.h"
 #include <iostream>
 #include "FunctionDefinitionNode.h"
+#include "RecordType.h"
 #include "UnitNode.h"
 #include "compiler/Context.h"
-#include "interpreter/InterpreterContext.h"
+
 
 FunctionCallNode::FunctionCallNode(std::string name, std::vector<std::shared_ptr<ASTNode>> args) :
     m_name(name), m_args(args)
@@ -21,27 +22,6 @@ void FunctionCallNode::print()
     std::cout << ");\n";
 }
 
-void FunctionCallNode::eval(InterpreterContext &context, std::ostream &outputStream)
-{
-    context.parent = this;
-    for (auto &arg: m_args)
-    {
-        arg->eval(context, outputStream);
-    }
-    auto &func = context.stack.getFunction(m_name);
-    func->eval(context, outputStream);
-    if (context.stack.has_var(m_name))
-    {
-        auto functionDefinition = context.unit->getFunctionDefinition(m_name);
-        if (functionDefinition.value()->returnType()->baseType == VariableBaseType::Integer)
-            context.stack.push_back(context.stack.get_var<int64_t>(m_name));
-        else if (functionDefinition.value()->returnType()->baseType == VariableBaseType::String)
-        {
-            context.stack.push_back(context.stack.get_var<std::string_view>(m_name));
-        }
-    }
-    context.parent = nullptr;
-}
 
 llvm::Value *FunctionCallNode::codegen(std::unique_ptr<Context> &context)
 {

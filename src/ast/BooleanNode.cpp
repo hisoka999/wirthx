@@ -1,7 +1,6 @@
 #include "BooleanNode.h"
 #include <iostream>
 #include "compiler/Context.h"
-#include "interpreter/InterpreterContext.h"
 
 
 BooleanNode::BooleanNode(const bool value) : m_value(value) {}
@@ -12,11 +11,6 @@ void BooleanNode::print()
         std::cout << "true";
     else
         std::cout << "false";
-}
-
-void BooleanNode::eval(InterpreterContext &context, std::ostream &outputStream)
-{
-    context.stack.push_back(static_cast<int64_t>(m_value));
 }
 
 llvm::Value *BooleanNode::codegen(std::unique_ptr<Context> &context)

@@ -1,7 +1,7 @@
 #include "LogicalExpressionNode.h"
 #include <iostream>
 #include "compiler/Context.h"
-#include "interpreter/InterpreterContext.h"
+
 
 LogicalExpressionNode::LogicalExpressionNode(LogicalOperator op, const std::shared_ptr<ASTNode> &lhs,
                                              const std::shared_ptr<ASTNode> &rhs) :
@@ -37,43 +37,6 @@ void LogicalExpressionNode::print()
 
             std::cout << " not ";
             m_rhs->print();
-        }
-        break;
-        default:
-            break;
-    }
-}
-
-void LogicalExpressionNode::eval(InterpreterContext &context, std::ostream &outputStream)
-{
-
-    switch (m_operator)
-    {
-        case LogicalOperator::AND:
-        {
-            m_lhs->eval(context, outputStream);
-            auto lhs = context.stack.pop_front<int64_t>();
-            m_rhs->eval(context, outputStream);
-            auto rhs = context.stack.pop_front<int64_t>();
-
-            context.stack.push_back(static_cast<int64_t>(lhs && rhs));
-        }
-        break;
-        case LogicalOperator::OR:
-        {
-            m_lhs->eval(context, outputStream);
-            auto lhs = context.stack.pop_front<int64_t>();
-            m_rhs->eval(context, outputStream);
-            auto rhs = context.stack.pop_front<int64_t>();
-
-            context.stack.push_back(static_cast<int64_t>(lhs || rhs));
-        }
-        break;
-        case LogicalOperator::NOT:
-        {
-            m_rhs->eval(context, outputStream);
-            auto rhs = context.stack.pop_front<int64_t>();
-            context.stack.push_back(static_cast<int64_t>(!rhs));
         }
         break;
         default:

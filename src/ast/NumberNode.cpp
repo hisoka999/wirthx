@@ -1,16 +1,11 @@
 #include "NumberNode.h"
 #include <iostream>
 #include "compiler/Context.h"
-#include "interpreter/InterpreterContext.h"
+
 
 NumberNode::NumberNode(int64_t value, size_t numBits) : ASTNode(), m_value(value), m_numBits(numBits) {}
 
 void NumberNode::print() { std::cout << m_value; }
-
-void NumberNode::eval(InterpreterContext &context, [[maybe_unused]] std::ostream &outputStream)
-{
-    context.stack.push_back(m_value);
-}
 
 llvm::Value *NumberNode::codegen(std::unique_ptr<Context> &context)
 {

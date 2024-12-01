@@ -1,5 +1,4 @@
 #include "WhileNode.h"
-#include <interpreter/InterpreterContext.h>
 #include "compiler/Context.h"
 
 WhileNode::WhileNode(std::shared_ptr<ASTNode> loopCondition, std::vector<std::shared_ptr<ASTNode>> nodes) :
@@ -8,25 +7,6 @@ WhileNode::WhileNode(std::shared_ptr<ASTNode> loopCondition, std::vector<std::sh
 }
 
 void WhileNode::print() {}
-
-void WhileNode::eval(InterpreterContext &context, std::ostream &outputStream)
-{
-
-    while (true)
-    {
-        m_loopCondition->eval(context, outputStream);
-        auto value = context.stack.pop_front<int64_t>();
-        if (value == 0)
-            break;
-
-        for (auto &node: m_nodes)
-        {
-            node->eval(context, outputStream);
-            if (context.stack.stopBreakIfActive())
-                return;
-        }
-    }
-}
 
 llvm::Value *WhileNode::codegen(std::unique_ptr<Context> &context)
 {

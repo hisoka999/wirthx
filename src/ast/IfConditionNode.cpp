@@ -1,7 +1,7 @@
 #include "IfConditionNode.h"
 #include <iostream>
 #include "compiler/Context.h"
-#include "interpreter/InterpreterContext.h"
+
 
 IfConditionNode::IfConditionNode(std::shared_ptr<ASTNode> conditionNode,
                                  std::vector<std::shared_ptr<ASTNode>> ifExpressions,
@@ -28,27 +28,6 @@ void IfConditionNode::print()
             exp->print();
         }
         // std::cout << "end;\n";
-    }
-}
-
-void IfConditionNode::eval(InterpreterContext &context, std::ostream &outputStream)
-{
-    m_conditionNode->eval(context, outputStream);
-    // check result
-    auto result = context.stack.pop_front<int64_t>();
-    if (result)
-    {
-        for (auto &exp: m_ifExpressions)
-        {
-            exp->eval(context, outputStream);
-        }
-    }
-    else
-    {
-        for (auto &exp: m_elseExpressions)
-        {
-            exp->eval(context, outputStream);
-        }
     }
 }
 

@@ -1,7 +1,6 @@
 #include "BinaryOperationNode.h"
 #include <iostream>
 #include "compiler/Context.h"
-#include "interpreter/InterpreterContext.h"
 
 
 BinaryOperationNode::BinaryOperationNode(Operator op, const std::shared_ptr<ASTNode> &lhs,
@@ -15,26 +14,6 @@ void BinaryOperationNode::print()
     m_lhs->print();
     std::cout << static_cast<char>(m_operator);
     m_rhs->print();
-}
-
-void BinaryOperationNode::eval(InterpreterContext &context, [[maybe_unused]] std::ostream &outputStream)
-{
-    m_lhs->eval(context, outputStream);
-    m_rhs->eval(context, outputStream);
-    auto lhs = context.stack.pop_front<int64_t>();
-    auto rhs = context.stack.pop_front<int64_t>();
-    switch (m_operator)
-    {
-        case Operator::PLUS:
-            context.stack.push_back(lhs + rhs);
-            break;
-        case Operator::MINUS:
-            context.stack.push_back(lhs - rhs);
-            break;
-        case Operator::MUL:
-            context.stack.push_back(lhs * rhs);
-            break;
-    }
 }
 
 llvm::Value *BinaryOperationNode::codegen(std::unique_ptr<Context> &context)

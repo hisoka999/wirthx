@@ -1,10 +1,11 @@
 #include "FieldAccessNode.h"
+#include "FunctionCallNode.h"
 #include "FunctionDefinitionNode.h"
 #include "RecordType.h"
 #include "UnitNode.h"
 #include "compiler/Context.h"
 #include "exceptions/CompilerException.h"
-#include "interpreter/InterpreterContext.h"
+
 
 FieldAccessNode::FieldAccessNode(const TokenWithFile element, const TokenWithFile field) :
     m_element(element), m_elementName(element.token.lexical), m_field(field), m_fieldName(field.token.lexical)
@@ -12,8 +13,6 @@ FieldAccessNode::FieldAccessNode(const TokenWithFile element, const TokenWithFil
 }
 
 void FieldAccessNode::print() {}
-
-void FieldAccessNode::eval(InterpreterContext &context, std::ostream &outputStream) {}
 
 llvm::Value *FieldAccessNode::codegen(std::unique_ptr<Context> &context)
 {

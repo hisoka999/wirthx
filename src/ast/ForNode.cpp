@@ -1,6 +1,6 @@
 #include "ForNode.h"
 #include "compiler/Context.h"
-#include "interpreter/InterpreterContext.h"
+
 
 ForNode::ForNode(std::string loopVariable, std::shared_ptr<ASTNode> &startExpression,
                  std::shared_ptr<ASTNode> &endExpression, std::vector<std::shared_ptr<ASTNode>> &body) :
@@ -12,28 +12,6 @@ ForNode::ForNode(std::string loopVariable, std::shared_ptr<ASTNode> &startExpres
 ForNode::~ForNode() {}
 
 void ForNode::print() {}
-
-void ForNode::eval(InterpreterContext &context, std::ostream &outputStream)
-{
-    m_startExpression->eval(context, outputStream);
-    auto start_value = context.stack.pop_front<int64_t>();
-    m_endExpression->eval(context, outputStream);
-    auto end_value = context.stack.pop_front<int64_t>();
-
-    context.stack.set_var(m_loopVariable, start_value);
-
-    for (int64_t i = start_value; i <= end_value; i++)
-    {
-        context.stack.set_var(m_loopVariable, i);
-
-        for (auto &exp: m_body)
-        {
-            exp->eval(context, outputStream);
-            if (context.stack.stopBreakIfActive())
-                return;
-        }
-    }
-}
 
 llvm::Value *ForNode::codegen(std::unique_ptr<Context> &context)
 {

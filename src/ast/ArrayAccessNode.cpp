@@ -2,7 +2,7 @@
 #include "UnitNode.h"
 #include "compiler/Context.h"
 #include "exceptions/CompilerException.h"
-#include "interpreter/InterpreterContext.h"
+
 
 ArrayAccessNode::ArrayAccessNode(const TokenWithFile arrayName, const std::shared_ptr<ASTNode> &indexNode) :
     m_arrayNameToken(arrayName), m_arrayName(std::string(arrayName.token.lexical)), m_indexNode(indexNode)
@@ -11,31 +11,6 @@ ArrayAccessNode::ArrayAccessNode(const TokenWithFile arrayName, const std::share
 
 void ArrayAccessNode::print() {}
 
-void ArrayAccessNode::eval(InterpreterContext &context, std::ostream &outputStream)
-{
-
-    auto arrayDef = context.unit->getVariableDefinition(m_arrayName);
-
-    if (!context.stack.has_var(m_arrayName))
-    {
-        throw CompilerException(ParserError{.file_name = m_arrayNameToken.fileName,
-                                            .token = m_arrayNameToken.token,
-                                            .message = "the array with the name X does not exist."});
-    }
-    else
-    {
-        auto array = context.stack.get_var<PascalIntArray>(m_arrayName);
-        m_indexNode->eval(context, outputStream);
-        auto index = context.stack.pop_front<int64_t>();
-        if (index < static_cast<int64_t>(array.low()) || index > static_cast<int64_t>(array.height()))
-        {
-            throw CompilerException(ParserError{.file_name = m_arrayNameToken.fileName,
-                                                .token = m_arrayNameToken.token,
-                                                .message = "the array index is not in the defined range."});
-        }
-        context.stack.push_back(array[index]);
-    }
-}
 
 std::shared_ptr<VariableType> ArrayAccessNode::resolveType(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
 {

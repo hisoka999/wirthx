@@ -1,17 +1,11 @@
 #include "StringConstantNode.h"
 #include <iostream>
 #include "compiler/Context.h"
-#include "interpreter/InterpreterContext.h"
+
 
 StringConstantNode::StringConstantNode(std::string_view literal) : ASTNode(), m_literal(literal) {}
 
 void StringConstantNode::print() { std::cout << "\'" << m_literal << "\'"; }
-
-void StringConstantNode::eval(InterpreterContext &context, 
-                              [[maybe_unused]] std::ostream &outputStream)
-{
-    context.stack.push_back(m_literal);
-}
 
 llvm::Value *StringConstantNode::codegen(std::unique_ptr<Context> &context)
 {

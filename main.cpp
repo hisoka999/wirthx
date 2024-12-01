@@ -1,19 +1,18 @@
-#include "Lexer.h"
-#include "Parser.h"
-#include "ast/FunctionDefinitionNode.h"
-#include "compiler/Compiler.h"
-#include "interpreter/interpreter.h"
+#include <cassert>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include "Lexer.h"
+#include "Parser.h"
+#include "ast/FunctionDefinitionNode.h"
+#include "compiler/Compiler.h"
 
 using namespace std::literals;
 
 enum class CompileOption
 {
-    INTERPRETE,
     COMPILE,
     JIT
 };
@@ -54,10 +53,6 @@ int main(int args, char **argv)
             // displayAst = true;
             // fileArg++;
         }
-        else if (arg == "-i")
-        {
-            option = CompileOption::INTERPRETE;
-        }
         else if (arg == "-c")
         {
             option = CompileOption::COMPILE;
@@ -92,12 +87,11 @@ int main(int args, char **argv)
 
     switch (option)
     {
-    case CompileOption::COMPILE:
-        compile_file(file_path, std::cerr, std::cout);
-        break;
-    case CompileOption::INTERPRETE:
-    case CompileOption::JIT:
-        interprete_file(file_path, std::cerr, std::cout);
+        case CompileOption::COMPILE:
+            compile_file(file_path, std::cerr, std::cout);
+            break;
+        case CompileOption::JIT:
+            assert(false && "JIT compiler is not implemented yet.");
     }
     return 0;
 }

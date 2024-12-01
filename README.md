@@ -1,12 +1,11 @@
 # wirthx
-Wirthx is an experimental pascal interpreter and compiler. 
+Wirthx is an experimental pascal compiler. 
 The language is named after Nicolaus Wirth the creator of pascal.
 
 ## Compiler
 The compiler is based on llvm and will generate a native binary for the target plattform. 
 For now only `linux-x86-64` is supported.
 
-## Interpreter
 
 # Usage
 
@@ -46,4 +45,30 @@ begin
     my_var := addx(1,2);
     Writeln(my_var);
 end.
+```
+
+## Records
+
+```pascal
+program test
+
+    type Vec2 = record
+        x : int64;
+        y : int64;
+    end;
+
+    // pass the vector as a reference 
+    procedure vec2_inc(var t : Vec2); 
+    begin
+        t.x := t.x + 1;
+        t.y := t.y + 1;
+    end;
+var
+    myvec : Vec2;
+begin
+    myvec.x := 2;
+    myvec.y := 3;
+    vec2_inc(myvec);
+end.
+
 ```

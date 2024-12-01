@@ -58,8 +58,6 @@ file(GLOB SRC
     src/ast/RecordType.cpp
     src/ast/ForNode.cpp
     src/ast/BreakNode.cpp
-    src/interpreter/Stack.cpp
-    src/interpreter/interpreter.cpp
     src/compiler/Context.cpp
     src/compiler/Compiler.cpp
     src/Lexer.cpp

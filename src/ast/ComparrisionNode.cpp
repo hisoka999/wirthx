@@ -2,7 +2,7 @@
 #include <iostream>
 #include "ComparissionNode.h"
 #include "compiler/Context.h"
-#include "interpreter/InterpreterContext.h"
+
 ComparrisionNode::ComparrisionNode(CMPOperator op, const std::shared_ptr<ASTNode> &lhs,
                                    const std::shared_ptr<ASTNode> &rhs) : m_lhs(lhs), m_rhs(rhs), m_operator(op)
 {
@@ -34,70 +34,7 @@ void ComparrisionNode::print()
     m_rhs->print();
 }
 
-void compare_int(CMPOperator op, int64_t lhs, int64_t rhs, Stack &stack)
-{
-    switch (op)
-    {
-        case CMPOperator::EQUALS:
-            stack.push_back(static_cast<int64_t>(lhs == rhs));
-            break;
-        case CMPOperator::GREATER:
-            stack.push_back(static_cast<int64_t>(lhs > rhs));
-            break;
-        case CMPOperator::GREATER_EQUAL:
-            stack.push_back(static_cast<int64_t>(lhs >= rhs));
-            break;
-        case CMPOperator::LESS:
-            stack.push_back(static_cast<int64_t>(lhs < rhs));
-            break;
-        case CMPOperator::LESS_EQUAL:
-            stack.push_back(static_cast<int64_t>(lhs <= rhs));
-            break;
-    }
-}
 
-void compare_str(CMPOperator op, std::string_view lhs, std::string_view rhs, Stack &stack)
-{
-
-
-    switch (op)
-    {
-        case CMPOperator::EQUALS:
-            stack.push_back(static_cast<int64_t>(lhs == rhs));
-            break;
-        case CMPOperator::GREATER:
-            stack.push_back(static_cast<int64_t>(lhs > rhs));
-            break;
-        case CMPOperator::GREATER_EQUAL:
-            stack.push_back(static_cast<int64_t>(lhs >= rhs));
-            break;
-        case CMPOperator::LESS:
-            stack.push_back(static_cast<int64_t>(lhs < rhs));
-            break;
-        case CMPOperator::LESS_EQUAL:
-            stack.push_back(static_cast<int64_t>(lhs <= rhs));
-            break;
-    }
-}
-void ComparrisionNode::eval(InterpreterContext &context, std::ostream &outputStream)
-{
-    m_lhs->eval(context, outputStream);
-    m_rhs->eval(context, outputStream);
-
-
-    if (m_lhs->resolveType(context.unit, context.parent)->baseType == VariableBaseType::Integer)
-    {
-        auto lhs = context.stack.pop_front<int64_t>();
-        auto rhs = context.stack.pop_front<int64_t>();
-        compare_int(m_operator, lhs, rhs, context.stack);
-    }
-    else
-    {
-        auto lhs = context.stack.pop_front<std::string_view>();
-        auto rhs = context.stack.pop_front<std::string_view>();
-        compare_str(m_operator, lhs, rhs, context.stack);
-    }
-}
 llvm::Value *ComparrisionNode::codegen(std::unique_ptr<Context> &context)
 {
     auto lhs = m_lhs->codegen(context);

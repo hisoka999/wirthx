@@ -30,11 +30,6 @@ void UnitNode::print()
     m_blockNode->print();
 }
 
-void UnitNode::eval(InterpreterContext &context, std::ostream &outputStream)
-{
-    m_blockNode->eval(context, outputStream);
-}
-
 std::vector<std::shared_ptr<FunctionDefinitionNode>> UnitNode::getFunctionDefinitions()
 {
     return m_functionDefinitions;

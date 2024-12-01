@@ -3,49 +3,11 @@
 #include "FunctionCallNode.h"
 #include "UnitNode.h"
 #include "compiler/Context.h"
-#include "interpreter/InterpreterContext.h"
+
 
 VariableAccessNode::VariableAccessNode(const std::string_view variableName) : m_variableName(variableName) {}
 
 void VariableAccessNode::print() { std::cout << m_variableName; }
-
-void VariableAccessNode::eval(InterpreterContext &context, [[maybe_unused]] std::ostream &outputStream)
-{
-    VariableBaseType baseType = VariableBaseType::Unknown;
-
-    if (context.parent != nullptr)
-    {
-        if (FunctionCallNode *functionCall = dynamic_cast<FunctionCallNode *>(context.parent))
-        {
-            auto functionDefinition = context.unit->getFunctionDefinition(functionCall->name());
-            if (functionDefinition)
-            {
-                auto param = functionDefinition.value()->getParam(m_variableName);
-                if (param)
-                {
-                    baseType = param.value().type->baseType;
-                }
-            }
-        }
-        else
-        {
-            baseType = context.unit->getVariableDefinition(m_variableName).value().variableType->baseType;
-        }
-    }
-    else
-    {
-        baseType = context.unit->getVariableDefinition(m_variableName).value().variableType->baseType;
-    }
-
-    if (baseType == VariableBaseType::String)
-    {
-        context.stack.push_back(context.stack.get_var<std::string_view>(m_variableName));
-    }
-    else if (baseType == VariableBaseType::Integer || baseType == VariableBaseType::Boolean)
-    {
-        context.stack.push_back(context.stack.get_var<int64_t>(m_variableName));
-    }
-}
 
 llvm::Value *VariableAccessNode::codegen(std::unique_ptr<Context> &context)
 {

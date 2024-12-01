@@ -1,7 +1,7 @@
 #include "ArrayAssignmentNode.h"
 #include "UnitNode.h"
 #include "compiler/Context.h"
-#include "interpreter/InterpreterContext.h"
+
 
 ArrayAssignmentNode::ArrayAssignmentNode(const std::string variableName, const std::shared_ptr<ASTNode> &indexNode,
                                          const std::shared_ptr<ASTNode> &expression) :
@@ -11,31 +11,6 @@ ArrayAssignmentNode::ArrayAssignmentNode(const std::string variableName, const s
 
 void ArrayAssignmentNode::print() {}
 
-void ArrayAssignmentNode::eval(InterpreterContext &context, std::ostream &outputStream)
-{
-    auto arrayDef = context.unit->getVariableDefinition(m_variableName);
-
-    if (!context.stack.has_var(m_variableName))
-    {
-        auto type = std::dynamic_pointer_cast<ArrayType>(arrayDef.value().variableType);
-        PascalIntArray array(type->low, type->high);
-        m_indexNode->eval(context, outputStream);
-        auto index = context.stack.pop_front<int64_t>();
-        m_expression->eval(context, outputStream);
-        array[index] = context.stack.pop_front<int64_t>();
-        context.stack.set_var(m_variableName, array);
-    }
-    else
-    {
-        auto array = context.stack.get_var<PascalIntArray>(m_variableName);
-        m_indexNode->eval(context, outputStream);
-
-        auto index = context.stack.pop_front<int64_t>();
-        m_expression->eval(context, outputStream);
-        array[index] = context.stack.pop_front<int64_t>();
-        context.stack.set_var(m_variableName, array);
-    }
-}
 
 llvm::Value *ArrayAssignmentNode::codegen(std::unique_ptr<Context> &context)
 {

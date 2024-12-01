@@ -4,7 +4,7 @@
 #include "FieldAssignmentNode.h"
 #include "RecordType.h"
 #include "compiler/Context.h"
-#include "interpreter/InterpreterContext.h"
+
 
 FunctionDefinitionNode::FunctionDefinitionNode(std::string name, std::vector<FunctionArgument> params,
                                                std::shared_ptr<BlockNode> body, bool isProcedure,
@@ -47,24 +47,6 @@ void FunctionDefinitionNode::print()
     // std::cout << "end;\n";
 }
 
-void FunctionDefinitionNode::eval(InterpreterContext &context, std::ostream &outputStream)
-{
-    for (auto param: m_params)
-    {
-        if (param.type->baseType == VariableBaseType::Integer)
-        {
-            auto value = context.stack.pop_front<int64_t>();
-            context.stack.set_var(param.argumentName, value);
-        }
-        else if (param.type->baseType == VariableBaseType::String)
-        {
-            auto value = context.stack.pop_front<std::string_view>();
-            context.stack.set_var(param.argumentName, value);
-        }
-    }
-    m_body->eval(context, outputStream);
-}
-
 std::string &FunctionDefinitionNode::name() { return m_name; }
 
 std::shared_ptr<VariableType> FunctionDefinitionNode::returnType() { return m_returnType; }
@@ -76,47 +58,6 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
     for (auto &param: m_params)
     {
 
-        // if (!param.isReference && param.type->baseType == VariableBaseType::Struct)
-        // {
-        //     m_body->addVariableDefinition(VariableDefinition{.variableType = param.type,
-        //                                                      .variableName = param.argumentName,
-        //                                                      .scopeId = 0,
-        //                                                      .value = nullptr,
-        //                                                      .constant = false});
-        //     auto originalArgumentName = param.argumentName;
-        //     param.argumentName = param.argumentName + "_";
-
-        //     auto rt = std::dynamic_pointer_cast<RecordType>(param.type);
-        //     auto targetToken =
-        //             Token{.lexical = originalArgumentName, .row = 0, .col = 0, .tokenType = TokenType::NAMEDTOKEN};
-        //     auto sourceToken =
-        //             Token{.lexical = param.argumentName, .row = 0, .col = 0, .tokenType = TokenType::NAMEDTOKEN};
-
-        //     TokenWithFile target{
-        //             .token = targetToken,
-        //             .fileName = "",
-        //     };
-        //     TokenWithFile source{
-        //             .token = sourceToken,
-        //             .fileName = "",
-        //     };
-        //     for (size_t i = 0; i < rt->size(); ++i)
-        //     {
-        //         auto field = rt->getField(i);
-        //         auto fieldToken =
-        //                 Token{.lexical = field.variableName, .row = 0, .col = 0, .tokenType = TokenType::NAMEDTOKEN};
-        //         const TokenWithFile fieldTokenWithFile{
-        //                 .token = fieldToken,
-        //                 .fileName = "",
-        //         };
-        //         std::shared_ptr<ASTNode> fieldAccessExp = std::make_shared<FieldAccessNode>(source,
-        //         fieldTokenWithFile);
-
-
-        //         auto assignment = std::make_shared<FieldAssignmentNode>(target, fieldTokenWithFile, fieldAccessExp);
-        //         m_body->preappendExpression(assignment);
-        //     }
-        // }
         if (param.isReference || param.type->baseType == VariableBaseType::Struct)
         {
 

@@ -1,7 +1,9 @@
 #include "FieldAssignmentNode.h"
+#include "FunctionCallNode.h"
 #include "RecordType.h"
 #include "UnitNode.h"
 #include "compiler/Context.h"
+
 
 FieldAssignmentNode::FieldAssignmentNode(const TokenWithFile variable, const TokenWithFile field,
                                          const std::shared_ptr<ASTNode> &expression) :
@@ -11,8 +13,6 @@ FieldAssignmentNode::FieldAssignmentNode(const TokenWithFile variable, const Tok
 }
 
 void FieldAssignmentNode::print() {}
-
-void FieldAssignmentNode::eval(InterpreterContext &context, std::ostream &outputStream) {}
 
 llvm::Value *FieldAssignmentNode::codegen(std::unique_ptr<Context> &context)
 {

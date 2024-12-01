@@ -28,7 +28,6 @@ public:
     ~UnitNode() = default;
 
     void print() override;
-    void eval(InterpreterContext &context, std::ostream &outputStream) override;
 
     std::vector<std::shared_ptr<FunctionDefinitionNode>> getFunctionDefinitions();
     std::optional<std::shared_ptr<FunctionDefinitionNode>> getFunctionDefinition(const std::string &functionName);

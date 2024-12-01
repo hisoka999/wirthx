@@ -16,7 +16,6 @@ public:
     ~BlockNode() = default;
 
     void print() override;
-    void eval(InterpreterContext &context, std::ostream &outputStream) override;
     void setBlockName(const std::string &name);
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
     std::optional<VariableDefinition> getVariableDefinition(const std::string &name);
