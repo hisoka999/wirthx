@@ -6,6 +6,7 @@ enum class TokenType
 {
     NUMBER,
     STRING,
+    CHAR,
     KEYWORD,
     NAMEDTOKEN,
     PLUS,

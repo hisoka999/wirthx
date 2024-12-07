@@ -1,4 +1,7 @@
-
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+message(${llvm_libs})
+message(${LLVM_INCLUDE_DIRS})
 include(GoogleTest)
 
 
@@ -19,7 +22,7 @@ file(GLOB_RECURSE TEST_SRC  ${PROJECT_SOURCE_DIR}/src/*)
 macro(package_add_test TESTNAME)
     #INCLUDE_DIRECTORIES()
 
-    include_directories(${PROJECT_SOURCE_DIR} )
+    include_directories(${PROJECT_SOURCE_DIR} ${LLVM_INCLUDE_DIRS})
     # create an exectuable in which the tests will be stored
     add_executable(${TESTNAME}  ${TEST_SRC} ${ARGN})
     # link the Google test infrastructure, mocking library, and a default main fuction to
@@ -38,6 +41,7 @@ macro(package_add_test TESTNAME)
 endmacro()
 
 macro(package_add_test_with_libraries TESTNAME FILES LIBRARIES TEST_WORKING_DIRECTORY)
+
     add_executable(} ${FILES})
     llvm_map_components_to_libnames(llvm_libs support core irreader)
     target_link_libraries(${TESTNAME} ${llvm_libs})

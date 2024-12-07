@@ -14,6 +14,7 @@
 #include "ast/BlockNode.h"
 #include "ast/BooleanNode.h"
 #include "ast/BreakNode.h"
+#include "ast/CharConstantNode.h"
 #include "ast/ComparissionNode.h"
 #include "ast/FieldAccessNode.h"
 #include "ast/FieldAssignmentNode.h"
@@ -37,6 +38,7 @@ Parser::Parser(const std::filesystem::path &path, std::vector<Token> &tokens) : 
 {
     m_typeDefinitions["shortint"] = VariableType::getInteger(8);
     m_typeDefinitions["byte"] = VariableType::getInteger(8);
+    m_typeDefinitions["char"] = VariableType::getInteger(8);
     m_typeDefinitions["smallint"] = VariableType::getInteger(16);
     m_typeDefinitions["word"] = VariableType::getInteger(16);
     m_typeDefinitions["longint"] = VariableType::getInteger();
@@ -122,8 +124,11 @@ bool Parser::tryConsumeKeyWord(const std::string &keyword)
 
 std::optional<std::shared_ptr<VariableType>> Parser::determinVariableTypeByName(const std::string &name)
 {
-    if (m_typeDefinitions.contains(name))
-        return m_typeDefinitions.at(name);
+    for (const auto &def: m_typeDefinitions)
+    {
+        if (iequals(def.first, name))
+            return def.second;
+    }
 
     return std::nullopt;
 }
@@ -149,6 +154,10 @@ std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, size_t currentSc
         case TokenType::STRING:
         {
             return std::make_shared<StringConstantNode>(token.lexical);
+        }
+        case TokenType::CHAR:
+        {
+            return std::make_shared<CharConstantNode>(token.lexical);
         }
         case TokenType::PLUS:
         {
@@ -321,10 +330,17 @@ std::optional<VariableDefinition> Parser::parseVariableDefinitions(const Token &
 
     if (tryConsume(TokenType::COLON))
     {
-        consume(TokenType::NAMEDTOKEN);
-        _currentToken = current();
-        varType = std::string(_currentToken.lexical);
-        type = determinVariableTypeByName(varType);
+        if (tryConsume(TokenType::NAMEDTOKEN))
+        {
+            _currentToken = current();
+            varType = std::string(_currentToken.lexical);
+            type = determinVariableTypeByName(varType);
+        }
+        else if (tryConsumeKeyWord("array"))
+        {
+            varType = "array";
+            type = parseArray(scope, false);
+        }
     }
     std::shared_ptr<ASTNode> value;
     if (tryConsume(TokenType::EQUAL))
@@ -613,6 +629,8 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
     {
         consume(TokenType::NAMEDTOKEN);
         auto loopVariable = std::string(current().lexical);
+        m_known_variable_definitions.push_back(VariableDefinition{
+                .variableType = VariableType::getInteger(64), .variableName = loopVariable, .scopeId = scope + 1});
         consume(TokenType::COLON);
         consume(TokenType::EQUAL);
         auto loopStart = parseToken(next(), 0, nodes);
@@ -637,7 +655,8 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
                 consume(TokenType::ENDLINE);
             }
         }
-        whileNodes.push_back(parseBlock(current(), 0));
+        whileNodes.push_back(parseBlock(current(), scope + 1));
+
 
         nodes.push_back(std::make_shared<ForNode>(loopVariable, loopStart, loopEnd, whileNodes));
     }
@@ -821,9 +840,11 @@ std::shared_ptr<ASTNode> Parser::parseExpression(const Token &currentToken, size
         switch (token.tokenType)
         {
             case TokenType::STRING:
+            case TokenType::CHAR:
             case TokenType::NUMBER:
                 nodes.push_back(parseToken(token, currentScope, {}));
                 break;
+
             case TokenType::NAMEDTOKEN:
             {
                 if (canConsume(TokenType::COLON) || canConsume(TokenType::LEFT_SQUAR) ||
@@ -1077,6 +1098,50 @@ std::unique_ptr<UnitNode> Parser::parseUnit()
     return nullptr;
 }
 
+
+std::shared_ptr<ArrayType> Parser::parseArray(size_t scope, bool includeExpressionEnd)
+{
+    auto isFixedArray = tryConsume(TokenType::LEFT_SQUAR);
+    size_t arrayStart = 0;
+    size_t arrayEnd = 0;
+    if (isFixedArray)
+    {
+
+        auto arrayStartNode = parseToken(next(), scope, {});
+        if (auto node = std::dynamic_pointer_cast<NumberNode>(arrayStartNode))
+        {
+            arrayStart = node->getValue();
+        }
+        consume(TokenType::DOT);
+        consume(TokenType::DOT);
+
+        auto arrayEndNode = parseToken(next(), scope, {});
+        if (auto node = std::dynamic_pointer_cast<NumberNode>(arrayEndNode))
+        {
+            arrayEnd = node->getValue();
+        }
+        consume(TokenType::RIGHT_SQUAR);
+    }
+    consumeKeyWord("of");
+    consume(TokenType::NAMEDTOKEN);
+    auto internalTypeName = std::string(current().lexical);
+    auto internalType = determinVariableTypeByName(internalTypeName);
+    if (includeExpressionEnd)
+    {
+        consume(TokenType::SEMICOLON);
+        tryConsume(TokenType::ENDLINE);
+    }
+
+    if (isFixedArray)
+    {
+        return ArrayType::getFixedArray(arrayStart, arrayEnd, internalType.value());
+    }
+    else
+    {
+        return ArrayType::getDynArray(internalType.value());
+    }
+}
+
 void Parser::parseTypeDefinitions(int scope)
 {
     if (tryConsumeKeyWord("type"))
@@ -1095,29 +1160,7 @@ void Parser::parseTypeDefinitions(int scope)
             // parse type
             if (tryConsumeKeyWord("array"))
             {
-                consume(TokenType::LEFT_SQUAR);
-                size_t arrayStart = 0;
-                auto arrayStartNode = parseToken(next(), scope, {});
-                if (auto node = std::dynamic_pointer_cast<NumberNode>(arrayStartNode))
-                {
-                    arrayStart = node->getValue();
-                }
-                consume(TokenType::DOT);
-                consume(TokenType::DOT);
-                size_t arrayEnd = 0;
-                auto arrayEndNode = parseToken(next(), scope, {});
-                if (auto node = std::dynamic_pointer_cast<NumberNode>(arrayEndNode))
-                {
-                    arrayEnd = node->getValue();
-                }
-                consume(TokenType::RIGHT_SQUAR);
-                consumeKeyWord("of");
-                consume(TokenType::NAMEDTOKEN);
-                auto internalTypeName = std::string(current().lexical);
-                auto internalType = determinVariableTypeByName(internalTypeName);
-                consume(TokenType::SEMICOLON);
-                tryConsume(TokenType::ENDLINE);
-                m_typeDefinitions[typeName] = ArrayType::getArray(arrayStart, arrayEnd, internalType.value());
+                m_typeDefinitions[typeName] = parseArray(scope);
             }
             else if (tryConsumeKeyWord("record"))
             {

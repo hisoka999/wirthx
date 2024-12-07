@@ -1,24 +1,17 @@
 #include "Lexer.h"
-#include "compare.h"
 #include <iostream>
+#include "compare.h"
 
-Lexer::Lexer()
-{
-}
+Lexer::Lexer() {}
 
-Lexer::~Lexer()
-{
-}
+Lexer::~Lexer() {}
 
 bool validStartNameChar(char value)
 {
     return (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z') || value == '_';
 }
 
-bool validNameChar(char value)
-{
-    return validStartNameChar(value) || (value >= '0' && value <= '9');
-}
+bool validNameChar(char value) { return validStartNameChar(value) || (value >= '0' && value <= '9'); }
 
 std::vector<Token> Lexer::tokenize(std::string_view content)
 {
@@ -50,7 +43,8 @@ std::vector<Token> Lexer::tokenize(std::string_view content)
         if (found)
         {
             int offset = endPosition - i;
-            tokens.push_back(Token{.lexical = content.substr(i, offset), .row = row, .col = column, .tokenType = TokenType::KEYWORD});
+            tokens.push_back(Token{
+                    .lexical = content.substr(i, offset), .row = row, .col = column, .tokenType = TokenType::KEYWORD});
             i = endPosition - 1;
             column += offset + 1;
             continue;
@@ -60,7 +54,10 @@ std::vector<Token> Lexer::tokenize(std::string_view content)
         if (found)
         {
             int offset = endPosition - i;
-            tokens.push_back(Token{.lexical = content.substr(i, offset + 1), .row = row, .col = column, .tokenType = TokenType::NAMEDTOKEN});
+            tokens.push_back(Token{.lexical = content.substr(i, offset + 1),
+                                   .row = row,
+                                   .col = column,
+                                   .tokenType = TokenType::NAMEDTOKEN});
             i = endPosition;
             column += offset + 1;
             continue;
@@ -71,7 +68,17 @@ std::vector<Token> Lexer::tokenize(std::string_view content)
         if (found)
         {
             int offset = endPosition - i;
-            tokens.push_back(Token{.lexical = content.substr(i + 1, offset - 1), .row = row, .col = column, .tokenType = TokenType::STRING});
+            auto string_length = (offset - 1);
+            if (string_length > 1)
+                tokens.push_back(Token{.lexical = content.substr(i + 1, string_length),
+                                       .row = row,
+                                       .col = column,
+                                       .tokenType = TokenType::STRING});
+            else
+                tokens.push_back(Token{.lexical = content.substr(i + 1, string_length),
+                                       .row = row,
+                                       .col = column,
+                                       .tokenType = TokenType::CHAR});
             i = endPosition;
             column += offset + 1;
             continue;
@@ -81,7 +88,10 @@ std::vector<Token> Lexer::tokenize(std::string_view content)
         if (found)
         {
             int offset = endPosition - i;
-            tokens.push_back(Token{.lexical = content.substr(i, offset + 1), .row = row, .col = column, .tokenType = TokenType::NUMBER});
+            tokens.push_back(Token{.lexical = content.substr(i, offset + 1),
+                                   .row = row,
+                                   .col = column,
+                                   .tokenType = TokenType::NUMBER});
             i = endPosition;
             column += offset + 1;
             continue;
@@ -89,58 +99,82 @@ std::vector<Token> Lexer::tokenize(std::string_view content)
         // TokenType tokenType;
         switch (ch)
         {
-        case '\n':
-            tokens.push_back(Token{.lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::ENDLINE});
-            column = 1;
-            row++;
-            continue;
-        case '+':
-            tokens.push_back(Token{.lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::PLUS});
-            break;
-        case '-':
-            tokens.push_back(Token{.lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::MINUS});
-            break;
-        case '*':
-            tokens.push_back(Token{.lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::MUL});
-            break;
-        case '/':
-            tokens.push_back(Token{.lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::DIV});
-            break;
-        case '(':
-            tokens.push_back(Token{.lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::LEFT_CURLY});
-            break;
-        case ')':
-            tokens.push_back(Token{.lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::RIGHT_CURLY});
-            break;
-        case '[':
-            tokens.push_back(Token{.lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::LEFT_SQUAR});
-            break;
-        case ']':
-            tokens.push_back(Token{.lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::RIGHT_SQUAR});
-            break;
-        case '=':
-            tokens.push_back(Token{.lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::EQUAL});
-            break;
-        case '<':
-            tokens.push_back(Token{.lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::LESS});
-            break;
-        case '>':
-            tokens.push_back(Token{.lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::GREATER});
-            break;
-        case ',':
-            tokens.push_back(Token{.lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::COMMA});
-            break;
-        case ';':
-            tokens.push_back(Token{.lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::SEMICOLON});
-            break;
-        case ':':
-            tokens.push_back(Token{.lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::COLON});
-            break;
-        case '.':
-            tokens.push_back(Token{.lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::DOT});
-            break;
-        default:
-            break;
+            case '\n':
+                tokens.push_back(Token{
+                        .lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::ENDLINE});
+                column = 1;
+                row++;
+                continue;
+            case '+':
+                tokens.push_back(Token{
+                        .lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::PLUS});
+                break;
+            case '-':
+                tokens.push_back(Token{
+                        .lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::MINUS});
+                break;
+            case '*':
+                tokens.push_back(
+                        Token{.lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::MUL});
+                break;
+            case '/':
+                tokens.push_back(
+                        Token{.lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::DIV});
+                break;
+            case '(':
+                tokens.push_back(Token{.lexical = content.substr(i, 1),
+                                       .row = row,
+                                       .col = column,
+                                       .tokenType = TokenType::LEFT_CURLY});
+                break;
+            case ')':
+                tokens.push_back(Token{.lexical = content.substr(i, 1),
+                                       .row = row,
+                                       .col = column,
+                                       .tokenType = TokenType::RIGHT_CURLY});
+                break;
+            case '[':
+                tokens.push_back(Token{.lexical = content.substr(i, 1),
+                                       .row = row,
+                                       .col = column,
+                                       .tokenType = TokenType::LEFT_SQUAR});
+                break;
+            case ']':
+                tokens.push_back(Token{.lexical = content.substr(i, 1),
+                                       .row = row,
+                                       .col = column,
+                                       .tokenType = TokenType::RIGHT_SQUAR});
+                break;
+            case '=':
+                tokens.push_back(Token{
+                        .lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::EQUAL});
+                break;
+            case '<':
+                tokens.push_back(Token{
+                        .lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::LESS});
+                break;
+            case '>':
+                tokens.push_back(Token{
+                        .lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::GREATER});
+                break;
+            case ',':
+                tokens.push_back(Token{
+                        .lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::COMMA});
+                break;
+            case ';':
+                tokens.push_back(Token{
+                        .lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::SEMICOLON});
+                break;
+            case ':':
+                tokens.push_back(Token{
+                        .lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::COLON});
+                break;
+            case '.':
+                tokens.push_back(
+                        Token{.lexical = content.substr(i, 1), .row = row, .col = column, .tokenType = TokenType::DOT});
+                break;
+            default:
+                break;
         }
         column++;
     }
@@ -163,10 +197,7 @@ bool Lexer::find_string(std::string_view content, size_t start, size_t *endPosit
     }
     return true;
 }
-bool isNumberStart(char c)
-{
-    return (c >= '0' && c <= '9') || c == '-';
-}
+bool isNumberStart(char c) { return (c >= '0' && c <= '9') || c == '-'; }
 
 bool Lexer::find_number(std::string_view content, size_t start, size_t *endPosition)
 {
@@ -223,7 +254,7 @@ bool Lexer::find_fixed_token(std::string_view content, size_t start, size_t *end
     }
 
     auto tmp = content.substr(start, *endPosition - start);
-    for (auto token : possible_tokens)
+    for (auto token: possible_tokens)
     {
         if (iequals(tmp, token))
         {

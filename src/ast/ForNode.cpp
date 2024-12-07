@@ -27,10 +27,10 @@ llvm::Value *ForNode::codegen(std::unique_ptr<Context> &context)
     // block.
     // Within the loop, the variable is defined equal to the PHI node.  If it
     // shadows an existing variable, we have to restore it, so save it now.
-    auto *oldValue = context->NamedAllocations[m_loopVariable];
-    if (!oldValue)
-        return nullptr;
-    builder->CreateStore(startValue, context->NamedAllocations[m_loopVariable]);
+    // auto *oldValue = context->NamedAllocations[m_loopVariable];
+    // if (!oldValue)
+    //     return nullptr;
+    // builder->CreateStore(startValue, context->NamedAllocations[m_loopVariable]);
 
     Function *TheFunction = builder->GetInsertBlock()->getParent();
     BasicBlock *preheaderBB = builder->GetInsertBlock();
@@ -64,8 +64,8 @@ llvm::Value *ForNode::codegen(std::unique_ptr<Context> &context)
     Value *stepValue = builder->getInt64(1);
 
     Value *nextVar = builder->CreateAdd(Variable, stepValue, "nextvar");
-    builder->CreateStore(nextVar, context->NamedAllocations[m_loopVariable]);
-    // Compute the end condition.
+    // builder->CreateStore(nextVar, context->NamedAllocations[m_loopVariable]);
+    //  Compute the end condition.
     Value *EndCond = m_endExpression->codegen(context);
     if (!EndCond)
         return nullptr;

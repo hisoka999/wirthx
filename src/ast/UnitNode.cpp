@@ -85,7 +85,7 @@ llvm::Value *UnitNode::codegen(std::unique_ptr<Context> &context)
 
     context->Builder->CreateRet(llvm::ConstantInt::get(*context->TheContext, llvm::APInt(32, 0)));
     verifyFunction(*F, &llvm::errs());
-    context->TheFPM->run(*F, *context->TheFAM);
+    // context->TheFPM->run(*F, *context->TheFAM);
 
     return nullptr;
 }

@@ -32,11 +32,31 @@ llvm::Value *ArrayAssignmentNode::codegen(std::unique_ptr<Context> &context)
     else
     {
         auto def = std::dynamic_pointer_cast<ArrayType>(arrayDef->variableType);
+
         if (def->low > 0)
             index = context->Builder->CreateSub(
                     index, context->Builder->getIntN(index->getType()->getIntegerBitWidth(), def->low), "subtmp");
 
         llvm::ArrayRef<llvm::Value *> idxList = {context->Builder->getInt64(0), index};
+
+        if (def->isDynArray)
+        {
+            auto llvmRecordType = def->generateLlvmType(context);
+            auto arrayBaseType = def->arrayBase->generateLlvmType(context);
+
+            auto arrayPointerOffset = context->Builder->CreateStructGEP(llvmRecordType, V, 1, "array.ptr.offset");
+            // const llvm::DataLayout &DL = context->TheModule->getDataLayout();
+            // auto alignment = DL.getPrefTypeAlign(ptrType);
+            auto loadResult = context->Builder->CreateLoad(llvm::PointerType::getUnqual(*context->TheContext),
+                                                           arrayPointerOffset);
+
+
+            auto bounds = context->Builder->CreateGEP(arrayBaseType, loadResult, llvm::ArrayRef<llvm::Value *>{index},
+                                                      "", true);
+
+            context->Builder->CreateStore(result, bounds);
+            return result;
+        }
 
         auto bounds = context->Builder->CreateGEP(V->getAllocatedType(), V, idxList, "arrayindex", false);
 

@@ -38,6 +38,7 @@ private:
     std::optional<std::shared_ptr<VariableType>> determinVariableTypeByName(const std::string &name);
     std::shared_ptr<ASTNode> parseToken(const Token &token, size_t currentScope,
                                         std::vector<std::shared_ptr<ASTNode>> nodes);
+    std::shared_ptr<ArrayType> parseArray(size_t scope, bool includeExpressionEnd = true);
     bool parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr<ASTNode>> &nodes, size_t scope);
     void parseFunction(size_t scope, std::vector<std::shared_ptr<ASTNode>> &nodes, bool isProcedure);
     void parseVariableAssignment(const Token &currentToken, size_t currentScope,

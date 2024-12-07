@@ -4,7 +4,7 @@ type
     TValues = array [1..100] of integer;
 var
     values : TValues;
-    idx : integer;
+    //idx : integer;
 begin
 
     for idx := 1 to 100 do

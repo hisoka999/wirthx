@@ -12,7 +12,7 @@ SET(CMAKE_FIND_PACKAGE_SORT_ORDER NATURAL)
 SET(CMAKE_FIND_PACKAGE_SORT_DIRECTION ASC)
 
 
-find_package(LLVM 16.0.0 REQUIRED)
+find_package(LLVM 18.1.0 REQUIRED)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID}")
@@ -35,6 +35,7 @@ file(GLOB SRC
     src/ast/ASTNode.cpp
     src/ast/PrintNode.cpp
     src/ast/NumberNode.cpp
+    src/ast/CharConstantNode.cpp
     src/ast/StringConstantNode.cpp
     src/ast/BinaryOperationNode.cpp
     src/ast/InputNode.cpp

@@ -10,11 +10,13 @@ llvm::AllocaInst *VariableDefinition::generateCode(std::unique_ptr<Context> &con
     auto array = std::dynamic_pointer_cast<ArrayType>(this->variableType);
     if (array != nullptr)
     {
+        auto arrayType = array->generateLlvmType(context);
 
-        auto arraySize = array->high - array->low + 1;
-        auto type = array->arrayBase->generateLlvmType(context);
-
-        return context->Builder->CreateAlloca(llvm::ArrayType::get(type, arraySize), nullptr, this->variableName);
+        if (array->isDynArray)
+        {
+            return context->Builder->CreateAlloca(arrayType, nullptr, this->variableName);
+        }
+        return context->Builder->CreateAlloca(arrayType, nullptr, this->variableName);
     }
     auto structType = std::dynamic_pointer_cast<RecordType>(this->variableType);
     if (structType != nullptr)

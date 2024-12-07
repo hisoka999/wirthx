@@ -47,7 +47,8 @@ std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit)
     context->TheSI = std::make_unique<llvm::StandardInstrumentations>(*context->TheContext,
                                                                       /*DebugLogging*/ true);
 
-    context->TheSI->registerCallbacks(*context->ThePIC, context->TheFAM.get());
+    context->TheSI->registerCallbacks(*context->ThePIC, context->TheMAM.get());
+
 
     // Add transform passes.
     // Do simple "peephole" optimizations and bit-twiddling optzns.
@@ -71,7 +72,7 @@ std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit)
 }
 
 void createSystemCall(std::unique_ptr<Context> &context, std::string functionName,
-                      std::vector<FunctionArgument> functionparams)
+                      std::vector<FunctionArgument> functionparams, std::shared_ptr<VariableType> returnType = nullptr)
 {
     llvm::Function *F = context->FunctionDefinitions[functionName];
     if (F == nullptr)
@@ -82,6 +83,10 @@ void createSystemCall(std::unique_ptr<Context> &context, std::string functionNam
             params.push_back(param.type->generateLlvmType(context));
         }
         llvm::Type *resultType = llvm::Type::getVoidTy(*context->TheContext);
+        if (returnType)
+        {
+            resultType = returnType->generateLlvmType(context);
+        }
 
         llvm::FunctionType *FT = llvm::FunctionType::get(resultType, params, false);
 
@@ -98,7 +103,8 @@ void createSystemCall(std::unique_ptr<Context> &context, std::string functionNam
 void createPrintfCall(std::unique_ptr<Context> &context)
 {
     std::vector<llvm::Type *> params;
-    params.push_back(llvm::Type::getInt8PtrTy(*context->TheContext));
+    params.push_back(llvm::PointerType::getUnqual(*context->TheContext));
+
     llvm::Type *resultType = llvm::Type::getInt32Ty(*context->TheContext);
     llvm::FunctionType *FT = llvm::FunctionType::get(resultType, params, true);
     llvm::Function *F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "printf", context->TheModule.get());
@@ -162,6 +168,8 @@ void writeLnCodegen(std::unique_ptr<Context> &context, size_t length)
     std::vector<llvm::Value *> ArgsV;
     if (length > 32)
         ArgsV.push_back(context->Builder->CreateGlobalString("%ld\n"));
+    else if (length == 8)
+        ArgsV.push_back(context->Builder->CreateGlobalString("%c\n"));
     else
         ArgsV.push_back(context->Builder->CreateGlobalString("%d\n"));
     for (auto &arg: F->args())
@@ -214,6 +222,8 @@ void writeLnStrCodegen(std::unique_ptr<Context> &context)
     verifyFunction(*F, &llvm::errs());
     context->FunctionDefinitions[m_name] = F;
 }
+
+
 void compile_file(std::filesystem::path inputPath, std::ostream &errorStream, std::ostream &outputStream)
 {
     std::ifstream file;
@@ -251,8 +261,14 @@ void compile_file(std::filesystem::path inputPath, std::ostream &errorStream, st
     createPrintfCall(context);
     writeLnCodegen(context, 32);
     writeLnCodegen(context, 64);
+    writeLnCodegen(context, 8);
     writeLnStrCodegen(context);
     createSystemCall(context, "exit", {FunctionArgument{.type = intType, .argumentName = "X", .isReference = false}});
+    createSystemCall(
+            context, "malloc",
+            {FunctionArgument{.type = VariableType::getInteger(64), .argumentName = "size", .isReference = false}},
+            VariableType::getString());
+
     try
     {
         context->ProgramUnit->codegen(context);
@@ -317,7 +333,7 @@ void compile_file(std::filesystem::path inputPath, std::ostream &errorStream, st
     }
 
     legacy::PassManager pass;
-    auto FileType = CodeGenFileType::CGFT_ObjectFile;
+    auto FileType = CodeGenFileType::ObjectFile;
 
     if (TheTargetMachine->addPassesToEmitFile(pass, dest, nullptr, FileType))
     {

@@ -103,10 +103,10 @@ llvm::Value *FunctionCallNode::codegen(std::unique_ptr<Context> &context)
         {
             auto fieldName = functionDefinition.value()->name() + "_" + argType->argumentName;
             auto llvmArgType = argType->type->generateLlvmType(context);
-            auto memcpyCall =
-                    llvm::Intrinsic::getDeclaration(context->TheModule.get(), llvm::Intrinsic::memcpy,
-                                                    {context->Builder->getInt8PtrTy(), context->Builder->getInt8PtrTy(),
-                                                     context->Builder->getInt64Ty()});
+
+            auto memcpyCall = llvm::Intrinsic::getDeclaration(
+                    context->TheModule.get(), llvm::Intrinsic::memcpy,
+                    {context->Builder->getPtrTy(), context->Builder->getPtrTy(), context->Builder->getInt64Ty()});
             std::vector<llvm::Value *> memcopyArgs;
             llvm::AllocaInst *alloca = context->Builder->CreateAlloca(llvmArgType, nullptr, fieldName + "_ptr");
 
@@ -114,8 +114,8 @@ llvm::Value *FunctionCallNode::codegen(std::unique_ptr<Context> &context)
             uint64_t structSize = DL.getTypeAllocSize(argType->type->generateLlvmType(context));
 
 
-            memcopyArgs.push_back(context->Builder->CreateBitCast(alloca, context->Builder->getInt8PtrTy()));
-            memcopyArgs.push_back(context->Builder->CreateBitCast(argValue, context->Builder->getInt8PtrTy()));
+            memcopyArgs.push_back(context->Builder->CreateBitCast(alloca, context->Builder->getPtrTy()));
+            memcopyArgs.push_back(context->Builder->CreateBitCast(argValue, context->Builder->getPtrTy()));
             memcopyArgs.push_back(context->Builder->getInt64(structSize));
             memcopyArgs.push_back(context->Builder->getFalse());
 
