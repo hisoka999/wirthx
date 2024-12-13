@@ -16,6 +16,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
 
+#include "CompilerOptions.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 // namespace llvm
@@ -55,6 +56,7 @@ struct Context
     std::unique_ptr<llvm::StandardInstrumentations> TheSI;
 
     std::unique_ptr<UnitNode> ProgramUnit;
+    CompilerOptions compilerOptions;
 };
 
 void LogError(const char *Str);

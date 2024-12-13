@@ -2,7 +2,7 @@
 #include <iostream>
 #include "os/command.h"
 
-bool pascal_link_modules(const std::filesystem::path &baseDir, const std::string &program_name,
+bool pascal_link_modules(std::ostream &errStream, const std::filesystem::path &baseDir, const std::string &program_name,
                          std::vector<std::string> flags, std::vector<std::string> object_files)
 {
     std::vector<std::string> args;
@@ -15,5 +15,5 @@ bool pascal_link_modules(const std::filesystem::path &baseDir, const std::string
     for (auto &flag: flags)
         args.emplace_back(flag);
 
-    return execute_command_list(std::cerr, "cc", args);
+    return execute_command_list(errStream, "cc", args);
 }

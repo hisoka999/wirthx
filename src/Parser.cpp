@@ -34,7 +34,9 @@
 #include "compare.h"
 
 
-Parser::Parser(const std::filesystem::path &path, std::vector<Token> &tokens) : m_file_path(path), m_tokens(tokens)
+Parser::Parser(const std::vector<std::filesystem::path> rtlDirectories, const std::filesystem::path &path,
+               std::vector<Token> &tokens) :
+    m_rtlDirectories(std::move(rtlDirectories)), m_file_path(path), m_tokens(tokens)
 {
     m_typeDefinitions["shortint"] = VariableType::getInteger(8);
     m_typeDefinitions["byte"] = VariableType::getInteger(8);
@@ -560,7 +562,14 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
         if (consume(TokenType::NAMEDTOKEN))
         {
             auto filename = std::string(current().lexical) + ".pas";
+
             auto path = this->m_file_path.parent_path() / filename;
+            auto it = m_rtlDirectories.begin();
+            while (!std::filesystem::exists(path))
+            {
+                path = *it / filename;
+                it++;
+            }
             Lexer lexer;
             std::ifstream file;
             std::istringstream is;
@@ -583,7 +592,7 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
             file.read(&buffer[0], size);
 
             auto tokens = lexer.tokenize(std::string_view{buffer});
-            Parser parser(path, tokens);
+            Parser parser(m_rtlDirectories, path, tokens);
             auto unit = parser.parseUnit();
 
             for (auto &node: unit->getFunctionDefinitions())
@@ -738,7 +747,7 @@ void Parser::parseFunction(size_t scope, std::vector<std::shared_ptr<ASTNode>> &
         }
         else
         {
-            // TODO type def missing
+            // TODO: type def missing
             m_errors.push_back(ParserError{.file_name = m_file_path.string(),
                                            .token = token,
                                            .message = "For the parameter definition " + funcParamName +

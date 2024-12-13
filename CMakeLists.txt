@@ -22,13 +22,26 @@ if (UNIX)
     # G++
     file(GLOB LINKER_SRC src/linker/unix/pascal_linker.cpp src/os/unix/command.cpp)
 elseif(WIN32)
-message(ERROR "Windows is not yet supported")
+message(ERROR "Windows is not yet supported") 
 
 set(LINKER_SRC )
 endif()
+ 
+set (WIRTHX_VERSION_MAJOR 0)
+set (WIRTHX_VERSION_MINOR 1)
+set (WIRTHX_VERSION_PATCH 0) 
+
+# configure a header file to pass some of the CMake settings
+# to the source code
+configure_file (
+  "${PROJECT_SOURCE_DIR}/config.h.in"
+  "${PROJECT_BINARY_DIR}/config.h"
+  )
+
 
 file(GLOB SRC 
     ${LINKER_SRC}
+    ${PROJECT_BINARY_DIR}/config.h
     src/compare.cpp
     src/ast/BooleanNode.cpp
     src/ast/VariableDefinition.cpp
@@ -59,6 +72,8 @@ file(GLOB SRC
     src/ast/RecordType.cpp
     src/ast/ForNode.cpp
     src/ast/BreakNode.cpp
+    src/compiler/intrinsics.cpp
+    src/compiler/CompilerOptions.cpp
     src/compiler/Context.cpp
     src/compiler/Compiler.cpp
     src/Lexer.cpp

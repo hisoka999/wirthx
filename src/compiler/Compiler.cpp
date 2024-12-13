@@ -8,11 +8,13 @@
 #include "Parser.h"
 #include "ast/FunctionDefinitionNode.h"
 #include "compiler/Context.h"
+#include "compiler/intrinsics.h"
 #include "linker/pascal_linker.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/LTO/LTO.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/StandardInstrumentations.h"
@@ -27,10 +29,13 @@
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/Reassociate.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
+#include "os/command.h"
 
-std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit)
+
+std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit, CompilerOptions options)
 {
     auto context = std::make_unique<Context>();
+    context->compilerOptions = options;
     // Open a new context and module.
     context->TheContext = std::make_unique<llvm::LLVMContext>();
     context->TheModule = std::make_unique<llvm::Module>(unit->getUnitName(), *context->TheContext);
@@ -71,160 +76,9 @@ std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit)
     return context;
 }
 
-void createSystemCall(std::unique_ptr<Context> &context, std::string functionName,
-                      std::vector<FunctionArgument> functionparams, std::shared_ptr<VariableType> returnType = nullptr)
-{
-    llvm::Function *F = context->FunctionDefinitions[functionName];
-    if (F == nullptr)
-    {
-        std::vector<llvm::Type *> params;
-        for (auto &param: functionparams)
-        {
-            params.push_back(param.type->generateLlvmType(context));
-        }
-        llvm::Type *resultType = llvm::Type::getVoidTy(*context->TheContext);
-        if (returnType)
-        {
-            resultType = returnType->generateLlvmType(context);
-        }
 
-        llvm::FunctionType *FT = llvm::FunctionType::get(resultType, params, false);
-
-        llvm::Function *F =
-                llvm::Function::Create(FT, llvm::Function::ExternalLinkage, functionName, context->TheModule.get());
-
-        // Set names for all arguments.
-        unsigned idx = 0;
-        for (auto &arg: F->args())
-            arg.setName(functionparams[idx++].argumentName);
-    }
-}
-
-void createPrintfCall(std::unique_ptr<Context> &context)
-{
-    std::vector<llvm::Type *> params;
-    params.push_back(llvm::PointerType::getUnqual(*context->TheContext));
-
-    llvm::Type *resultType = llvm::Type::getInt32Ty(*context->TheContext);
-    llvm::FunctionType *FT = llvm::FunctionType::get(resultType, params, true);
-    llvm::Function *F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "printf", context->TheModule.get());
-    for (auto &arg: F->args())
-        arg.setName("__fmt");
-}
-
-void createSystemCall(std::unique_ptr<Context> &context, std::string functionName,
-                      std::vector<FunctionArgument> functionparams, VariableType returnType)
-{
-
-    llvm::Function *F = context->FunctionDefinitions[functionName];
-    if (F == nullptr)
-    {
-        std::vector<llvm::Type *> params;
-        for (auto &param: functionparams)
-        {
-            params.push_back(param.type->generateLlvmType(context));
-        }
-        llvm::Type *resultType = returnType.generateLlvmType(context);
-
-        llvm::FunctionType *FT = llvm::FunctionType::get(resultType, params, false);
-
-        llvm::Function *F =
-                llvm::Function::Create(FT, llvm::Function::ExternalLinkage, functionName, context->TheModule.get());
-
-        // Set names for all arguments.
-        unsigned idx = 0;
-        for (auto &arg: F->args())
-            arg.setName(functionparams[idx++].argumentName);
-    }
-}
-
-void writeLnCodegen(std::unique_ptr<Context> &context, size_t length)
-{
-    std::vector<llvm::Type *> params;
-    std::string m_name = "writeln_int" + std::to_string(length);
-    llvm::Type *resultType;
-    auto type = VariableType::getInteger(length);
-    params.push_back(type->generateLlvmType(context));
-
-    resultType = llvm::Type::getVoidTy(*context->TheContext);
-    llvm::FunctionType *FT = llvm::FunctionType::get(resultType, params, false);
-
-    llvm::Function *F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, m_name, context->TheModule.get());
-    F->addFnAttr(llvm::Attribute::AlwaysInline);
-    // Set names for all arguments.
-    for (auto &arg: F->args())
-        arg.setName("arg");
-
-    // Create a new basic block to start insertion into.
-
-    llvm::BasicBlock *BB = llvm::BasicBlock::Create(*context->TheContext, m_name, F);
-
-    context->Builder->SetInsertPoint(BB);
-
-    llvm::Function *CalleeF = context->TheModule->getFunction("printf");
-    if (!CalleeF)
-        LogErrorV("Unknown function referenced");
-
-    std::vector<llvm::Value *> ArgsV;
-    if (length > 32)
-        ArgsV.push_back(context->Builder->CreateGlobalString("%ld\n"));
-    else if (length == 8)
-        ArgsV.push_back(context->Builder->CreateGlobalString("%c\n"));
-    else
-        ArgsV.push_back(context->Builder->CreateGlobalString("%d\n"));
-    for (auto &arg: F->args())
-        ArgsV.push_back(F->getArg(arg.getArgNo()));
-
-    context->Builder->CreateCall(CalleeF, ArgsV);
-
-    context->Builder->CreateRetVoid();
-
-    verifyFunction(*F, &llvm::errs());
-    context->FunctionDefinitions[m_name] = F;
-}
-
-void writeLnStrCodegen(std::unique_ptr<Context> &context)
-{
-    std::vector<llvm::Type *> params;
-    std::string m_name = "writeln_str";
-    llvm::Type *resultType;
-    auto type = VariableType::getString();
-    params.push_back(type->generateLlvmType(context));
-
-    resultType = llvm::Type::getVoidTy(*context->TheContext);
-    llvm::FunctionType *FT = llvm::FunctionType::get(resultType, params, true);
-
-    llvm::Function *F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, m_name, context->TheModule.get());
-    F->addFnAttr(llvm::Attribute::AlwaysInline);
-    // Set names for all arguments.
-    for (auto &arg: F->args())
-        arg.setName("arg");
-
-    // Create a new basic block to start insertion into.
-
-    llvm::BasicBlock *BB = llvm::BasicBlock::Create(*context->TheContext, m_name, F);
-
-    context->Builder->SetInsertPoint(BB);
-
-    llvm::Function *CalleeF = context->TheModule->getFunction("printf");
-    if (!CalleeF)
-        LogErrorV("Unknown function referenced");
-
-    std::vector<llvm::Value *> ArgsV;
-    ArgsV.push_back(context->Builder->CreateGlobalString("%s\n"));
-    for (auto &arg: F->args())
-        ArgsV.push_back(F->getArg(arg.getArgNo()));
-
-    context->Builder->CreateCall(CalleeF, ArgsV);
-
-    context->Builder->CreateRetVoid();
-
-    verifyFunction(*F, &llvm::errs());
-    context->FunctionDefinitions[m_name] = F;
-}
-
-
-void compile_file(std::filesystem::path inputPath, std::ostream &errorStream, std::ostream &outputStream)
+void compile_file(CompilerOptions options, std::filesystem::path inputPath, std::ostream &errorStream,
+                  std::ostream &outputStream)
 {
     std::ifstream file;
     std::istringstream is;
@@ -244,14 +98,14 @@ void compile_file(std::filesystem::path inputPath, std::ostream &errorStream, st
 
     auto tokens = lexer.tokenize(std::string_view{buffer});
 
-    Parser parser(inputPath, tokens);
+    Parser parser(options.rtlDirectories, inputPath, tokens);
     auto unit = parser.parseUnit();
     if (parser.hasError())
     {
         parser.printErrors(errorStream);
         return;
     }
-    auto context = InitializeModule(unit);
+    auto context = InitializeModule(unit, options);
     auto intType = VariableType::getInteger();
     llvm::Intrinsic::getDeclaration(context->TheModule.get(), llvm::Intrinsic::vastart);
     llvm::Intrinsic::getDeclaration(context->TheModule.get(), llvm::Intrinsic::vacopy);
@@ -268,21 +122,6 @@ void compile_file(std::filesystem::path inputPath, std::ostream &errorStream, st
             context, "malloc",
             {FunctionArgument{.type = VariableType::getInteger(64), .argumentName = "size", .isReference = false}},
             VariableType::getString());
-
-    try
-    {
-        context->ProgramUnit->codegen(context);
-    }
-    catch (CompilerException &e)
-    {
-        errorStream << e.what();
-        return;
-    }
-
-
-    llvm::verifyModule(*context->TheModule, &llvm::errs());
-
-    context->TheModule->print(llvm::errs(), nullptr, false, false);
 
     using namespace llvm;
     using namespace llvm::sys;
@@ -315,16 +154,37 @@ void compile_file(std::filesystem::path inputPath, std::ostream &errorStream, st
     auto Features = "";
 
     TargetOptions opt;
-
     auto TheTargetMachine = Target->createTargetMachine(TargetTriple, CPU, Features, opt, Reloc::PIC_);
 
     context->TheModule->setDataLayout(TheTargetMachine->createDataLayout());
 
-    auto Filename = context->ProgramUnit->getUnitName() + ".o";
+
+    try
+    {
+        context->ProgramUnit->codegen(context);
+    }
+    catch (CompilerException &e)
+    {
+        errorStream << e.what();
+        return;
+    }
+
+
+    llvm::verifyModule(*context->TheModule, &llvm::errs());
+    if (context->compilerOptions.printLLVMIR)
+    {
+        context->TheModule->print(llvm::errs(), nullptr, false, false);
+    }
+
+
+    auto basePath = context->compilerOptions.outputDirectory;
+
+
+    auto objectFileName = basePath / (context->ProgramUnit->getUnitName() + ".o");
     std::vector<std::string> objectFiles;
-    objectFiles.emplace_back(Filename);
+    objectFiles.emplace_back(objectFileName.string());
     std::error_code EC;
-    raw_fd_ostream dest(Filename, EC, sys::fs::OF_None);
+    raw_fd_ostream dest(objectFileName.string(), EC, sys::fs::OF_None);
 
     if (EC)
     {
@@ -344,8 +204,19 @@ void compile_file(std::filesystem::path inputPath, std::ostream &errorStream, st
     pass.run(*context->TheModule);
     dest.flush();
 
-    outs() << "Wrote " << Filename << "\n";
-    // TODO link object files
-    auto basePath = std::filesystem::current_path();
-    pascal_link_modules(basePath, context->ProgramUnit->getUnitName(), {"-lc"}, objectFiles);
+    outs() << "Wrote " << objectFileName << "\n";
+
+    if (!pascal_link_modules(errorStream, basePath, context->ProgramUnit->getUnitName(), {"-lc"}, objectFiles))
+    {
+        return;
+    }
+
+    if (context->compilerOptions.runProgram)
+    {
+
+        if (!execute_command(outputStream, (basePath / context->ProgramUnit->getUnitName()).string()))
+        {
+            errorStream << "program could not be executed!\n";
+        }
+    }
 }

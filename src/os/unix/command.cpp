@@ -1,7 +1,7 @@
 #include "os/command.h"
-#include "limits.h"
 #include <cstdlib>
 #include <iostream>
+#include "limits.h"
 
 bool execute_command_list(std::ostream &outstream, const std::string &command, std::vector<std::string> args)
 {
@@ -11,7 +11,7 @@ bool execute_command_list(std::ostream &outstream, const std::string &command, s
 
     std::string cmd = command;
 
-    for (auto &arg : args)
+    for (auto &arg: args)
         cmd += " " + arg;
 
     fp = popen(cmd.c_str(), "r");
@@ -22,5 +22,10 @@ bool execute_command_list(std::ostream &outstream, const std::string &command, s
         outstream << path;
 
     status = pclose(fp);
+    if (status != 0)
+    {
+        std::cerr << "could not execute command: " << cmd << "\n";
+    }
+
     return status != -1;
 }

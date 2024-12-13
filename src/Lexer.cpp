@@ -267,7 +267,7 @@ bool Lexer::find_fixed_token(std::string_view content, size_t start, size_t *end
 
 bool Lexer::find_comment(std::string_view content, size_t start, size_t *endPosition)
 {
-    if (content.substr(start, 1) == "{")
+    if (content[start] == '{')
     {
         char current = content[start];
         *endPosition = start + 1;
@@ -280,7 +280,7 @@ bool Lexer::find_comment(std::string_view content, size_t start, size_t *endPosi
         *endPosition -= 1;
         return true;
     }
-    else if (content.substr(start, 2) == "//")
+    else if (content[start] == '/' && content[start + 1] == '/')
     {
         char current = content[start];
         *endPosition = start + 3;

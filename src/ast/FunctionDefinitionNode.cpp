@@ -122,7 +122,10 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
         context->Builder->CreateRetVoid();
 
         verifyFunction(*F);
-        // context->TheFPM->run(*F, *context->TheFAM);
+        if (context->compilerOptions.buildMode == BuildMode::Release)
+        {
+            context->TheFPM->run(*F, *context->TheFAM);
+        }
 
         return F;
     }
@@ -135,7 +138,10 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
 
     // Validate the generated code, checking for consistency.
     verifyFunction(*F);
-    // context->TheFPM->run(*F, *context->TheFAM);
+    if (context->compilerOptions.buildMode == BuildMode::Release)
+    {
+        context->TheFPM->run(*F, *context->TheFAM);
+    }
 
     return F;
 }

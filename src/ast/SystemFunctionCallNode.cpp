@@ -103,7 +103,7 @@ llvm::Value *SystemFunctionCallNode::codegen(std::unique_ptr<Context> &context)
                     newSize, context->Builder->getInt64(arrayBaseType->getPrimitiveSizeInBits()));
             auto allocCall = context->Builder->CreateCall(context->TheModule->getFunction("malloc"), allocSize);
 
-            return context->Builder->CreateAlignedStore(allocCall, arrayPointerOffset, llvm::MaybeAlign(8), false);
+            return context->Builder->CreateStore(allocCall, arrayPointerOffset);
         }
 
         return nullptr;

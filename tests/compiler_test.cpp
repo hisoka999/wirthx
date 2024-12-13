@@ -27,14 +27,16 @@ TEST_P(CompilerTest, TestNoError)
     ASSERT_TRUE(std::filesystem::exists(output_path));
     std::stringstream ostream;
     std::stringstream erstream;
-    compile_file(input_path, erstream, std::cout);
+    CompilerOptions options;
+
+    options.runProgram = true;
+    options.outputDirectory = std::filesystem::current_path();
+    compile_file(options, input_path, erstream, ostream);
 
     std::ifstream file;
     std::istringstream is;
     std::string s;
     std::string group;
-
-    execute_command(ostream, (std::filesystem::current_path() / name).string());
 
     file.open(output_path, std::ios::in);
 
@@ -67,7 +69,9 @@ TEST_P(CompilerTestError, CompilerTestWithError)
     ASSERT_TRUE(std::filesystem::exists(output_path));
     std::stringstream ostream;
     std::stringstream erstream;
-    compile_file(input_path, erstream, std::cout);
+    CompilerOptions options;
+
+    compile_file(options, input_path, erstream, ostream);
 
     std::ifstream file;
     std::istringstream is;
