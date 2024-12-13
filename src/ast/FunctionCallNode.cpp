@@ -22,54 +22,50 @@ void FunctionCallNode::print()
     std::cout << ");\n";
 }
 
+std::string FunctionCallNode::callSignature(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
+{
+    ASTNode *parent = unit.get();
+    if (parentNode != nullptr)
+    {
+        parent = parentNode;
+    }
+    std::string result = m_name + "(";
+    for (size_t i = 0; i < m_args.size(); ++i)
+    {
+        auto arg = m_args.at(i)->resolveType(unit, parent);
+
+        result += arg->typeName + ((i < m_args.size() - 1) ? "," : "");
+    }
+    result += ")";
+    return result;
+}
 
 llvm::Value *FunctionCallNode::codegen(std::unique_ptr<Context> &context)
 {
     // Look up the name in the global module table.
-    std::string functionName = m_name;
+    ASTNode *parent = context->ProgramUnit.get();
+    if (context->TopLevelFunction)
+    {
+        auto def = context->ProgramUnit->getFunctionDefinition(context->TopLevelFunction->getName().str());
+        if (def)
+        {
+            parent = def.value().get();
+        }
+    }
+
+    std::string functionName = callSignature(context->ProgramUnit, parent);
 
     llvm::Function *CalleeF = context->TheModule->getFunction(functionName);
     auto functionDefinition = context->ProgramUnit->getFunctionDefinition(functionName);
-    if (!CalleeF && m_args.size() > 0)
-    {
-        ASTNode *parent = context.get()->ProgramUnit.get();
-        if (context->TopLevelFunction)
-        {
-            auto def = context->ProgramUnit->getFunctionDefinition(std::string(context->TopLevelFunction->getName()));
-            if (def)
-            {
-                parent = def.value().get();
-            }
-        }
-        // look for alternative name
-        auto arg1 = m_args.at(0)->resolveType(context->ProgramUnit, parent);
-        switch (arg1->baseType)
-        {
-            case VariableBaseType::Integer:
-            {
-                functionName += "_int";
-                auto intType = std::dynamic_pointer_cast<IntegerType>(arg1);
-                assert(intType && "variable base type is integer but it is not an IntegerType");
-                functionName += std::to_string(intType->length);
-                break;
-            }
-            case VariableBaseType::String:
-                functionName += "_str";
-                break;
-            default:
-                break;
-        }
-        CalleeF = context->TheModule->getFunction(functionName);
-    }
+
 
     if (!CalleeF)
-        return LogErrorV("Unknown function referenced");
+        return LogErrorV("Unknown function referenced: " + functionName);
 
     // If argument mismatch error.
     if (CalleeF->arg_size() != m_args.size() && !CalleeF->isVarArg())
     {
-        std::cerr << "incorrect argumentsize for call " << functionName << "(" << m_args.size()
-                  << ") != " << CalleeF->arg_size() << "\n";
+        std::cerr << "incorrect argumentsize for call " << functionName << " != " << CalleeF->arg_size() << "\n";
         return LogErrorV("Incorrect # arguments passed");
     }
     std::vector<llvm::Value *> ArgsV;
@@ -155,7 +151,7 @@ llvm::Value *FunctionCallNode::codegen(std::unique_ptr<Context> &context)
 
 std::shared_ptr<VariableType> FunctionCallNode::resolveType(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
 {
-    auto functionDefinition = unit->getFunctionDefinition(m_name);
+    auto functionDefinition = unit->getFunctionDefinition(callSignature(unit, parentNode));
     if (!functionDefinition)
     {
         return std::make_shared<VariableType>();

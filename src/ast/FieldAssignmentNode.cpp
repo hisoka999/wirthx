@@ -42,8 +42,13 @@ llvm::Value *FieldAssignmentNode::codegen(std::unique_ptr<Context> &context)
 
                 auto index = recordType->getFieldIndexByName(m_fieldName);
                 auto field = recordType->getField(index);
+                auto fieldType = field.variableType->generateLlvmType(context);
+                auto bitLength = fieldType->getIntegerBitWidth();
                 auto result = m_expression->codegen(context);
-
+                if (result->getType()->isIntegerTy() && result->getType()->getIntegerBitWidth() != bitLength)
+                {
+                    result = context->Builder->CreateIntCast(result, fieldType, true, "result_cast");
+                }
                 if (arg->getType()->isStructTy())
                 {
                     llvm::AllocaInst *alloca =
@@ -56,6 +61,8 @@ llvm::Value *FieldAssignmentNode::codegen(std::unique_ptr<Context> &context)
                 else
                 {
                     auto arrayValue = context->Builder->CreateStructGEP(llvmRecordType, arg, index, fieldName);
+
+
                     context->Builder->CreateStore(result, arrayValue);
                 }
                 return result;
@@ -87,7 +94,14 @@ llvm::Value *FieldAssignmentNode::codegen(std::unique_ptr<Context> &context)
 
     auto elementPointer = context->Builder->CreateStructGEP(recordType->generateLlvmType(context), V, index, fieldName);
 
+    auto fieldType = field.variableType->generateLlvmType(context);
+    auto bitLength = fieldType->getIntegerBitWidth();
     auto result = m_expression->codegen(context);
+    if (result->getType()->isIntegerTy() && result->getType()->getIntegerBitWidth() != bitLength)
+    {
+        result = context->Builder->CreateIntCast(result, fieldType, true, "result_cast");
+    }
+
     const llvm::DataLayout &DL = context->TheModule->getDataLayout();
     auto alignment = DL.getPrefTypeAlign(field.variableType->generateLlvmType(context));
 

@@ -1,6 +1,6 @@
 #include "ForNode.h"
+#include "UnitNode.h"
 #include "compiler/Context.h"
-
 
 ForNode::ForNode(std::string loopVariable, std::shared_ptr<ASTNode> &startExpression,
                  std::shared_ptr<ASTNode> &endExpression, std::vector<std::shared_ptr<ASTNode>> &body) :
@@ -15,9 +15,8 @@ void ForNode::print() {}
 
 llvm::Value *ForNode::codegen(std::unique_ptr<Context> &context)
 {
-    using namespace llvm;
 
-    Value *startValue = m_startExpression->codegen(context);
+    llvm::Value *startValue = m_startExpression->codegen(context);
     if (!startValue)
         return nullptr;
 
@@ -32,10 +31,10 @@ llvm::Value *ForNode::codegen(std::unique_ptr<Context> &context)
     //     return nullptr;
     // builder->CreateStore(startValue, context->NamedAllocations[m_loopVariable]);
 
-    Function *TheFunction = builder->GetInsertBlock()->getParent();
-    BasicBlock *preheaderBB = builder->GetInsertBlock();
-    BasicBlock *loopBB = BasicBlock::Create(*llvmContext, "for.body", TheFunction);
-    BasicBlock *afterBB = BasicBlock::Create(*llvmContext, "for.cleanup", TheFunction);
+    llvm::Function *TheFunction = builder->GetInsertBlock()->getParent();
+    llvm::BasicBlock *preheaderBB = builder->GetInsertBlock();
+    llvm::BasicBlock *loopBB = llvm::BasicBlock::Create(*llvmContext, "for.body", TheFunction);
+    llvm::BasicBlock *afterBB = llvm::BasicBlock::Create(*llvmContext, "for.cleanup", TheFunction);
     // Insert an explicit fall through from the current block to the LoopBB.
     builder->CreateBr(loopBB);
 
@@ -43,7 +42,28 @@ llvm::Value *ForNode::codegen(std::unique_ptr<Context> &context)
     builder->SetInsertPoint(loopBB);
 
     // Start the PHI node with an entry for Start.
-    PHINode *Variable = builder->CreatePHI(Type::getInt64Ty(*llvmContext), 2, m_loopVariable);
+    // ASTNode *parent = context->ProgramUnit.get();
+    // if (context->TopLevelFunction)
+    // {
+    //     auto def = context->ProgramUnit->getFunctionDefinition(context->TopLevelFunction->getName().str());
+    //     if (def)
+    //     {
+    //         parent = def.value().get();
+    //     }
+    // }
+    // auto endExpressionType = m_endExpression->resolveType(context->ProgramUnit, parent);
+    unsigned int bitLength = 64;
+    auto targetType = llvm::Type::getIntNTy(*llvmContext, bitLength);
+    // if (auto integerType = std::dynamic_pointer_cast<IntegerType>(endExpressionType))
+    // {
+    //     bitLength = integerType->length;
+    // }
+    llvm::PHINode *Variable = builder->CreatePHI(targetType, 2, m_loopVariable);
+
+    if (startValue->getType()->getIntegerBitWidth() != bitLength)
+    {
+        startValue = context->Builder->CreateIntCast(startValue, targetType, true, "startValue_cast");
+    }
     Variable->addIncoming(startValue, preheaderBB);
 
     context->NamedValues[m_loopVariable] = Variable;
@@ -61,20 +81,24 @@ llvm::Value *ForNode::codegen(std::unique_ptr<Context> &context)
     }
     context->BreakBlock.Block = nullptr;
     // Emit the step value.
-    Value *stepValue = builder->getInt64(1);
+    llvm::Value *stepValue = builder->getIntN(bitLength, 1);
 
-    Value *nextVar = builder->CreateAdd(Variable, stepValue, "nextvar");
+    llvm::Value *nextVar = builder->CreateAdd(Variable, stepValue, "nextvar");
     // builder->CreateStore(nextVar, context->NamedAllocations[m_loopVariable]);
     //  Compute the end condition.
-    Value *EndCond = m_endExpression->codegen(context);
+    llvm::Value *EndCond = m_endExpression->codegen(context);
     if (!EndCond)
         return nullptr;
+    if (EndCond->getType()->getIntegerBitWidth() != bitLength)
+    {
+        EndCond = context->Builder->CreateIntCast(EndCond, targetType, true, "lhs_cast");
+    }
 
     // Convert condition to a bool by comparing non-equal to 0.0.
-    EndCond = context->Builder->CreateCmp(CmpInst::ICMP_SLE, nextVar, EndCond, "for.loopcond");
+    EndCond = context->Builder->CreateCmp(llvm::CmpInst::ICMP_SLE, nextVar, EndCond, "for.loopcond");
 
     // Create the "after loop" block and insert it.
-    BasicBlock *loopEndBB = builder->GetInsertBlock();
+    llvm::BasicBlock *loopEndBB = builder->GetInsertBlock();
 
     // Insert the conditional branch into the end of loopEndBB.
     builder->CreateCondBr(EndCond, loopBB, afterBB);
@@ -89,5 +113,5 @@ llvm::Value *ForNode::codegen(std::unique_ptr<Context> &context)
     // context->NamedAllocations[m_loopVariable] = result;
 
     // for expr always returns 0.0.
-    return Constant::getNullValue(Type::getInt64Ty(*llvmContext));
+    return llvm::Constant::getNullValue(llvm::Type::getInt64Ty(*llvmContext));
 }

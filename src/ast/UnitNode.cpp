@@ -39,7 +39,7 @@ std::optional<std::shared_ptr<FunctionDefinitionNode>> UnitNode::getFunctionDefi
 {
     for (auto &def: m_functionDefinitions)
     {
-        if (def->name() == functionName)
+        if (def->functionSignature() == functionName)
         {
             return def;
         }

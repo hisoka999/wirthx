@@ -74,11 +74,12 @@ llvm::Value *SystemFunctionCallNode::codegen(std::unique_ptr<Context> &context)
         {
             return nullptr;
         }
+
         auto arrayType = array->resolveType(context->ProgramUnit, parent);
         if (arrayType->baseType == VariableBaseType::Array)
         {
             auto realType = std::dynamic_pointer_cast<ArrayType>(arrayType);
-            // auto indexType = VariableType::getInteger(64)->generateLlvmType(context);
+            auto indexType = VariableType::getInteger(64)->generateLlvmType(context);
             auto value = array->codegen(context);
             // const llvm::DataLayout &DL = context->TheModule->getDataLayout();
             // auto alignment = DL.getPrefTypeAlign(indexType);
@@ -94,11 +95,16 @@ llvm::Value *SystemFunctionCallNode::codegen(std::unique_ptr<Context> &context)
             auto arrayPointerOffset = context->Builder->CreateStructGEP(llvmRecordType, value, 1, "array.ptr.offset");
             // auto arrayPointer =
             //         context->Builder->CreateAlignedLoad(arrayBaseType, arrayPointerOffset, alignment, "array.ptr");
+            if (64 != newSize->getType()->getIntegerBitWidth())
+            {
+                newSize = context->Builder->CreateIntCast(newSize, indexType, true, "lhs_cast");
+            }
 
             // change array size
             context->Builder->CreateStore(newSize, arraySizeOffset);
 
             // allocate memory for pointer
+
             auto allocSize = context->Builder->CreateMul(
                     newSize, context->Builder->getInt64(arrayBaseType->getPrimitiveSizeInBits()));
             auto allocCall = context->Builder->CreateCall(context->TheModule->getFunction("malloc"), allocSize);

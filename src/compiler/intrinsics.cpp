@@ -46,7 +46,7 @@ void createPrintfCall(std::unique_ptr<Context> &context)
 void writeLnCodegen(std::unique_ptr<Context> &context, size_t length)
 {
     std::vector<llvm::Type *> params;
-    std::string m_name = "writeln_int" + std::to_string(length);
+    std::string m_name = "writeln(integer" + std::to_string(length) + ")";
     llvm::Type *resultType;
     auto type = VariableType::getInteger(length);
     params.push_back(type->generateLlvmType(context));
@@ -91,7 +91,7 @@ void writeLnCodegen(std::unique_ptr<Context> &context, size_t length)
 void writeLnStrCodegen(std::unique_ptr<Context> &context)
 {
     std::vector<llvm::Type *> params;
-    std::string m_name = "writeln_str";
+    std::string m_name = "writeln(string)";
     llvm::Type *resultType;
     auto type = VariableType::getString();
     params.push_back(type->generateLlvmType(context));

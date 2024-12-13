@@ -1,5 +1,6 @@
 #include "Parser.h"
 #include <algorithm>
+#include <cmath>
 #include <exception>
 #include <fstream>
 #include <iostream>
@@ -143,15 +144,7 @@ std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, size_t currentSc
     {
         case TokenType::NUMBER:
         {
-            auto value = std::atoll(token.lexical.data());
-            auto lhs = std::make_shared<NumberNode>(value, 64);
-            if (canConsume(TokenType::PLUS) || canConsume(TokenType::MINUS))
-            {
-                auto op = parseToken(next(), currentScope, {lhs});
-                return op;
-            }
-            return lhs;
-            // check when ever the next token is a an operator
+            return parseNumber(token, currentScope);
         }
         case TokenType::STRING:
         {
@@ -300,6 +293,19 @@ std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, size_t currentSc
             throw ParserException(m_errors);
     }
     return nullptr;
+}
+
+const std::shared_ptr<ASTNode> Parser::parseNumber(const Token &token, size_t currentScope)
+{
+    auto value = std::atoll(token.lexical.data());
+    auto base = 1 + static_cast<int>(std::log2(value));
+    base = (base > 32) ? 64 : 32;
+    auto lhs = std::make_shared<NumberNode>(value, base);
+    if (canConsume(TokenType::PLUS) || canConsume(TokenType::MINUS))
+    {
+        return parseToken(next(), currentScope, {lhs});
+    }
+    return lhs;
 }
 
 bool Parser::isVariableDefined(const std::string_view name, size_t scope)

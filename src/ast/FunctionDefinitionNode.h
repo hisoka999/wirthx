@@ -28,6 +28,7 @@ public:
                            std::shared_ptr<VariableType> returnType = std::make_shared<VariableType>());
     ~FunctionDefinitionNode() = default;
     void print() override;
+    std::string functionSignature();
     std::string &name();
     std::shared_ptr<VariableType> returnType();
     std::optional<FunctionArgument> getParam(const std::string &paramName);

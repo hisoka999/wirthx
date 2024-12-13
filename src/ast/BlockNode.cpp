@@ -63,9 +63,13 @@ llvm::Value *BlockNode::codegen(std::unique_ptr<Context> &context)
         values.push_back(exp->codegen(context));
     }
 
+    auto topLevelFunctionName = (context->TopLevelFunction) ? context->TopLevelFunction->getName().str() : "";
+    if (context->TopLevelFunction)
+        topLevelFunctionName = topLevelFunctionName.substr(0, topLevelFunctionName.find('('));
     for (auto &def: m_variableDefinitions)
     {
-        if (!context->TopLevelFunction || def.variableName != context->TopLevelFunction->getName())
+
+        if (!context->TopLevelFunction || def.variableName != topLevelFunctionName)
             context->NamedAllocations[def.variableName] = nullptr;
     }
     return llvm::Constant::getNullValue(llvm::Type::getDoubleTy(*context->TheContext));

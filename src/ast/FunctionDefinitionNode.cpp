@@ -80,17 +80,17 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
     }
     llvm::FunctionType *FT = llvm::FunctionType::get(resultType, params, false);
 
-    llvm::Function *F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, m_name, context->TheModule.get());
-    F->setDSOLocal(true);
-    F->addFnAttr(llvm::Attribute::MustProgress);
+    llvm::Function *functionDefintion =
+            llvm::Function::Create(FT, llvm::Function::ExternalLinkage, functionSignature(), context->TheModule.get());
+    functionDefintion->setDSOLocal(true);
+    functionDefintion->addFnAttr(llvm::Attribute::MustProgress);
     llvm::AttrBuilder b(*context->TheContext);
     b.addAttribute("frame-pointer", "all");
-    F->addFnAttrs(b);
-
+    functionDefintion->addFnAttrs(b);
 
     // Set names for all arguments.
     unsigned idx = 0;
-    for (auto &arg: F->args())
+    for (auto &arg: functionDefintion->args())
     {
         auto param = m_params[idx];
         if (!param.isReference && param.type->baseType == VariableBaseType::Struct)
@@ -103,9 +103,10 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
         arg.setName(param.argumentName);
         idx++;
     }
+    context->FunctionDefinitions[functionSignature()] = functionDefintion;
     // Create a new basic block to start insertion into.
 
-    context->TopLevelFunction = F;
+    context->TopLevelFunction = functionDefintion;
     m_body->setBlockName(m_name + "_block");
     if (!m_isProcedure)
     {
@@ -121,13 +122,13 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
     {
         context->Builder->CreateRetVoid();
 
-        verifyFunction(*F);
+        verifyFunction(*functionDefintion);
         if (context->compilerOptions.buildMode == BuildMode::Release)
         {
-            context->TheFPM->run(*F, *context->TheFAM);
+            context->TheFPM->run(*functionDefintion, *context->TheFAM);
         }
 
-        return F;
+        return functionDefintion;
     }
     else
     {
@@ -137,13 +138,13 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
     // Finish off the function.
 
     // Validate the generated code, checking for consistency.
-    verifyFunction(*F);
+    verifyFunction(*functionDefintion);
     if (context->compilerOptions.buildMode == BuildMode::Release)
     {
-        context->TheFPM->run(*F, *context->TheFAM);
+        context->TheFPM->run(*functionDefintion, *context->TheFAM);
     }
 
-    return F;
+    return functionDefintion;
 }
 
 std::optional<FunctionArgument> FunctionDefinitionNode::getParam(const std::string &paramName)
@@ -168,3 +169,15 @@ std::optional<FunctionArgument> FunctionDefinitionNode::getParam(const size_t in
 }
 
 std::shared_ptr<BlockNode> FunctionDefinitionNode::body() { return m_body; }
+
+
+std::string FunctionDefinitionNode::functionSignature()
+{
+    auto result = m_name + "(";
+    for (size_t i = 0; i < m_params.size(); ++i)
+    {
+        result += m_params[i].type->typeName + ((i < m_params.size() - 1) ? "," : "");
+    }
+    result += ")";
+    return result;
+}
