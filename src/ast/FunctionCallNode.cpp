@@ -57,6 +57,16 @@ llvm::Value *FunctionCallNode::codegen(std::unique_ptr<Context> &context)
 
     llvm::Function *CalleeF = context->TheModule->getFunction(functionName);
     auto functionDefinition = context->ProgramUnit->getFunctionDefinition(functionName);
+    if (!CalleeF)
+    {
+        functionDefinition = context->ProgramUnit->getFunctionDefinition(m_name);
+        if (functionDefinition)
+            CalleeF = context->TheModule->getFunction(functionDefinition.value()->functionSignature());
+        if (CalleeF)
+        {
+            functionName = m_name;
+        }
+    }
 
 
     if (!CalleeF)
@@ -154,8 +164,14 @@ std::shared_ptr<VariableType> FunctionCallNode::resolveType(const std::unique_pt
     auto functionDefinition = unit->getFunctionDefinition(callSignature(unit, parentNode));
     if (!functionDefinition)
     {
+        functionDefinition = unit->getFunctionDefinition(m_name);
+    }
+
+    if (!functionDefinition)
+    {
         return std::make_shared<VariableType>();
     }
+
     return functionDefinition.value()->returnType();
 }
 

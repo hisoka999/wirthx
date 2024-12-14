@@ -3,9 +3,10 @@
 #include <vector>
 #include "Token.h"
 
-inline auto possible_tokens = {"program", "unit",  "uses",  "begin", "end", "procedure", "function", "var",   "if",
-                               "then",    "else",  "while", "do",    "for", "to",        "break",    "type",  "array",
-                               "of",      "const", "true",  "false", "and", "or",        "not",      "record"};
+inline auto possible_tokens = {"program", "unit",  "uses", "begin", "end",    "procedure", "function",
+                               "var",     "if",    "then", "else",  "while",  "do",        "for",
+                               "to",      "break", "type", "array", "of",     "const",     "true",
+                               "false",   "and",   "or",   "not",   "record", "external",  "name"};
 
 class Lexer
 {

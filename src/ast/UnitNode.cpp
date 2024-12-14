@@ -39,7 +39,8 @@ std::optional<std::shared_ptr<FunctionDefinitionNode>> UnitNode::getFunctionDefi
 {
     for (auto &def: m_functionDefinitions)
     {
-        if (def->functionSignature() == functionName)
+        if (def->functionSignature() == functionName ||
+            (def->name() == functionName && def->externalName() != def->name()))
         {
             return def;
         }
@@ -95,4 +96,17 @@ llvm::Value *UnitNode::codegen(std::unique_ptr<Context> &context)
 std::optional<VariableDefinition> UnitNode::getVariableDefinition(const std::string &name)
 {
     return m_blockNode->getVariableDefinition(name);
+}
+
+std::set<std::string> UnitNode::collectLibsToLink()
+{
+    std::set<std::string> result;
+    result.insert("c");
+    for (auto &function: m_functionDefinitions)
+    {
+        auto libName = function->libName();
+        if (!libName.empty())
+            result.insert(libName);
+    }
+    return result;
 }

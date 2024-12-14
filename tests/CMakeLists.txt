@@ -17,7 +17,7 @@ set_target_properties(gmock PROPERTIES FOLDER extern)
 set_target_properties(gmock_main PROPERTIES FOLDER extern)
 
 set(TEST_SRC "")
-file(GLOB_RECURSE TEST_SRC  ${PROJECT_SOURCE_DIR}/src/*)
+file(GLOB_RECURSE TEST_SRC  ${PROJECT_SOURCE_DIR}/src/*) 
 
 macro(package_add_test TESTNAME)
     #INCLUDE_DIRECTORIES()

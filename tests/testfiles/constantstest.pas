@@ -1,14 +1,14 @@
 program constantstest;
 
 const
-  Name = 'Tao Yue';
+  MyName = 'Tao Yue';
   FirstLetter = 'a';
   Year = 1997;
   TypedField: integer = 200;
 
 begin
     writeln('Name:');
-    writeln(Name);
+    writeln(MyName);
     writeln('Year:');
     writeln(Year);
     writeln('TypedField:');

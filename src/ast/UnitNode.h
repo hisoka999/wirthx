@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <set>
 #include "ASTNode.h"
 #include "ast/BlockNode.h"
 #include "ast/FunctionDefinitionNode.h"
@@ -35,4 +36,5 @@ public:
     std::string getUnitName();
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
     std::optional<VariableDefinition> getVariableDefinition(const std::string &name);
+    std::set<std::string> collectLibsToLink();
 };

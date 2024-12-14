@@ -206,7 +206,13 @@ void compile_file(CompilerOptions options, std::filesystem::path inputPath, std:
 
     outs() << "Wrote " << objectFileName << "\n";
 
-    if (!pascal_link_modules(errorStream, basePath, context->ProgramUnit->getUnitName(), {"-lc"}, objectFiles))
+    std::vector<std::string> flags;
+    for (auto lib: context->ProgramUnit->collectLibsToLink())
+    {
+        flags.push_back("-l" + lib);
+    }
+
+    if (!pascal_link_modules(errorStream, basePath, context->ProgramUnit->getUnitName(), flags, objectFiles))
     {
         return;
     }

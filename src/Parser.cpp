@@ -691,6 +691,9 @@ void Parser::parseFunction(size_t scope, std::vector<std::shared_ptr<ASTNode>> &
     consume(TokenType::NAMEDTOKEN);
     auto functionName = std::string(current().lexical);
     m_known_function_names.push_back(functionName);
+    bool isExternalFunction = false;
+    std::string libName = "";
+    std::string externalName = functionName;
 
     consume(TokenType::LEFT_CURLY);
     auto token = next();
@@ -786,15 +789,37 @@ void Parser::parseFunction(size_t scope, std::vector<std::shared_ptr<ASTNode>> &
                 VariableDefinition{.variableType = returnType, .variableName = functionName, .scopeId = scope});
     }
     consume(TokenType::SEMICOLON);
+
+    if (tryConsumeKeyWord("external"))
+    {
+        isExternalFunction = true;
+        tryConsume(TokenType::STRING) || tryConsume(TokenType::CHAR);
+        libName = std::string(current().lexical);
+
+        if (tryConsumeKeyWord("name"))
+        {
+            consume(TokenType::STRING);
+            externalName = std::string(current().lexical);
+        }
+        tryConsume(TokenType::SEMICOLON);
+    }
+
     tryConsume(TokenType::ENDLINE);
 
     // parse function body
+    if (isExternalFunction)
+    {
+        nodes.push_back(std::make_shared<FunctionDefinitionNode>(functionName, externalName, libName, functionParams,
+                                                                 isProcedure, returnType));
+    }
+    else
+    {
+        auto functionBody = parseBlock(current(), scope + 1);
+        consume(TokenType::SEMICOLON);
 
-    auto functionBody = parseBlock(current(), scope + 1);
-    consume(TokenType::SEMICOLON);
-
-    nodes.push_back(std::make_shared<FunctionDefinitionNode>(functionName, functionParams, functionBody, isProcedure,
-                                                             returnType));
+        nodes.push_back(std::make_shared<FunctionDefinitionNode>(functionName, functionParams, functionBody,
+                                                                 isProcedure, returnType));
+    }
 }
 
 std::shared_ptr<ASTNode> Parser::parseComparrision(const Token &currentToken, size_t currentScope,

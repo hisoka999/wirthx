@@ -9,7 +9,16 @@
 FunctionDefinitionNode::FunctionDefinitionNode(std::string name, std::vector<FunctionArgument> params,
                                                std::shared_ptr<BlockNode> body, bool isProcedure,
                                                std::shared_ptr<VariableType> returnType) :
-    m_name(name), m_params(params), m_body(body), m_isProcedure(isProcedure), m_returnType(returnType)
+    m_name(name), m_externalName(m_name), m_libName(""), m_params(params), m_body(body), m_isProcedure(isProcedure),
+    m_returnType(returnType)
+{
+}
+
+FunctionDefinitionNode::FunctionDefinitionNode(std::string name, std::string externalName, std::string libName,
+                                               std::vector<FunctionArgument> params, bool isProcedure,
+                                               std::shared_ptr<VariableType> returnType) :
+    m_name(name), m_externalName(externalName), m_libName(libName), m_params(params), m_body(nullptr),
+    m_isProcedure(isProcedure), m_returnType(returnType)
 {
 }
 
@@ -82,11 +91,14 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
 
     llvm::Function *functionDefintion =
             llvm::Function::Create(FT, llvm::Function::ExternalLinkage, functionSignature(), context->TheModule.get());
-    functionDefintion->setDSOLocal(true);
-    functionDefintion->addFnAttr(llvm::Attribute::MustProgress);
-    llvm::AttrBuilder b(*context->TheContext);
-    b.addAttribute("frame-pointer", "all");
-    functionDefintion->addFnAttrs(b);
+    if (m_libName.empty())
+    {
+        functionDefintion->setDSOLocal(true);
+        functionDefintion->addFnAttr(llvm::Attribute::MustProgress);
+        llvm::AttrBuilder b(*context->TheContext);
+        b.addAttribute("frame-pointer", "all");
+        functionDefintion->addFnAttrs(b);
+    }
 
     // Set names for all arguments.
     unsigned idx = 0;
@@ -107,42 +119,45 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
     // Create a new basic block to start insertion into.
 
     context->TopLevelFunction = functionDefintion;
-    m_body->setBlockName(m_name + "_block");
-    if (!m_isProcedure)
+    if (m_body)
     {
-        m_body->addVariableDefinition(VariableDefinition{.variableType = m_returnType,
-                                                         .variableName = m_name,
-                                                         .scopeId = 0,
-                                                         .value = nullptr,
-                                                         .constant = false});
-    }
-    m_body->codegen(context);
+        m_body->setBlockName(m_name + "_block");
+        if (!m_isProcedure)
+        {
+            m_body->addVariableDefinition(VariableDefinition{.variableType = m_returnType,
+                                                             .variableName = m_name,
+                                                             .scopeId = 0,
+                                                             .value = nullptr,
+                                                             .constant = false});
+        }
+        m_body->codegen(context);
+        if (m_isProcedure)
+        {
+            context->Builder->CreateRetVoid();
 
-    if (m_isProcedure)
-    {
-        context->Builder->CreateRetVoid();
+            verifyFunction(*functionDefintion);
+            if (context->compilerOptions.buildMode == BuildMode::Release)
+            {
+                context->TheFPM->run(*functionDefintion, *context->TheFAM);
+            }
 
+            return functionDefintion;
+        }
+        else
+        {
+            context->Builder->CreateRet(context->Builder->CreateLoad(
+                    context->NamedAllocations[m_name]->getAllocatedType(), context->NamedAllocations[m_name]));
+        }
+        // Finish off the function.
+
+        // Validate the generated code, checking for consistency.
         verifyFunction(*functionDefintion);
         if (context->compilerOptions.buildMode == BuildMode::Release)
         {
             context->TheFPM->run(*functionDefintion, *context->TheFAM);
         }
+    }
 
-        return functionDefintion;
-    }
-    else
-    {
-        context->Builder->CreateRet(context->Builder->CreateLoad(context->NamedAllocations[m_name]->getAllocatedType(),
-                                                                 context->NamedAllocations[m_name]));
-    }
-    // Finish off the function.
-
-    // Validate the generated code, checking for consistency.
-    verifyFunction(*functionDefintion);
-    if (context->compilerOptions.buildMode == BuildMode::Release)
-    {
-        context->TheFPM->run(*functionDefintion, *context->TheFAM);
-    }
 
     return functionDefintion;
 }
@@ -173,6 +188,9 @@ std::shared_ptr<BlockNode> FunctionDefinitionNode::body() { return m_body; }
 
 std::string FunctionDefinitionNode::functionSignature()
 {
+    if (!m_libName.empty())
+        return m_externalName;
+
     auto result = m_name + "(";
     for (size_t i = 0; i < m_params.size(); ++i)
     {
@@ -181,3 +199,7 @@ std::string FunctionDefinitionNode::functionSignature()
     result += ")";
     return result;
 }
+
+std::string &FunctionDefinitionNode::externalName() { return m_externalName; }
+
+std::string &FunctionDefinitionNode::libName() { return m_libName; }

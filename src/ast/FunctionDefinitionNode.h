@@ -17,6 +17,8 @@ class FunctionDefinitionNode : public ASTNode
 {
 private:
     std::string m_name;
+    std::string m_externalName;
+    std::string m_libName;
     std::vector<FunctionArgument> m_params;
     std::shared_ptr<BlockNode> m_body;
     bool m_isProcedure;
@@ -26,10 +28,15 @@ public:
     FunctionDefinitionNode(std::string name, std::vector<FunctionArgument> params, std::shared_ptr<BlockNode> body,
                            bool isProcedure,
                            std::shared_ptr<VariableType> returnType = std::make_shared<VariableType>());
+    FunctionDefinitionNode(std::string name, std::string externalName, std::string libName,
+                           std::vector<FunctionArgument> params, bool isProcedure,
+                           std::shared_ptr<VariableType> returnType = std::make_shared<VariableType>());
     ~FunctionDefinitionNode() = default;
     void print() override;
     std::string functionSignature();
     std::string &name();
+    std::string &externalName();
+    std::string &libName();
     std::shared_ptr<VariableType> returnType();
     std::optional<FunctionArgument> getParam(const std::string &paramName);
     std::optional<FunctionArgument> getParam(const size_t index);
