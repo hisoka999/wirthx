@@ -6,7 +6,8 @@
 #include "compiler/Context.h"
 
 
-static std::vector<std::string> knownSystemCalls = {"writeln", "write", "printf", "exit", "low", "high", "setlength"};
+static std::vector<std::string> knownSystemCalls = {"writeln", "write", "printf",    "exit",
+                                                    "low",     "high",  "setlength", "length"};
 
 bool isKnownSystemCall(const std::string &name)
 {
@@ -65,6 +66,22 @@ llvm::Value *SystemFunctionCallNode::codegen(std::unique_ptr<Context> &context)
             return context->Builder->getInt64(arrayType->high);
         }
     }
+    else if (iequals(m_name, "length"))
+    {
+        auto paramType = m_args[0]->resolveType(context->ProgramUnit, parent);
+        if (auto arrayType = std::dynamic_pointer_cast<StringType>(paramType))
+        {
+
+            // const llvm::DataLayout &DL = context->TheModule->getDataLayout();
+            auto value = m_args[0]->codegen(context);
+            auto llvmRecordType = arrayType->generateLlvmType(context);
+
+            auto arraySizeOffset = context->Builder->CreateStructGEP(llvmRecordType, value, 1, "length");
+            auto indexType = VariableType::getInteger(64)->generateLlvmType(context);
+
+            return context->Builder->CreateLoad(indexType, arraySizeOffset, "loaded.length");
+        }
+    }
     else if (iequals(m_name, "setlength"))
     {
         assert(m_args.size() == 2 && "setlength needs 2 arguments");
@@ -116,4 +133,28 @@ llvm::Value *SystemFunctionCallNode::codegen(std::unique_ptr<Context> &context)
     }
 
     return FunctionCallNode::codegen(context);
+}
+
+
+std::shared_ptr<VariableType> SystemFunctionCallNode::resolveType(const std::unique_ptr<UnitNode> &unitNode,
+                                                                  ASTNode *parentNode)
+{
+    if (iequals(m_name, "low"))
+    {
+        return IntegerType::getInteger(64);
+    }
+    else if (iequals(m_name, "high"))
+    {
+        return IntegerType::getInteger(64);
+    }
+    else if (iequals(m_name, "length"))
+    {
+        return IntegerType::getInteger(64);
+    }
+    else if (iequals(m_name, "setlength"))
+    {
+        return nullptr;
+    }
+
+    return nullptr;
 }

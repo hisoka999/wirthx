@@ -67,7 +67,8 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
     for (auto &param: m_params)
     {
 
-        if (param.isReference || param.type->baseType == VariableBaseType::Struct)
+        if (param.isReference || param.type->baseType == VariableBaseType::Struct ||
+            param.type->baseType == VariableBaseType::String)
         {
 
             auto ptr = llvm::PointerType::getUnqual(param.type->generateLlvmType(context));

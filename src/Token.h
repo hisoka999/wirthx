@@ -2,10 +2,11 @@
 #include <filesystem>
 #include <string_view>
 
-enum class TokenType
+enum class TokenType : uint16_t
 {
     NUMBER,
     STRING,
+    ESCAPED_STRING,
     CHAR,
     KEYWORD,
     NAMEDTOKEN,

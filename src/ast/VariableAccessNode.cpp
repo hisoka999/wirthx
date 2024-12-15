@@ -43,7 +43,7 @@ llvm::Value *VariableAccessNode::codegen(std::unique_ptr<Context> &context)
         }
 
 
-        return LogErrorV("Unknown variable name");
+        return LogErrorV("Unknown variable name: " + m_variableName);
     }
 
     // Load the value.
@@ -61,6 +61,11 @@ std::shared_ptr<VariableType> VariableAccessNode::resolveType(const std::unique_
         {
             return param.value().type;
         }
+        auto var = functionDefinition->body()->getVariableDefinition(m_variableName);
+        if (var)
+        {
+            return var.value().variableType;
+        }
     }
 
     if (FunctionCallNode *functionCall = dynamic_cast<FunctionCallNode *>(parent))
@@ -72,6 +77,11 @@ std::shared_ptr<VariableType> VariableAccessNode::resolveType(const std::unique_
             if (param)
             {
                 return param.value().type;
+            }
+            auto var = functionDefinition.value()->body()->getVariableDefinition(m_variableName);
+            if (var)
+            {
+                return var.value().variableType;
             }
         }
     }

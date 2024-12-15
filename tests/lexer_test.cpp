@@ -1,7 +1,11 @@
 #include "Lexer.h"
 #include <gtest/gtest.h>
+#include <magic_enum/magic_enum.hpp>
 #include <string>
 using namespace std::literals;
+
+
+void PrintTo(const TokenType e, std::ostream *os) { *os << magic_enum::enum_name(e); }
 
 TEST(LexerTest, LexHelloWorld)
 {
@@ -232,4 +236,37 @@ TEST(LexerTest, LexFunctionDeclaration)
     ASSERT_EQ(result[16].row, 6);
 
     ASSERT_EQ(result[17].tokenType, TokenType::T_EOF);
+}
+TEST(LexerTest, LexQuotedString)
+{
+    Lexer lexer;
+
+    auto result = lexer.tokenize(R"(str4 := 'this is a ''quoted'' string'; )");
+
+    EXPECT_EQ(result.size(), 6);
+    ASSERT_EQ(result[0].tokenType, TokenType::NAMEDTOKEN);
+    ASSERT_EQ(result[1].tokenType, TokenType::COLON);
+    ASSERT_EQ(result[2].tokenType, TokenType::EQUAL);
+    ASSERT_EQ(result[3].tokenType, TokenType::STRING);
+    ASSERT_EQ(result[3].lexical, "this is a ''quoted'' string"sv);
+    ASSERT_EQ(result[4].tokenType, TokenType::SEMICOLON);
+    ASSERT_EQ(result[5].tokenType, TokenType::T_EOF);
+}
+
+
+TEST(LexterTest, LexEscapedString)
+{
+
+    Lexer lexer;
+
+    auto result = lexer.tokenize(R"(str4 := #13#10; )");
+
+    EXPECT_EQ(result.size(), 6);
+    ASSERT_EQ(result[0].tokenType, TokenType::NAMEDTOKEN);
+    ASSERT_EQ(result[1].tokenType, TokenType::COLON);
+    ASSERT_EQ(result[2].tokenType, TokenType::EQUAL);
+    ASSERT_EQ(result[3].tokenType, TokenType::ESCAPED_STRING);
+    ASSERT_EQ(result[3].lexical, "#13#10"sv);
+    ASSERT_EQ(result[4].tokenType, TokenType::SEMICOLON);
+    ASSERT_EQ(result[5].tokenType, TokenType::T_EOF);
 }

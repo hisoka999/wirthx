@@ -94,7 +94,7 @@ void writeLnStrCodegen(std::unique_ptr<Context> &context)
     std::string m_name = "writeln(string)";
     llvm::Type *resultType;
     auto type = VariableType::getString();
-    params.push_back(type->generateLlvmType(context));
+    params.push_back(llvm::PointerType::getUnqual(*context->TheContext));
 
     resultType = llvm::Type::getVoidTy(*context->TheContext);
     llvm::FunctionType *FT = llvm::FunctionType::get(resultType, params, true);
@@ -115,10 +115,14 @@ void writeLnStrCodegen(std::unique_ptr<Context> &context)
     if (!CalleeF)
         LogErrorV("Unknown function referenced");
 
+    auto stringStructPtr = F->getArg(0);
+    auto arrayPointerOffset =
+            context->Builder->CreateStructGEP(type->generateLlvmType(context), stringStructPtr, 2, "string.ptr.offset");
+    auto value = context->Builder->CreateLoad(llvm::PointerType::getUnqual(*context->TheContext), arrayPointerOffset);
     std::vector<llvm::Value *> ArgsV;
     ArgsV.push_back(context->Builder->CreateGlobalString("%s\n"));
-    for (auto &arg: F->args())
-        ArgsV.push_back(F->getArg(arg.getArgNo()));
+
+    ArgsV.push_back(value);
 
     context->Builder->CreateCall(CalleeF, ArgsV);
 

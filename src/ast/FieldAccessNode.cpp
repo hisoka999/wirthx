@@ -33,7 +33,7 @@ llvm::Value *FieldAccessNode::codegen(std::unique_ptr<Context> &context)
 
                 if (!structDef)
                 {
-                    return LogErrorV("Unknown variable name");
+                    return LogErrorV("Unknown struct with name: " + m_elementName);
                 }
 
                 auto recordType = std::dynamic_pointer_cast<RecordType>(structDef->type);

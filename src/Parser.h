@@ -45,7 +45,7 @@ private:
     void parseFunction(size_t scope, std::vector<std::shared_ptr<ASTNode>> &nodes, bool isProcedure);
     void parseVariableAssignment(const Token &currentToken, size_t currentScope,
                                  std::vector<std::shared_ptr<ASTNode>> &nodes);
-    std::optional<VariableDefinition> parseVariableDefinitions(const Token &token, size_t scope);
+    std::vector<VariableDefinition> parseVariableDefinitions(const Token &token, size_t scope);
     std::shared_ptr<ASTNode> parseComparrision(const Token &currentToken, size_t currentScope,
                                                std::vector<std::shared_ptr<ASTNode>> &nodes);
     std::shared_ptr<ASTNode> parseExpression(const Token &currentToken, size_t currentScope);

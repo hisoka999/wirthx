@@ -24,7 +24,8 @@ llvm::Value *VariableAssignmentNode::codegen(std::unique_ptr<Context> &context)
     llvm::AllocaInst *V = context->NamedAllocations[m_variableName];
 
     if (!V)
-        return LogErrorV("Unknown variable name");
+        return LogErrorV("Unknown variable name for assignment: " + m_variableName);
+
 
     auto result = m_expression->codegen(context);
 
@@ -35,8 +36,35 @@ llvm::Value *VariableAssignmentNode::codegen(std::unique_ptr<Context> &context)
         {
             result = context->Builder->CreateIntCast(result, targetType, true, "lhs_cast");
         }
+
+        context->Builder->CreateStore(result, V);
+        return result;
     }
 
+
+    if (V->getAllocatedType()->isStructTy() && result->getType()->isPointerTy())
+    {
+        auto llvmArgType = V->getAllocatedType();
+
+        auto memcpyCall = llvm::Intrinsic::getDeclaration(
+                context->TheModule.get(), llvm::Intrinsic::memcpy,
+                {context->Builder->getPtrTy(), context->Builder->getPtrTy(), context->Builder->getInt64Ty()});
+        std::vector<llvm::Value *> memcopyArgs;
+        // llvm::AllocaInst *alloca = context->Builder->CreateAlloca(llvmArgType, nullptr, m_variableName + "_ptr");
+
+        const llvm::DataLayout &DL = context->TheModule->getDataLayout();
+        uint64_t structSize = DL.getTypeAllocSize(llvmArgType);
+
+
+        memcopyArgs.push_back(context->Builder->CreateBitCast(V, context->Builder->getPtrTy()));
+        memcopyArgs.push_back(context->Builder->CreateBitCast(result, context->Builder->getPtrTy()));
+        memcopyArgs.push_back(context->Builder->getInt64(structSize));
+        memcopyArgs.push_back(context->Builder->getFalse());
+
+        context->Builder->CreateCall(memcpyCall, memcopyArgs);
+
+        return result;
+    }
 
     context->Builder->CreateStore(result, V);
     return result;

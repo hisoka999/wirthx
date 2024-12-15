@@ -47,7 +47,7 @@ Parser::Parser(const std::vector<std::filesystem::path> rtlDirectories, const st
     m_typeDefinitions["longint"] = VariableType::getInteger();
     m_typeDefinitions["integer"] = VariableType::getInteger();
     m_typeDefinitions["int64"] = VariableType::getInteger(64);
-    m_typeDefinitions["string"] = std::make_shared<VariableType>(VariableBaseType::String, "string");
+    m_typeDefinitions["string"] = VariableType::getString();
     m_typeDefinitions["boolean"] = VariableType::getBoolean();
 }
 
@@ -146,9 +146,24 @@ std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, size_t currentSc
         {
             return parseNumber(token, currentScope);
         }
+        case TokenType::ESCAPED_STRING:
+        {
+            auto result = std::string{};
+            size_t x = 1;
+            while (x < token.lexical.size())
+            {
+                int next = token.lexical.find('#', x);
+                if (next == -1)
+                    next = token.lexical.size();
+                auto tmp = token.lexical.substr(x, next - x);
+                result += std::atoi(tmp.data());
+                x = next + 1;
+            }
+            return std::make_shared<StringConstantNode>(result);
+        }
         case TokenType::STRING:
         {
-            return std::make_shared<StringConstantNode>(token.lexical);
+            return std::make_shared<StringConstantNode>(std::string(token.lexical));
         }
         case TokenType::CHAR:
         {
@@ -318,20 +333,32 @@ bool Parser::isVariableDefined(const std::string_view name, size_t scope)
     return false;
 }
 
-std::optional<VariableDefinition> Parser::parseVariableDefinitions(const Token &token, size_t scope)
+std::vector<VariableDefinition> Parser::parseVariableDefinitions(const Token &token, size_t scope)
 {
+    std::vector<VariableDefinition> result;
     Token _currentToken = token;
 
     if (canConsume(TokenType::ENDLINE))
     {
         consume(TokenType::ENDLINE);
-        return std::nullopt;
+        return {};
     }
     // consume var declarations
-    consume(TokenType::NAMEDTOKEN);
-    _currentToken = current();
-    auto varName = std::string(_currentToken.lexical);
 
+
+    std::vector<std::string> varNames;
+    do
+    {
+        consume(TokenType::NAMEDTOKEN);
+        _currentToken = current();
+        auto varName = std::string(_currentToken.lexical);
+        varNames.push_back(varName);
+        if (!tryConsume(TokenType::COMMA))
+        {
+            break;
+        }
+    }
+    while (!canConsume(TokenType::COLON));
 
     std::optional<std::shared_ptr<VariableType>> type;
     std::string varType;
@@ -366,25 +393,32 @@ std::optional<VariableDefinition> Parser::parseVariableDefinitions(const Token &
 
     consume(TokenType::SEMICOLON);
     consume(TokenType::ENDLINE);
-    if (isVariableDefined(varName, scope))
+    for (auto varName: varNames)
     {
-        m_errors.push_back(
-                ParserError{.file_name = m_file_path.string(),
-                            .token = _currentToken,
-                            .message = "A variable or constant with the name " + varName + " was allready defined!"});
-        return std::nullopt;
-    }
-    else if (!type.has_value())
-    {
-        m_errors.push_back(ParserError{.file_name = m_file_path.string(),
-                                       .token = _currentToken,
-                                       .message = "A type " + varType + " of the variable " + varName +
-                                                  " could not be determined!"});
-        return std::nullopt;
-    }
+        if (isVariableDefined(varName, scope))
+        {
+            m_errors.push_back(ParserError{.file_name = m_file_path.string(),
+                                           .token = _currentToken,
+                                           .message = "A variable or constant with the name " + varName +
+                                                      " was allready defined!"});
+            return {};
+        }
+        else if (!type.has_value())
+        {
+            m_errors.push_back(ParserError{.file_name = m_file_path.string(),
+                                           .token = _currentToken,
+                                           .message = "A type " + varType + " of the variable " + varName +
+                                                      " could not be determined!"});
+            return {};
+        }
 
-    return VariableDefinition{
-            .variableType = type.value(), .variableName = varName, .scopeId = scope, .value = value, .constant = false};
+        result.push_back(VariableDefinition{.variableType = type.value(),
+                                            .variableName = varName,
+                                            .scopeId = scope,
+                                            .value = value,
+                                            .constant = false});
+    }
+    return result;
 }
 
 std::shared_ptr<BlockNode> Parser::parseBlock(const Token &currentToken, size_t scope)
@@ -476,12 +510,13 @@ std::shared_ptr<BlockNode> Parser::parseBlock(const Token &currentToken, size_t 
         while (!canConsumeKeyWord("begin"))
         {
 
-            auto definition = parseVariableDefinitions(_currentToken, scope);
-            if (!definition)
-                continue;
+            auto definitions = parseVariableDefinitions(_currentToken, scope);
 
-            m_known_variable_definitions.push_back(definition.value());
-            blockVariableDefinitions.push_back(definition.value());
+            for (auto &definition: definitions)
+            {
+                m_known_variable_definitions.push_back(definition);
+                blockVariableDefinitions.push_back(definition);
+            }
         }
     }
 
@@ -648,10 +683,10 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
                 .variableType = VariableType::getInteger(64), .variableName = loopVariable, .scopeId = scope + 1});
         consume(TokenType::COLON);
         consume(TokenType::EQUAL);
-        auto loopStart = parseToken(next(), 0, nodes);
+        auto loopStart = parseToken(next(), scope + 1, nodes);
 
         consumeKeyWord("to");
-        auto loopEnd = parseToken(next(), 0, nodes);
+        auto loopEnd = parseToken(next(), scope + 1, nodes);
 
         std::vector<std::shared_ptr<ASTNode>> whileNodes;
 
@@ -879,6 +914,7 @@ std::shared_ptr<ASTNode> Parser::parseExpression(const Token &currentToken, size
     {
         switch (token.tokenType)
         {
+            case TokenType::ESCAPED_STRING:
             case TokenType::STRING:
             case TokenType::CHAR:
             case TokenType::NUMBER:
@@ -887,7 +923,8 @@ std::shared_ptr<ASTNode> Parser::parseExpression(const Token &currentToken, size
 
             case TokenType::NAMEDTOKEN:
             {
-                if (canConsume(TokenType::COLON) || canConsume(TokenType::LEFT_SQUAR) ||
+                if (canConsume(TokenType::COLON) ||
+                    (canConsume(TokenType::LEFT_SQUAR) && canConsume(TokenType::COLON, 4)) ||
                     (canConsume(TokenType::DOT) && canConsume(TokenType::COLON, 3)))
                 {
                     parseVariableAssignment(token, currentScope, nodes);
@@ -1209,11 +1246,10 @@ void Parser::parseTypeDefinitions(int scope)
 
                 while (!canConsumeKeyWord("end"))
                 {
-                    auto definition = parseVariableDefinitions(current(), scope);
-                    if (!definition)
-                        continue;
+                    auto definitions = parseVariableDefinitions(current(), scope);
 
-                    fieldDefinitions.push_back(definition.value());
+                    for (auto &definition: definitions)
+                        fieldDefinitions.push_back(definition);
                 }
 
                 consumeKeyWord("end");

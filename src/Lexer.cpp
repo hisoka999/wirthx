@@ -83,6 +83,25 @@ std::vector<Token> Lexer::tokenize(std::string_view content)
             column += offset + 1;
             continue;
         }
+
+        found = find_escape_sequence(content, i, &endPosition);
+        if (found)
+        {
+            int offset = endPosition - i;
+            auto string_length = (offset);
+            auto string = content.substr(i, string_length);
+
+
+            if (string_length > 1)
+                tokens.push_back(
+                        Token{.lexical = string, .row = row, .col = column, .tokenType = TokenType::ESCAPED_STRING});
+            else
+                tokens.push_back(Token{.lexical = string, .row = row, .col = column, .tokenType = TokenType::CHAR});
+            i = endPosition - 1;
+            column += offset;
+            continue;
+        }
+
         endPosition = i;
         found = find_number(content, i, &endPosition);
         if (found)
@@ -182,6 +201,35 @@ std::vector<Token> Lexer::tokenize(std::string_view content)
     return tokens;
 }
 
+bool Lexer::find_escape_sequence(std::string_view content, size_t start, size_t *endPosition)
+{
+    char current = content[start];
+    if (current != '#')
+        return false;
+
+    *endPosition = start + 1;
+    current = content[start + 1];
+    while (true)
+    {
+        if (current == '#')
+        {
+            *endPosition += 1;
+            current = content[*endPosition];
+        }
+        else if (content[*endPosition] >= '0' && content[*endPosition] <= '9')
+        {
+            *endPosition += 1;
+            current = content[*endPosition];
+            continue;
+        }
+        else
+        {
+            break;
+        }
+    }
+    return true;
+}
+
 bool Lexer::find_string(std::string_view content, size_t start, size_t *endPosition)
 {
     char current = content[start];
@@ -189,8 +237,20 @@ bool Lexer::find_string(std::string_view content, size_t start, size_t *endPosit
         return false;
     *endPosition = start + 1;
     current = content[start + 1];
-    while (current != '\'')
+    while (true)
     {
+        if (current == '\'')
+        {
+            if (content.size() - 1 > *endPosition + 1 && content[*endPosition + 1] == '\'')
+            {
+                *endPosition += 2;
+                current = content[*endPosition];
+            }
+            else
+            {
+                break;
+            }
+        }
 
         *endPosition += 1;
         current = content[*endPosition];

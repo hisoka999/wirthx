@@ -18,7 +18,7 @@ llvm::Value *ArrayAssignmentNode::codegen(std::unique_ptr<Context> &context)
     llvm::AllocaInst *V = context->NamedAllocations[m_variableName];
 
     if (!V)
-        return LogErrorV("Unknown variable name");
+        return LogErrorV("Unknown variable name for array assignment: " + m_variableName);
 
     auto result = m_expression->codegen(context);
 
@@ -27,7 +27,7 @@ llvm::Value *ArrayAssignmentNode::codegen(std::unique_ptr<Context> &context)
     auto arrayDef = context->ProgramUnit->getVariableDefinition(m_variableName);
     if (!arrayDef)
     {
-        return LogErrorV("Unknown variable name");
+        return LogErrorV("Unknown variable name for array assignment: " + m_variableName);
     }
     else
     {

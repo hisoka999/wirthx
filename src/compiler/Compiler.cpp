@@ -121,7 +121,7 @@ void compile_file(CompilerOptions options, std::filesystem::path inputPath, std:
     createSystemCall(
             context, "malloc",
             {FunctionArgument{.type = VariableType::getInteger(64), .argumentName = "size", .isReference = false}},
-            VariableType::getString());
+            VariableType::getPointer());
 
     using namespace llvm;
     using namespace llvm::sys;

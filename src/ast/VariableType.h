@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <memory>
 #include <string>
+#include "Token.h"
 
 enum class VariableBaseType
 {
@@ -13,6 +14,7 @@ enum class VariableBaseType
     Array,
     Class,
     Boolean,
+    Pointer,
     Unknown
 };
 
@@ -27,6 +29,8 @@ struct Context;
 
 class IntegerType;
 
+class StringType;
+
 class VariableType
 {
 public:
@@ -38,10 +42,18 @@ public:
     virtual llvm::Type *generateLlvmType(std::unique_ptr<Context> &context);
     static std::shared_ptr<IntegerType> getInteger(size_t length = 32);
     static std::shared_ptr<VariableType> getBoolean();
-    static std::shared_ptr<VariableType> getString();
+    static std::shared_ptr<StringType> getString();
+    static std::shared_ptr<VariableType> getPointer();
 };
 
-class ArrayType : public VariableType
+class FieldAccessableType
+{
+public:
+    virtual llvm::Value *generateFieldAccess(TokenWithFile &token, llvm::Value *indexValue,
+                                             std::unique_ptr<Context> &context) = 0;
+};
+
+class ArrayType : public VariableType, public FieldAccessableType
 {
 private:
     llvm::Type *llvmType = nullptr;
@@ -59,12 +71,24 @@ public:
     static std::shared_ptr<ArrayType> getDynArray(const std::shared_ptr<VariableType> &baseType);
 
     llvm::Type *generateLlvmType(std::unique_ptr<Context> &context) override;
+    llvm::Value *generateFieldAccess(TokenWithFile &token, llvm::Value *indexValue,
+                                     std::unique_ptr<Context> &context) override;
 };
-
 
 class IntegerType : public VariableType
 {
 public:
     size_t length;
     llvm::Type *generateLlvmType(std::unique_ptr<Context> &context) override;
+};
+
+class StringType : public VariableType, public FieldAccessableType
+{
+private:
+    llvm::Type *llvmType = nullptr;
+
+public:
+    llvm::Type *generateLlvmType(std::unique_ptr<Context> &context) override;
+    llvm::Value *generateFieldAccess(TokenWithFile &token, llvm::Value *indexValue,
+                                     std::unique_ptr<Context> &context) override;
 };

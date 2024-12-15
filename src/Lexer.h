@@ -17,6 +17,7 @@ private:
     bool find_string(std::string_view content, size_t start, size_t *endPosition);
     bool find_number(std::string_view content, size_t start, size_t *endPosition);
     bool find_comment(std::string_view content, size_t start, size_t *endPosition);
+    bool find_escape_sequence(std::string_view content, size_t start, size_t *endPosition);
 
 public:
     Lexer();

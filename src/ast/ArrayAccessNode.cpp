@@ -14,80 +14,93 @@ void ArrayAccessNode::print() {}
 
 std::shared_ptr<VariableType> ArrayAccessNode::resolveType(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
 {
-    if (auto functionDefinition = dynamic_cast<FunctionDefinitionNode *>(parentNode))
+    auto definition = unit->getVariableDefinition(m_arrayName);
+    std::shared_ptr<VariableType> varType = nullptr;
+    if (!definition)
     {
-        auto param = functionDefinition->getParam(m_arrayName);
-        if (param)
+        if (auto functionDefinition = dynamic_cast<FunctionDefinitionNode *>(parentNode))
         {
-            return param.value().type;
+            auto param = functionDefinition->getParam(m_arrayName);
+            if (param)
+            {
+                varType = param.value().type;
+            }
         }
     }
-    auto definition = unit->getVariableDefinition(m_arrayName);
-    if (definition)
+    else
     {
-        auto array = std::dynamic_pointer_cast<ArrayType>(definition.value().variableType);
+        varType = definition->variableType;
+    }
 
-        return array->arrayBase;
+    if (varType)
+    {
+        if (auto array = std::dynamic_pointer_cast<ArrayType>(varType))
+            return array->arrayBase;
+        else if (auto array = std::dynamic_pointer_cast<StringType>(varType))
+            return IntegerType::getInteger(8);
     }
     return std::make_shared<VariableType>();
 }
 
 llvm::Value *ArrayAccessNode::codegen(std::unique_ptr<Context> &context)
 {
-    llvm::AllocaInst *V = context->NamedAllocations[m_arrayName];
+    llvm::Value *V = context->NamedAllocations[m_arrayName];
+
 
     if (!V)
-        return LogErrorV("Unknown variable name");
+    {
+        for (auto &arg: context->TopLevelFunction->args())
+        {
+            if (arg.getName() == m_arrayName)
+            {
+                V = context->TopLevelFunction->getArg(arg.getArgNo());
+                break;
+            }
+        }
+    }
+
+    if (!V)
+        return LogErrorV("Unknown variable for array access: " + m_arrayName);
+
+    ASTNode *parent = context->ProgramUnit.get();
+    if (context->TopLevelFunction)
+    {
+        auto def = context->ProgramUnit->getFunctionDefinition(context->TopLevelFunction->getName().str());
+        if (def)
+        {
+            parent = def.value().get();
+        }
+    }
 
     auto arrayDef = context->ProgramUnit->getVariableDefinition(m_arrayName);
-    if (!arrayDef)
+    std::shared_ptr<VariableType> arrayDefType = nullptr;
+    if (arrayDef)
     {
-        return LogErrorV("Unknown variable name");
+        arrayDefType = arrayDef->variableType;
+    }
+
+    if (auto functionDefinition = dynamic_cast<FunctionDefinitionNode *>(parent))
+    {
+        auto param = functionDefinition->getParam(m_arrayName);
+        if (param)
+        {
+            arrayDefType = param.value().type;
+        }
+    }
+
+    if (!arrayDefType)
+    {
+        return LogErrorV("Unknown variable for array access: " + m_arrayName);
+    }
+    auto fieldAccessType = std::dynamic_pointer_cast<FieldAccessableType>(arrayDefType);
+    if (fieldAccessType)
+    {
+
+        auto index = m_indexNode->codegen(context);
+        return fieldAccessType->generateFieldAccess(m_arrayNameToken, index, context);
     }
     else
     {
-        auto def = std::dynamic_pointer_cast<ArrayType>(arrayDef->variableType);
-        auto index = m_indexNode->codegen(context);
-
-        if (def->isDynArray)
-        {
-            auto llvmRecordType = def->generateLlvmType(context);
-            auto arrayBaseType = def->arrayBase->generateLlvmType(context);
-
-            auto arrayPointerOffset = context->Builder->CreateStructGEP(llvmRecordType, V, 1, "array.ptr.offset");
-            // const llvm::DataLayout &DL = context->TheModule->getDataLayout();
-            // auto alignment = DL.getPrefTypeAlign(ptrType);
-            auto loadResult = context->Builder->CreateLoad(llvm::PointerType::getUnqual(*context->TheContext),
-                                                           arrayPointerOffset);
-
-
-            auto bounds = context->Builder->CreateGEP(arrayBaseType, loadResult, llvm::ArrayRef<llvm::Value *>{index},
-                                                      "", true);
-
-            return context->Builder->CreateLoad(arrayBaseType, bounds);
-        }
-
-        if (llvm::isa<llvm::ConstantInt>(index))
-        {
-            llvm::ConstantInt *value = reinterpret_cast<llvm::ConstantInt *>(index);
-
-            if (value->getSExtValue() < static_cast<int64_t>(def->low) ||
-                value->getSExtValue() > static_cast<int64_t>(def->high))
-            {
-                throw CompilerException(ParserError{.file_name = m_arrayNameToken.fileName,
-                                                    .token = m_arrayNameToken.token,
-                                                    .message = "the array index is not in the defined range."});
-            }
-        }
-
-        if (def->low > 0)
-            index = context->Builder->CreateSub(
-                    index, context->Builder->getIntN(index->getType()->getIntegerBitWidth(), def->low),
-                    "array.index.sub");
-
-        llvm::ArrayRef<llvm::Value *> idxList = {context->Builder->getInt64(0), index};
-
-        auto arrayValue = context->Builder->CreateGEP(V->getAllocatedType(), V, idxList, "arrayindex", false);
-        return context->Builder->CreateLoad(V->getAllocatedType()->getArrayElementType(), arrayValue);
+        return LogErrorV("variable can not access elements by [] operator: " + m_arrayName);
     }
 }

@@ -6,10 +6,10 @@
 class StringConstantNode : public ASTNode
 {
 private:
-    std::string_view m_literal;
+    std::string m_literal;
 
 public:
-    StringConstantNode(std::string_view literal);
+    StringConstantNode(std::string literal);
     ~StringConstantNode() = default;
     void print() override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;

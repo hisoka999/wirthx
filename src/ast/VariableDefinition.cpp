@@ -1,4 +1,6 @@
 #include "VariableDefinition.h"
+#include <cassert>
+#include <magic_enum/magic_enum.hpp>
 #include "ASTNode.h"
 #include "RecordType.h"
 #include "compare.h"
@@ -18,11 +20,7 @@ llvm::AllocaInst *VariableDefinition::generateCode(std::unique_ptr<Context> &con
         }
         return context->Builder->CreateAlloca(arrayType, nullptr, this->variableName);
     }
-    auto structType = std::dynamic_pointer_cast<RecordType>(this->variableType);
-    if (structType != nullptr)
-    {
-        return context->Builder->CreateAlloca(structType->generateLlvmType(context), nullptr, this->variableName);
-    }
+
 
     switch (this->variableType->baseType)
     {
@@ -44,7 +42,26 @@ llvm::AllocaInst *VariableDefinition::generateCode(std::unique_ptr<Context> &con
         case VariableBaseType::Real:
             return context->Builder->CreateAlloca(llvm::Type::getDoubleTy(*context->TheContext), nullptr,
                                                   this->variableName);
+        case VariableBaseType::Struct:
+        {
+            auto structType = std::dynamic_pointer_cast<RecordType>(this->variableType);
+            if (structType != nullptr)
+            {
+                return context->Builder->CreateAlloca(structType->generateLlvmType(context), nullptr,
+                                                      this->variableName);
+            }
+        }
+        case VariableBaseType::String:
+        {
+            auto stringType = std::dynamic_pointer_cast<StringType>(this->variableType);
+            if (stringType != nullptr)
+            {
+                return context->Builder->CreateAlloca(stringType->generateLlvmType(context), nullptr,
+                                                      this->variableName);
+            }
+        }
         default:
+            assert(false && "unsupported variable base type to generate variable definition");
             return nullptr;
     }
 }
