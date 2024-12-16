@@ -855,6 +855,12 @@ void Parser::parseFunction(size_t scope, std::vector<std::shared_ptr<ASTNode>> &
         nodes.push_back(std::make_shared<FunctionDefinitionNode>(functionName, functionParams, functionBody,
                                                                  isProcedure, returnType));
     }
+    for (auto &param: functionParams)
+    {
+        m_known_variable_definitions.erase(std::remove_if(
+                m_known_variable_definitions.begin(), m_known_variable_definitions.end(),
+                [param](VariableDefinition &value) { return param.argumentName == value.variableName; }));
+    }
 }
 
 std::shared_ptr<ASTNode> Parser::parseComparrision(const Token &currentToken, size_t currentScope,

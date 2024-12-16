@@ -17,10 +17,10 @@ program basicvec2;
         writeln(value.y);
     end;
 
-    procedure vec2_inc(var t : Vec2); 
+    procedure vec2_inc(var value : Vec2); 
     begin
-        t.x := t.x + 1;
-        t.y := t.y + 1;
+        value.x := value.x + 1;
+        value.y := value.y + 1;
     end;
 
 var 
@@ -31,13 +31,13 @@ begin
     myvec.x := 12;
     myvec.y := 13;
     printvec(myvec);   
-     other.x := 15;
-     other.y := 22;
-     res := vec2_add(myvec,other);
+    other.x := 15;
+    other.y := 22;
+    res := vec2_add(myvec,other);
 
 
-     printvec(other);
-     printvec(res);
-     vec2_inc(other);
-     printvec(other);
+    printvec(other);
+    printvec(res);
+    vec2_inc(other);
+    printvec(other);
 end.
