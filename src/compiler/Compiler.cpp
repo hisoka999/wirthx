@@ -1,4 +1,5 @@
 #include "compiler/Compiler.h"
+#include "llvm/Transforms/Utils.h"
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -7,9 +8,11 @@
 #include "Lexer.h"
 #include "Parser.h"
 #include "ast/FunctionDefinitionNode.h"
+
 #include "compiler/Context.h"
 #include "compiler/intrinsics.h"
 #include "linker/pascal_linker.h"
+
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
@@ -29,8 +32,8 @@
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/Reassociate.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
+#include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "os/command.h"
-
 
 std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit, CompilerOptions options)
 {
@@ -66,8 +69,17 @@ std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit, Compi
     context->TheFPM->addPass(llvm::SimplifyCFGPass());
 
 
+    // context->TheFPM->addPass(llvm::createLowerInvokePass());
+    // context->TheFPM->addPass(llvm::createLowerSwitchPass());
+    // context->TheFPM->addPass(llvm::createBreakCriticalEdgesPass());
+    // // context->TheFPM->addPass(llvm::createLCSSAPass());
+    // context->TheFPM->addPass(llvm::createPromoteMemoryToRegisterPass());
+
+    // context->TheFPM->addPass(llvm::createLoopSimplifyPass());
+
     // Register analysis passes used in these transform passes.
     llvm::PassBuilder PB;
+
     PB.registerModuleAnalyses(*context->TheMAM);
     PB.registerFunctionAnalyses(*context->TheFAM);
     PB.crossRegisterProxies(*context->TheLAM, *context->TheFAM, *context->TheCGAM, *context->TheMAM);
@@ -170,13 +182,6 @@ void compile_file(CompilerOptions options, std::filesystem::path inputPath, std:
     }
 
 
-    llvm::verifyModule(*context->TheModule, &llvm::errs());
-    if (context->compilerOptions.printLLVMIR)
-    {
-        context->TheModule->print(llvm::errs(), nullptr, false, false);
-    }
-
-
     auto basePath = context->compilerOptions.outputDirectory;
 
 
@@ -193,6 +198,11 @@ void compile_file(CompilerOptions options, std::filesystem::path inputPath, std:
     }
 
     legacy::PassManager pass;
+    if (context->compilerOptions.buildMode == BuildMode::Release)
+    {
+        pass.add(llvm::createAlwaysInlinerLegacyPass());
+    }
+
     auto FileType = CodeGenFileType::ObjectFile;
 
     if (TheTargetMachine->addPassesToEmitFile(pass, dest, nullptr, FileType))
@@ -203,6 +213,13 @@ void compile_file(CompilerOptions options, std::filesystem::path inputPath, std:
 
     pass.run(*context->TheModule);
     dest.flush();
+
+
+    llvm::verifyModule(*context->TheModule, &llvm::errs());
+    if (context->compilerOptions.printLLVMIR)
+    {
+        context->TheModule->print(llvm::errs(), nullptr, false, false);
+    }
 
     outs() << "Wrote " << objectFileName << "\n";
 
