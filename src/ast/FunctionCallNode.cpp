@@ -1,13 +1,17 @@
 #include "FunctionCallNode.h"
 #include <iostream>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/Intrinsics.h>
+#include <utility>
+
 #include "FunctionDefinitionNode.h"
 #include "RecordType.h"
 #include "UnitNode.h"
 #include "compiler/Context.h"
 
 
-FunctionCallNode::FunctionCallNode(std::string name, std::vector<std::shared_ptr<ASTNode>> args) :
-    m_name(name), m_args(args)
+FunctionCallNode::FunctionCallNode(std::string name, const std::vector<std::shared_ptr<ASTNode>> &args) :
+    m_name(std::move(name)), m_args(args)
 {
 }
 
@@ -22,7 +26,7 @@ void FunctionCallNode::print()
     std::cout << ");\n";
 }
 
-std::string FunctionCallNode::callSignature(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
+std::string FunctionCallNode::callSignature(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode) const
 {
     ASTNode *parent = unit.get();
     if (parentNode != nullptr)
@@ -32,7 +36,7 @@ std::string FunctionCallNode::callSignature(const std::unique_ptr<UnitNode> &uni
     std::string result = m_name + "(";
     for (size_t i = 0; i < m_args.size(); ++i)
     {
-        auto arg = m_args.at(i)->resolveType(unit, parent);
+        const auto arg = m_args.at(i)->resolveType(unit, parent);
 
         result += arg->typeName + ((i < m_args.size() - 1) ? "," : "");
     }
@@ -46,8 +50,7 @@ llvm::Value *FunctionCallNode::codegen(std::unique_ptr<Context> &context)
     ASTNode *parent = context->ProgramUnit.get();
     if (context->TopLevelFunction)
     {
-        auto def = context->ProgramUnit->getFunctionDefinition(context->TopLevelFunction->getName().str());
-        if (def)
+        if (auto def = context->ProgramUnit->getFunctionDefinition(context->TopLevelFunction->getName().str()))
         {
             parent = def.value().get();
         }
@@ -75,7 +78,7 @@ llvm::Value *FunctionCallNode::codegen(std::unique_ptr<Context> &context)
     // If argument mismatch error.
     if (CalleeF->arg_size() != m_args.size() && !CalleeF->isVarArg())
     {
-        std::cerr << "incorrect argumentsize for call " << functionName << " != " << CalleeF->arg_size() << "\n";
+        std::cerr << "incorrect argument size for call " << functionName << " != " << CalleeF->arg_size() << "\n";
         return LogErrorV("Incorrect # arguments passed");
     }
 

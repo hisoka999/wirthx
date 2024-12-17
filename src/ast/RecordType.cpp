@@ -1,15 +1,20 @@
 #include "RecordType.h"
+
+#include <llvm/ADT/ArrayRef.h>
+#include <llvm/IR/DerivedTypes.h>
+
 #include "compiler/Context.h"
 
-RecordType::RecordType(std::vector<VariableDefinition> fields, std::string typeName) : m_fields(std::move(fields))
+RecordType::RecordType(std::vector<VariableDefinition> fields, const std::string &typeName) :
+    m_fields(std::move(fields))
 {
     this->typeName = typeName;
     this->baseType = VariableBaseType::Struct;
 }
 
-void RecordType::addField(VariableDefinition &field) { m_fields.push_back(field); }
+void RecordType::addField(const VariableDefinition &field) { m_fields.push_back(field); }
 
-VariableDefinition RecordType::getField(size_t index) { return m_fields.at(index); }
+auto RecordType::getField(const size_t index) -> VariableDefinition { return m_fields.at(index); }
 
 std::optional<VariableDefinition> RecordType::getFieldByName(const std::string &fieldName)
 {
@@ -23,7 +28,7 @@ std::optional<VariableDefinition> RecordType::getFieldByName(const std::string &
     return std::nullopt;
 }
 
-int RecordType::getFieldIndexByName(const std::string &name)
+int RecordType::getFieldIndexByName(const std::string &name) const
 {
     for (size_t i = 0; i < m_fields.size(); ++i)
     {
@@ -53,4 +58,4 @@ llvm::Type *RecordType::generateLlvmType(std::unique_ptr<Context> &context)
     return m_cachedType;
 }
 
-size_t RecordType::size() { return m_fields.size(); }
+size_t RecordType::size() const { return m_fields.size(); }

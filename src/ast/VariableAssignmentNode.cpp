@@ -1,5 +1,8 @@
 #include "VariableAssignmentNode.h"
 #include <iostream>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/Intrinsics.h>
+
 #include "FunctionCallNode.h"
 #include "UnitNode.h"
 #include "compiler/Context.h"

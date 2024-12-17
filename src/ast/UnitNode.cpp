@@ -1,6 +1,13 @@
 #include "ast/UnitNode.h"
 #include <iostream>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/IRBuilder.h>
+
 #include "compiler/Context.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/IR/Verifier.h"
+
 
 UnitNode::UnitNode(UnitType unitType, const std::string unitName,
                    std::vector<std::shared_ptr<FunctionDefinitionNode>> functionDefinitions,

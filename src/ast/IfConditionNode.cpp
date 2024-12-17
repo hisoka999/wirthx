@@ -1,5 +1,7 @@
 #include "IfConditionNode.h"
 #include <iostream>
+#include <llvm/IR/IRBuilder.h>
+
 #include "compiler/Context.h"
 
 
@@ -52,6 +54,7 @@ llvm::Value *IfConditionNode::codegenIf(std::unique_ptr<Context> &context)
     }
     if (!context->BreakBlock.BlockUsed)
         context->Builder->CreateBr(MergeBB);
+    context->BreakBlock.BlockUsed = false;
     TheFunction->insert(TheFunction->end(), MergeBB);
     context->Builder->SetInsertPoint(MergeBB);
 

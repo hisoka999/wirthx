@@ -10,7 +10,7 @@ private:
 
 public:
     WhileNode(std::shared_ptr<ASTNode> loopCondition, std::vector<std::shared_ptr<ASTNode>> nodes);
-    ~WhileNode() = default;
+    ~WhileNode() override = default;
     void print() override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
 };

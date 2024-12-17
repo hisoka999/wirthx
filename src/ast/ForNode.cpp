@@ -1,4 +1,8 @@
 #include "ForNode.h"
+
+#include <llvm/IR/IRBuilder.h>
+
+#include "BlockNode.h"
 #include "UnitNode.h"
 #include "compiler/Context.h"
 
@@ -42,16 +46,6 @@ llvm::Value *ForNode::codegen(std::unique_ptr<Context> &context)
     builder->SetInsertPoint(loopBB);
 
     // Start the PHI node with an entry for Start.
-    // ASTNode *parent = context->ProgramUnit.get();
-    // if (context->TopLevelFunction)
-    // {
-    //     auto def = context->ProgramUnit->getFunctionDefinition(context->TopLevelFunction->getName().str());
-    //     if (def)
-    //     {
-    //         parent = def.value().get();
-    //     }
-    // }
-    // auto endExpressionType = m_endExpression->resolveType(context->ProgramUnit, parent);
     unsigned int bitLength = 64;
     auto targetType = llvm::Type::getIntNTy(*llvmContext, bitLength);
     // if (auto integerType = std::dynamic_pointer_cast<IntegerType>(endExpressionType))
@@ -114,4 +108,17 @@ llvm::Value *ForNode::codegen(std::unique_ptr<Context> &context)
 
     // for expr always returns 0.0.
     return llvm::Constant::getNullValue(llvm::Type::getInt64Ty(*llvmContext));
+}
+
+
+std::optional<std::shared_ptr<ASTNode>> ForNode::block()
+{
+    for (auto &exp: m_body)
+    {
+        if (auto block = std::dynamic_pointer_cast<BlockNode>(exp))
+        {
+            return block;
+        }
+    }
+    return std::nullopt;
 }

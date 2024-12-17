@@ -3,7 +3,9 @@
 #include "RecordType.h"
 #include "UnitNode.h"
 #include "compiler/Context.h"
-
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Type.h"
 
 FieldAssignmentNode::FieldAssignmentNode(const TokenWithFile variable, const TokenWithFile field,
                                          const std::shared_ptr<ASTNode> &expression) :

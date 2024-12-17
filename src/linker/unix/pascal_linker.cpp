@@ -1,9 +1,9 @@
 #include "linker/pascal_linker.h"
-#include <iostream>
+#include "llvm/Support/CommandLine.h"
 #include "os/command.h"
 
 bool pascal_link_modules(std::ostream &errStream, const std::filesystem::path &baseDir, const std::string &program_name,
-                         std::vector<std::string> flags, std::vector<std::string> object_files)
+                         const std::vector<std::string> &flags, const std::vector<std::string> &object_files)
 {
     std::vector<std::string> args;
     // args.emplace_back("-nostdlib");

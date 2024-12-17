@@ -1,6 +1,8 @@
 #include "SystemFunctionCallNode.h"
 #include <iostream>
+#include <llvm/IR/IRBuilder.h>
 #include <vector>
+
 #include "../compare.h"
 #include "UnitNode.h"
 #include "compiler/Context.h"
@@ -143,15 +145,15 @@ std::shared_ptr<VariableType> SystemFunctionCallNode::resolveType(const std::uni
     {
         return IntegerType::getInteger(64);
     }
-    else if (iequals(m_name, "high"))
+    if (iequals(m_name, "high"))
     {
         return IntegerType::getInteger(64);
     }
-    else if (iequals(m_name, "length"))
+    if (iequals(m_name, "length"))
     {
         return IntegerType::getInteger(64);
     }
-    else if (iequals(m_name, "setlength"))
+    if (iequals(m_name, "setlength"))
     {
         return nullptr;
     }

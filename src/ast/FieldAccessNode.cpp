@@ -5,9 +5,11 @@
 #include "UnitNode.h"
 #include "compiler/Context.h"
 #include "exceptions/CompilerException.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 
 
-FieldAccessNode::FieldAccessNode(const TokenWithFile element, const TokenWithFile field) :
+FieldAccessNode::FieldAccessNode(const TokenWithFile &element, const TokenWithFile &field) :
     m_element(element), m_elementName(element.token.lexical), m_field(field), m_fieldName(field.token.lexical)
 {
 }
@@ -94,8 +96,7 @@ std::shared_ptr<VariableType> FieldAccessNode::resolveType(const std::unique_ptr
 {
     if (auto functionDefinition = dynamic_cast<FunctionDefinitionNode *>(parentNode))
     {
-        auto param = functionDefinition->getParam(m_elementName);
-        if (param)
+        if (auto param = functionDefinition->getParam(m_elementName))
         {
             if (param->type->baseType == VariableBaseType::Struct)
             {
@@ -109,16 +110,13 @@ std::shared_ptr<VariableType> FieldAccessNode::resolveType(const std::unique_ptr
                 }
             }
         }
-        auto variable = functionDefinition->body()->getVariableDefinition(m_elementName);
-        if (variable)
+        if (auto variable = functionDefinition->body()->getVariableDefinition(m_elementName))
         {
             if (variable->variableType->baseType == VariableBaseType::Struct)
             {
                 auto type = std::dynamic_pointer_cast<RecordType>(variable->variableType);
 
-                auto field = type->getFieldByName(m_fieldName);
-
-                if (field)
+                if (auto field = type->getFieldByName(m_fieldName))
                 {
                     return field.value().variableType;
                 }
@@ -131,9 +129,7 @@ std::shared_ptr<VariableType> FieldAccessNode::resolveType(const std::unique_ptr
     {
         auto type = std::dynamic_pointer_cast<RecordType>(definition->variableType);
 
-        auto field = type->getFieldByName(m_fieldName);
-
-        if (field)
+        if (auto field = type->getFieldByName(m_fieldName))
         {
             return field.value().variableType;
         }

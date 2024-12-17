@@ -1,11 +1,15 @@
 #include "ArrayAssignmentNode.h"
+
+#include <utility>
 #include "UnitNode.h"
 #include "compiler/Context.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Type.h"
 
-
-ArrayAssignmentNode::ArrayAssignmentNode(const std::string variableName, const std::shared_ptr<ASTNode> &indexNode,
+ArrayAssignmentNode::ArrayAssignmentNode(std::string variableName, const std::shared_ptr<ASTNode> &indexNode,
                                          const std::shared_ptr<ASTNode> &expression) :
-    m_variableName(variableName), m_indexNode(indexNode), m_expression(expression)
+    m_variableName(std::move(variableName)), m_indexNode(indexNode), m_expression(expression)
 {
 }
 
@@ -20,18 +24,17 @@ llvm::Value *ArrayAssignmentNode::codegen(std::unique_ptr<Context> &context)
     if (!V)
         return LogErrorV("Unknown variable name for array assignment: " + m_variableName);
 
-    auto result = m_expression->codegen(context);
+    const auto result = m_expression->codegen(context);
 
     auto index = m_indexNode->codegen(context);
 
-    auto arrayDef = context->ProgramUnit->getVariableDefinition(m_variableName);
-    if (!arrayDef)
+    if (const auto arrayDef = context->ProgramUnit->getVariableDefinition(m_variableName); !arrayDef)
     {
         return LogErrorV("Unknown variable name for array assignment: " + m_variableName);
     }
     else
     {
-        auto def = std::dynamic_pointer_cast<ArrayType>(arrayDef->variableType);
+        const auto def = std::dynamic_pointer_cast<ArrayType>(arrayDef->variableType);
 
         if (def->low > 0)
             index = context->Builder->CreateSub(
@@ -41,24 +44,23 @@ llvm::Value *ArrayAssignmentNode::codegen(std::unique_ptr<Context> &context)
 
         if (def->isDynArray)
         {
-            auto llvmRecordType = def->generateLlvmType(context);
-            auto arrayBaseType = def->arrayBase->generateLlvmType(context);
+            const auto llvmRecordType = def->generateLlvmType(context);
+            const auto arrayBaseType = def->arrayBase->generateLlvmType(context);
 
-            auto arrayPointerOffset = context->Builder->CreateStructGEP(llvmRecordType, V, 1, "array.ptr.offset");
-            // const llvm::DataLayout &DL = context->TheModule->getDataLayout();
-            // auto alignment = DL.getPrefTypeAlign(ptrType);
-            auto loadResult = context->Builder->CreateLoad(llvm::PointerType::getUnqual(*context->TheContext),
-                                                           arrayPointerOffset);
+            const auto arrayPointerOffset = context->Builder->CreateStructGEP(llvmRecordType, V, 1, "array.ptr.offset");
+
+            const auto loadResult = context->Builder->CreateLoad(llvm::PointerType::getUnqual(*context->TheContext),
+                                                                 arrayPointerOffset);
 
 
-            auto bounds = context->Builder->CreateGEP(arrayBaseType, loadResult, llvm::ArrayRef<llvm::Value *>{index},
-                                                      "", true);
+            const auto bounds = context->Builder->CreateGEP(arrayBaseType, loadResult,
+                                                            llvm::ArrayRef<llvm::Value *>{index}, "", true);
 
             context->Builder->CreateStore(result, bounds);
             return result;
         }
 
-        auto bounds = context->Builder->CreateGEP(V->getAllocatedType(), V, idxList, "arrayindex", false);
+        const auto bounds = context->Builder->CreateGEP(V->getAllocatedType(), V, idxList, "arrayindex", false);
 
         context->Builder->CreateStore(result, bounds);
         return result;

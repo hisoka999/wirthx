@@ -4,19 +4,16 @@
 #include <cctype>
 #include <string>
 
-bool ichar_equals(char a, char b)
+bool ichar_equals(const char a, const char b)
 {
     return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
 }
-bool iequals(const std::string_view &a, const std::string_view &b)
-{
-    return std::equal(a.begin(), a.end(), b.begin(), b.end(), ichar_equals);
-}
+bool iequals(const std::string_view &a, const std::string_view &b) { return std::ranges::equal(a, b, ichar_equals); }
 
 
 std::string to_lower(const std::string &a)
 {
     std::string result = a;
-    std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c) { return std::tolower(c); });
+    std::ranges::transform(result, result.begin(), [](const unsigned char c) { return std::tolower(c); });
     return result;
 }

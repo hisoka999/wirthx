@@ -14,7 +14,7 @@ private:
     std::string m_fieldName;
 
 public:
-    FieldAccessNode(const TokenWithFile element, const TokenWithFile field);
+    FieldAccessNode(const TokenWithFile &element, const TokenWithFile &field);
     ~FieldAccessNode() = default;
     void print() override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;

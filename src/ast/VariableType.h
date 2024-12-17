@@ -49,6 +49,7 @@ public:
 class FieldAccessableType
 {
 public:
+    virtual ~FieldAccessableType() = default;
     virtual llvm::Value *generateFieldAccess(TokenWithFile &token, llvm::Value *indexValue,
                                              std::unique_ptr<Context> &context) = 0;
 };

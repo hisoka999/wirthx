@@ -1,14 +1,18 @@
 #include "intrinsics.h"
 
+#include <llvm/IR/IRBuilder.h>
+
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Verifier.h"
+
 
 void createSystemCall(std::unique_ptr<Context> &context, std::string functionName,
                       std::vector<FunctionArgument> functionparams, std::shared_ptr<VariableType> returnType)
 {
-    llvm::Function *F = context->FunctionDefinitions[functionName];
-    if (F == nullptr)
+    if (llvm::Function *F = context->FunctionDefinitions[functionName]; F == nullptr)
     {
         std::vector<llvm::Type *> params;
-        for (auto &param: functionparams)
+        for (const auto &param: functionparams)
         {
             params.push_back(param.type->generateLlvmType(context));
         }
@@ -20,8 +24,7 @@ void createSystemCall(std::unique_ptr<Context> &context, std::string functionNam
 
         llvm::FunctionType *FT = llvm::FunctionType::get(resultType, params, false);
 
-        llvm::Function *F =
-                llvm::Function::Create(FT, llvm::Function::ExternalLinkage, functionName, context->TheModule.get());
+        F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, functionName, context->TheModule.get());
 
         // Set names for all arguments.
         unsigned idx = 0;
@@ -30,7 +33,7 @@ void createSystemCall(std::unique_ptr<Context> &context, std::string functionNam
     }
 }
 
-void createPrintfCall(std::unique_ptr<Context> &context)
+void createPrintfCall(const std::unique_ptr<Context> &context)
 {
     std::vector<llvm::Type *> params;
     params.push_back(llvm::PointerType::getUnqual(*context->TheContext));
@@ -43,15 +46,14 @@ void createPrintfCall(std::unique_ptr<Context> &context)
 }
 
 
-void writeLnCodegen(std::unique_ptr<Context> &context, size_t length)
+void writeLnCodegen(std::unique_ptr<Context> &context, const size_t length)
 {
     std::vector<llvm::Type *> params;
     std::string m_name = "writeln(integer" + std::to_string(length) + ")";
-    llvm::Type *resultType;
     auto type = VariableType::getInteger(length);
     params.push_back(type->generateLlvmType(context));
 
-    resultType = llvm::Type::getVoidTy(*context->TheContext);
+    llvm::Type *resultType = llvm::Type::getVoidTy(*context->TheContext);
     llvm::FunctionType *FT = llvm::FunctionType::get(resultType, params, false);
 
     llvm::Function *F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, m_name, context->TheModule.get());
@@ -92,11 +94,10 @@ void writeLnStrCodegen(std::unique_ptr<Context> &context)
 {
     std::vector<llvm::Type *> params;
     std::string m_name = "writeln(string)";
-    llvm::Type *resultType;
     auto type = VariableType::getString();
     params.push_back(llvm::PointerType::getUnqual(*context->TheContext));
 
-    resultType = llvm::Type::getVoidTy(*context->TheContext);
+    llvm::Type *resultType = llvm::Type::getVoidTy(*context->TheContext);
     llvm::FunctionType *FT = llvm::FunctionType::get(resultType, params, true);
 
     llvm::Function *F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, m_name, context->TheModule.get());
@@ -115,10 +116,11 @@ void writeLnStrCodegen(std::unique_ptr<Context> &context)
     if (!CalleeF)
         LogErrorV("Unknown function referenced");
 
-    auto stringStructPtr = F->getArg(0);
-    auto arrayPointerOffset =
+    const auto stringStructPtr = F->getArg(0);
+    const auto arrayPointerOffset =
             context->Builder->CreateStructGEP(type->generateLlvmType(context), stringStructPtr, 2, "string.ptr.offset");
-    auto value = context->Builder->CreateLoad(llvm::PointerType::getUnqual(*context->TheContext), arrayPointerOffset);
+    const auto value =
+            context->Builder->CreateLoad(llvm::PointerType::getUnqual(*context->TheContext), arrayPointerOffset);
     std::vector<llvm::Value *> ArgsV;
     ArgsV.push_back(context->Builder->CreateGlobalString("%s\n"));
 

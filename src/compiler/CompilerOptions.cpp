@@ -55,7 +55,7 @@ CompilerOptions parseCompilerOptions(std::vector<std::string> &argList)
 
     if (const char *env_p = std::getenv("WIRTHX_PATH"))
     {
-        options.rtlDirectories.push_back(env_p);
+        options.rtlDirectories.emplace_back(env_p);
     }
     else if (options.rtlDirectories.empty())
     {

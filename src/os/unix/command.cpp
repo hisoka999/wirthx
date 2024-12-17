@@ -1,27 +1,24 @@
 #include "os/command.h"
+#include <climits>
 #include <cstdlib>
 #include <iostream>
-#include "limits.h"
 
 bool execute_command_list(std::ostream &outstream, const std::string &command, std::vector<std::string> args)
 {
-    FILE *fp;
-    int status;
     char path[PATH_MAX];
-
     std::string cmd = command;
 
     for (auto &arg: args)
         cmd += " " + arg;
 
-    fp = popen(cmd.c_str(), "r");
-    if (fp == NULL)
+    const auto fp = popen(cmd.c_str(), "r");
+    if (fp == nullptr)
         /* Handle error */;
 
-    while (fgets(path, PATH_MAX, fp) != NULL)
+    while (fgets(path, PATH_MAX, fp) != nullptr)
         outstream << path;
 
-    status = pclose(fp);
+    const int status = pclose(fp);
     if (status != 0)
     {
         std::cerr << "could not execute command: " << cmd << "\n";

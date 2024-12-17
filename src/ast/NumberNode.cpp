@@ -1,5 +1,7 @@
 #include "NumberNode.h"
 #include <iostream>
+#include <llvm/IR/Constants.h>
+
 #include "compiler/Context.h"
 
 

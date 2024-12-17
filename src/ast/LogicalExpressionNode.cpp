@@ -1,5 +1,7 @@
 #include "LogicalExpressionNode.h"
 #include <iostream>
+#include <llvm/IR/IRBuilder.h>
+
 #include "compiler/Context.h"
 
 

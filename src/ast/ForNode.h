@@ -17,4 +17,5 @@ public:
 
     void print() override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
+    std::optional<std::shared_ptr<ASTNode>> block() override;
 };

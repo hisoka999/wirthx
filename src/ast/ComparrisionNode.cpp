@@ -1,5 +1,7 @@
 #include <cassert>
 #include <iostream>
+#include <llvm/IR/IRBuilder.h>
+
 #include "ComparissionNode.h"
 #include "compiler/Context.h"
 
@@ -38,9 +40,9 @@ void ComparrisionNode::print()
 llvm::Value *ComparrisionNode::codegen(std::unique_ptr<Context> &context)
 {
     auto lhs = m_lhs->codegen(context);
-    assert(lhs && "lhs of the comparisson is null");
+    assert(lhs && "lhs of the comparison is null");
     auto rhs = m_rhs->codegen(context);
-    assert(rhs && "rhs of the comparisson is null");
+    assert(rhs && "rhs of the comparison is null");
 
     llvm::CmpInst::Predicate pred = llvm::CmpInst::ICMP_EQ;
     switch (m_operator)
@@ -58,7 +60,7 @@ llvm::Value *ComparrisionNode::codegen(std::unique_ptr<Context> &context)
             pred = llvm::CmpInst::ICMP_SLT;
             break;
         case CMPOperator::LESS_EQUAL:
-            pred = llvm::CmpInst::ICMP_SLT;
+            pred = llvm::CmpInst::ICMP_SLE;
             break;
         default:
             break;

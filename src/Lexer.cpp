@@ -263,6 +263,8 @@ bool Lexer::find_number(std::string_view content, size_t start, size_t *endPosit
 {
     int index = 0;
     char current = content[start];
+    if (current == '-' && !isNumberStart(content[start + 1]))
+        return false;
     if (!isNumberStart(current))
         return false;
     while ((current >= '0' && current <= '9') || (index == 0 && current == '-'))
@@ -340,7 +342,7 @@ bool Lexer::find_comment(std::string_view content, size_t start, size_t *endPosi
         *endPosition -= 1;
         return true;
     }
-    else if (content[start] == '/' && content[start + 1] == '/')
+    if (content[start] == '/' && content[start + 1] == '/')
     {
         char current = content[start];
         *endPosition = start + 3;

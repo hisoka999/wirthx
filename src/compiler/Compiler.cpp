@@ -1,9 +1,7 @@
 #include "compiler/Compiler.h"
-#include "llvm/Transforms/Utils.h"
-#include <cstring>
+
 #include <filesystem>
 #include <fstream>
-#include <iostream>
 #include <sstream>
 #include "Lexer.h"
 #include "Parser.h"
@@ -12,10 +10,10 @@
 #include "compiler/Context.h"
 #include "compiler/intrinsics.h"
 #include "linker/pascal_linker.h"
+#include "llvm/IR/PassManager.h"
 
 #include "llvm/IR/LegacyPassManager.h"
-#include "llvm/IR/PassManager.h"
-#include "llvm/IR/Type.h"
+
 #include "llvm/IR/Verifier.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -27,15 +25,14 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/Reassociate.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
-#include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "os/command.h"
 
-std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit, CompilerOptions options)
+std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit, const CompilerOptions &options)
 {
     auto context = std::make_unique<Context>();
     context->compilerOptions = options;
@@ -47,9 +44,9 @@ std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit, Compi
     context->Builder = std::make_unique<llvm::IRBuilder<>>(*context->TheContext);
     // Create new pass and analysis managers.
     context->TheFPM = std::make_unique<llvm::FunctionPassManager>();
-    context->TheLAM = std::make_unique<llvm::LoopAnalysisManager>();
+    const auto TheLAM = std::make_unique<llvm::LoopAnalysisManager>();
     context->TheFAM = std::make_unique<llvm::FunctionAnalysisManager>();
-    context->TheCGAM = std::make_unique<llvm::CGSCCAnalysisManager>();
+    const auto TheCGAM = std::make_unique<llvm::CGSCCAnalysisManager>();
     context->TheMAM = std::make_unique<llvm::ModuleAnalysisManager>();
     context->ThePIC = std::make_unique<llvm::PassInstrumentationCallbacks>();
     context->TheSI = std::make_unique<llvm::StandardInstrumentations>(*context->TheContext,
@@ -69,12 +66,6 @@ std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit, Compi
     context->TheFPM->addPass(llvm::SimplifyCFGPass());
 
 
-    // context->TheFPM->addPass(llvm::createLowerInvokePass());
-    // context->TheFPM->addPass(llvm::createLowerSwitchPass());
-    // context->TheFPM->addPass(llvm::createBreakCriticalEdgesPass());
-    // // context->TheFPM->addPass(llvm::createLCSSAPass());
-    // context->TheFPM->addPass(llvm::createPromoteMemoryToRegisterPass());
-
     // context->TheFPM->addPass(llvm::createLoopSimplifyPass());
 
     // Register analysis passes used in these transform passes.
@@ -82,14 +73,14 @@ std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit, Compi
 
     PB.registerModuleAnalyses(*context->TheMAM);
     PB.registerFunctionAnalyses(*context->TheFAM);
-    PB.crossRegisterProxies(*context->TheLAM, *context->TheFAM, *context->TheCGAM, *context->TheMAM);
+    PB.crossRegisterProxies(*TheLAM, *context->TheFAM, *TheCGAM, *context->TheMAM);
 
     context->ProgramUnit = std::move(unit);
     return context;
 }
 
 
-void compile_file(CompilerOptions options, std::filesystem::path inputPath, std::ostream &errorStream,
+void compile_file(const CompilerOptions &options, std::filesystem::path inputPath, std::ostream &errorStream,
                   std::ostream &outputStream)
 {
     std::ifstream file;
@@ -101,7 +92,7 @@ void compile_file(CompilerOptions options, std::filesystem::path inputPath, std:
         return;
     }
     file.seekg(0, std::ios::end);
-    size_t size = file.tellg();
+    std::streamsize size = file.tellg();
     std::string buffer(size, ' ');
     file.seekg(0);
     file.read(&buffer[0], size);
@@ -119,10 +110,10 @@ void compile_file(CompilerOptions options, std::filesystem::path inputPath, std:
     }
     auto context = InitializeModule(unit, options);
     auto intType = VariableType::getInteger();
-    llvm::Intrinsic::getDeclaration(context->TheModule.get(), llvm::Intrinsic::vastart);
-    llvm::Intrinsic::getDeclaration(context->TheModule.get(), llvm::Intrinsic::vacopy);
+    getDeclaration(context->TheModule.get(), llvm::Intrinsic::vastart);
+    getDeclaration(context->TheModule.get(), llvm::Intrinsic::vacopy);
 
-    llvm::Intrinsic::getDeclaration(context->TheModule.get(), llvm::Intrinsic::vaend);
+    getDeclaration(context->TheModule.get(), llvm::Intrinsic::vaend);
 
     createPrintfCall(context);
     writeLnCodegen(context, 32);
@@ -201,6 +192,7 @@ void compile_file(CompilerOptions options, std::filesystem::path inputPath, std:
     if (context->compilerOptions.buildMode == BuildMode::Release)
     {
         pass.add(llvm::createAlwaysInlinerLegacyPass());
+        pass.add(llvm::createInstructionCombiningPass());
     }
 
     auto FileType = CodeGenFileType::ObjectFile;
@@ -224,7 +216,7 @@ void compile_file(CompilerOptions options, std::filesystem::path inputPath, std:
     outs() << "Wrote " << objectFileName << "\n";
 
     std::vector<std::string> flags;
-    for (auto lib: context->ProgramUnit->collectLibsToLink())
+    for (const auto &lib: context->ProgramUnit->collectLibsToLink())
     {
         flags.push_back("-l" + lib);
     }

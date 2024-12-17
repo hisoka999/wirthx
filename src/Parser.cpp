@@ -51,8 +51,6 @@ Parser::Parser(const std::vector<std::filesystem::path> rtlDirectories, const st
     m_typeDefinitions["boolean"] = VariableType::getBoolean();
 }
 
-Parser::~Parser() {}
-
 bool Parser::hasNext() { return m_current < m_tokens.size() - 1; }
 
 Token &Parser::current() { return m_tokens[m_current]; }
@@ -187,7 +185,12 @@ std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, size_t currentSc
             auto lhs = nodes[0];
             return std::make_shared<BinaryOperationNode>(Operator::MUL, lhs, rhs);
         }
-
+        case TokenType::DIV:
+        {
+            auto rhs = parseToken(next(), currentScope, {});
+            auto lhs = nodes[0];
+            return std::make_shared<BinaryOperationNode>(Operator::DIV, lhs, rhs);
+        }
         case TokenType::NAMEDTOKEN:
         {
 
@@ -214,19 +217,32 @@ std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, size_t currentSc
                 {
                     switch (subToken.tokenType)
                     {
+                        case TokenType::CHAR:
+                        case TokenType::NUMBER:
+                        case TokenType::ESCAPED_STRING:
+                        case TokenType::STRING:
                         case TokenType::NAMEDTOKEN:
+                        case TokenType::MINUS:
                         {
-                            auto node = parseToken(subToken, currentScope, {});
-
+                            auto node = parseExpression(subToken, currentScope);
+                            subToken = current();
                             callArgs.push_back(node);
                         }
                         break;
                         case TokenType::COMMA:
                             break;
                         default:
-                            callArgs.push_back(parseToken(subToken, currentScope, {}));
-                    }
+                            m_errors.push_back(ParserError{.file_name = m_file_path.string(),
+                                                           .token = subToken,
+                                                           .message = "unexpected token in function call"});
 
+                            throw ParserException(m_errors);
+                    }
+                    if (subToken.tokenType == TokenType::RIGHT_CURLY)
+                    {
+                        tryConsume(TokenType::RIGHT_CURLY);
+                        break;
+                    }
                     subToken = next();
                 }
 
@@ -298,6 +314,22 @@ std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, size_t currentSc
             {
                 return std::make_shared<BooleanNode>(false);
             }
+            else if (iequals(token.lexical, "mod"))
+            {
+                auto rhs = parseToken(next(), currentScope, {});
+
+                if (nodes.empty())
+                {
+                    m_errors.push_back(
+                            ParserError{.file_name = m_file_path.string(),
+                                        .token = token,
+                                        .message = "the left hand side of the modulus operation is missing"});
+                    return nullptr;
+                }
+
+                auto lhs = nodes[0];
+                return std::make_shared<BinaryOperationNode>(Operator::MOD, lhs, rhs);
+            }
         }
         default:
             m_errors.push_back(ParserError{.file_name = m_file_path.string(),
@@ -316,7 +348,7 @@ const std::shared_ptr<ASTNode> Parser::parseNumber(const Token &token, size_t cu
     auto base = 1 + static_cast<int>(std::log2(value));
     base = (base > 32) ? 64 : 32;
     auto lhs = std::make_shared<NumberNode>(value, base);
-    if (canConsume(TokenType::PLUS) || canConsume(TokenType::MINUS))
+    if (canConsume(TokenType::PLUS) || canConsume(TokenType::MINUS) || canConsumeKeyWord("mod"))
     {
         return parseToken(next(), currentScope, {lhs});
     }
@@ -552,6 +584,7 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
     {
         auto conditionNode = parseExpression(next(), scope);
         tryConsumeKeyWord("then");
+        tryConsume(TokenType::ENDLINE);
         // consume(TokenType::RIGHT_CURLY);
         // parse expression list
         std::vector<std::shared_ptr<ASTNode>> ifExpressions;
@@ -567,6 +600,7 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
             ifExpressions.push_back(parseExpression(next(), scope));
             tryConsume(TokenType::SEMICOLON);
         }
+
         while (canConsume(TokenType::ENDLINE))
             tryConsume(TokenType::ENDLINE);
         if (tryConsumeKeyWord("else"))
@@ -671,7 +705,7 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
                 consume(TokenType::ENDLINE);
             }
         }
-        whileNodes.push_back(parseBlock(current(), 0));
+        whileNodes.push_back(parseBlock(current(), scope + 1));
 
         nodes.push_back(std::make_shared<WhileNode>(expression, whileNodes));
     }
@@ -938,7 +972,8 @@ std::shared_ptr<ASTNode> Parser::parseExpression(const Token &currentToken, size
                 else
                 {
                     auto lhs = parseToken(token, currentScope, {});
-                    if (canConsume(TokenType::PLUS) || canConsume(TokenType::MUL) || canConsume(TokenType::MINUS))
+                    if (canConsume(TokenType::PLUS) || canConsume(TokenType::MUL) || canConsume(TokenType::MINUS) ||
+                        canConsume(TokenType::DIV) || canConsumeKeyWord("mod"))
                     {
                         lhs = parseToken(next(), currentScope, {lhs});
                     }
@@ -953,7 +988,7 @@ std::shared_ptr<ASTNode> Parser::parseExpression(const Token &currentToken, size
                 {
                     if (iequals(token.lexical, "then"))
                     {
-                        break;
+                        return nodes.at(0);
                     }
                     LogicalOperator op = LogicalOperator::OR;
                     if (token.lexical == "not")
@@ -1010,7 +1045,8 @@ std::shared_ptr<ASTNode> Parser::parseExpression(const Token &currentToken, size
         token = current();
 
         if (token.tokenType == TokenType::SEMICOLON || token.tokenType == TokenType::ENDLINE ||
-            token.tokenType == TokenType::T_EOF || token.tokenType == TokenType::RIGHT_CURLY)
+            token.tokenType == TokenType::COMMA || token.tokenType == TokenType::T_EOF ||
+            token.tokenType == TokenType::RIGHT_CURLY)
             break;
 
         token = next();

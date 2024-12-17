@@ -16,19 +16,19 @@ struct ParserError
 class CompilerException : public std::exception
 {
 private:
-    std::string mesasage;
+    std::string m_message;
 
 public:
-    CompilerException(ParserError error)
+    explicit CompilerException(ParserError error)
     {
         std::stringstream outputStream;
 
         outputStream << error.file_name << ":" << error.token.row << ":" << error.token.col << ": " << error.message
                      << "\n";
 
-        mesasage = outputStream.str();
+        m_message = outputStream.str();
     }
-    CompilerException(std::vector<ParserError> errors)
+    explicit CompilerException(std::vector<ParserError> errors)
     {
         std::stringstream outputStream;
         for (auto &error: errors)
@@ -36,8 +36,8 @@ public:
             outputStream << error.file_name << ":" << error.token.row << ":" << error.token.col << ": " << error.message
                          << "\n";
         }
-        mesasage = outputStream.str();
+        m_message = outputStream.str();
     }
 
-    const char *what() const noexcept override { return mesasage.c_str(); }
+    [[nodiscard]] const char *what() const noexcept override { return m_message.c_str(); }
 };

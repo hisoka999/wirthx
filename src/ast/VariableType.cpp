@@ -1,5 +1,7 @@
 #include "ast/VariableType.h"
 #include <cassert>
+#include <llvm/IR/IRBuilder.h>
+
 #include "compiler/Context.h"
 #include "exceptions/CompilerException.h"
 

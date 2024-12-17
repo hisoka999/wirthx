@@ -254,7 +254,7 @@ TEST(LexerTest, LexQuotedString)
 }
 
 
-TEST(LexterTest, LexEscapedString)
+TEST(LexerTest, LexEscapedString)
 {
 
     Lexer lexer;

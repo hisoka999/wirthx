@@ -1,5 +1,7 @@
 #include "VariableAccessNode.h"
 #include <iostream>
+#include <llvm/IR/IRBuilder.h>
+
 #include "FunctionCallNode.h"
 #include "UnitNode.h"
 #include "compiler/Context.h"
@@ -54,7 +56,7 @@ llvm::Value *VariableAccessNode::codegen(std::unique_ptr<Context> &context)
 
 std::shared_ptr<VariableType> VariableAccessNode::resolveType(const std::unique_ptr<UnitNode> &unit, ASTNode *parent)
 {
-    if (FunctionDefinitionNode *functionDefinition = dynamic_cast<FunctionDefinitionNode *>(parent))
+    if (auto *functionDefinition = dynamic_cast<FunctionDefinitionNode *>(parent))
     {
         auto param = functionDefinition->getParam(m_variableName);
         if (param)
@@ -68,7 +70,7 @@ std::shared_ptr<VariableType> VariableAccessNode::resolveType(const std::unique_
         }
     }
 
-    if (FunctionCallNode *functionCall = dynamic_cast<FunctionCallNode *>(parent))
+    if (auto *functionCall = dynamic_cast<FunctionCallNode *>(parent))
     {
         auto functionDefinition = unit->getFunctionDefinition(functionCall->name());
         if (functionDefinition)

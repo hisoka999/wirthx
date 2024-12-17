@@ -1,6 +1,8 @@
 #include "BlockNode.h"
 #include <iostream>
 #include "compiler/Context.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/BasicBlock.h"
 
 
 BlockNode::BlockNode(std::vector<VariableDefinition> variableDefinitions,
@@ -84,6 +86,23 @@ std::optional<VariableDefinition> BlockNode::getVariableDefinition(const std::st
             return def;
         }
     }
+    for (auto &node: m_expressions)
+    {
+        auto block = node->block();
+        if (!block)
+        {
+            continue;
+        }
+        if (auto b = std::dynamic_pointer_cast<BlockNode>(block.value()))
+        {
+            auto result = b->getVariableDefinition(name);
+            if (result)
+            {
+                return result;
+            }
+        }
+    }
+
     return std::nullopt;
 }
 

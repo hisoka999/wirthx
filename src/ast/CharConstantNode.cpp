@@ -1,5 +1,6 @@
 #include "CharConstantNode.h"
 #include "compiler/Context.h"
+#include "llvm/IR/Constants.h"
 
 CharConstantNode::CharConstantNode(std::string_view literal) : m_literal(literal.at(0)) {}
 

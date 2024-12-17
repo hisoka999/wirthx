@@ -27,12 +27,12 @@ private:
     std::vector<std::string> m_known_function_names;
     Token &next();
     Token &current();
-    bool isVariableDefined(std::string_view name, size_t scope);
-    bool hasNext();
+    [[nodiscard]] bool isVariableDefined(std::string_view name, size_t scope);
+    [[nodiscard]] bool hasNext();
     bool consume(TokenType tokenType);
     bool tryConsume(TokenType tokenType);
-    bool canConsume(TokenType tokenType);
-    bool canConsume(TokenType tokenType, size_t next);
+    [[nodiscard]] bool canConsume(TokenType tokenType);
+    [[nodiscard]] bool canConsume(TokenType tokenType, size_t next);
     bool consumeKeyWord(const std::string &keyword);
     bool tryConsumeKeyWord(const std::string &keyword);
     bool canConsumeKeyWord(const std::string &keyword);
@@ -52,12 +52,12 @@ private:
     std::shared_ptr<BlockNode> parseBlock(const Token &currentToken, size_t scope);
 
 public:
-    Parser(const std::vector<std::filesystem::path> rtlDirectories, const std::filesystem::path &path,
+    Parser(std::vector<std::filesystem::path> rtlDirectories, const std::filesystem::path &path,
            std::vector<Token> &tokens);
-    ~Parser();
-    bool hasError() const;
+    ~Parser() = default;
+    [[nodiscard]] bool hasError() const;
     void printErrors(std::ostream &outputStream);
 
-    std::unique_ptr<UnitNode> parseUnit();
+    [[nodiscard]] std::unique_ptr<UnitNode> parseUnit();
     void parseTypeDefinitions(int scope);
 };

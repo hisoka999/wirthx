@@ -1,6 +1,7 @@
 #include "BooleanNode.h"
 #include <iostream>
 #include "compiler/Context.h"
+#include "llvm/IR/IRBuilder.h"
 
 
 BooleanNode::BooleanNode(const bool value) : m_value(value) {}

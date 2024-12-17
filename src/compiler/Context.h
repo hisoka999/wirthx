@@ -1,32 +1,44 @@
 #pragma once
+
 #include <map>
 #include <memory>
 #include <string>
 
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/PassManager.h"
-#include "llvm/IR/Type.h"
-#include "llvm/IR/Verifier.h"
-
 #include "CompilerOptions.h"
-#include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/StandardInstrumentations.h"
-// namespace llvm
-// {
-//     class LLVMContext;
-//     class Module;
-//     template< typename T>
-//     class IRBuilder<T>;
-//     class Value;
-// };
+
+namespace llvm
+{
+    class LLVMContext;
+    class Module;
+
+
+    class AllocaInst;
+    class Value;
+    class Function;
+
+    class PassInstrumentationCallbacks;
+    class StandardInstrumentations;
+    class BasicBlock;
+    class ConstantFolder;
+    class IRBuilderDefaultInserter;
+    // template<typename FolderTy = ConstantFolder, typename InserterTy = IRBuilderDefaultInserter>
+    template<class FolderTy, class InserterTy>
+    class IRBuilder;
+
+    template<typename IRUnitT, typename... ExtraArgTs>
+    class AnalysisManager;
+
+    template<typename IRUnitT, typename AnalysisManagerT, typename... ExtraArgTs>
+    class PassManager;
+
+    using FunctionPassManager = PassManager<Function, AnalysisManager<Function>>;
+    using FunctionAnalysisManager = AnalysisManager<Function>;
+    using ModuleAnalysisManager = AnalysisManager<Module>;
+
+} // namespace llvm
+
+
+// #include "llvm/IR/PassManager.h"
 
 class UnitNode;
 
@@ -40,7 +52,7 @@ struct Context
 {
     std::unique_ptr<llvm::LLVMContext> TheContext;
     std::unique_ptr<llvm::Module> TheModule;
-    std::unique_ptr<llvm::IRBuilder<>> Builder;
+    std::unique_ptr<llvm::IRBuilder<llvm::ConstantFolder, llvm::IRBuilderDefaultInserter>> Builder;
     std::map<std::string, llvm::AllocaInst *> NamedAllocations;
     std::map<std::string, llvm::Value *> NamedValues;
     llvm::Function *TopLevelFunction;
@@ -48,9 +60,7 @@ struct Context
     BreakBasicBlock BreakBlock;
 
     std::unique_ptr<llvm::FunctionPassManager> TheFPM;
-    std::unique_ptr<llvm::LoopAnalysisManager> TheLAM;
     std::unique_ptr<llvm::FunctionAnalysisManager> TheFAM;
-    std::unique_ptr<llvm::CGSCCAnalysisManager> TheCGAM;
     std::unique_ptr<llvm::ModuleAnalysisManager> TheMAM;
     std::unique_ptr<llvm::PassInstrumentationCallbacks> ThePIC;
     std::unique_ptr<llvm::StandardInstrumentations> TheSI;

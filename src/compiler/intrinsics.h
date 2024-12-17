@@ -10,7 +10,7 @@
 void createSystemCall(std::unique_ptr<Context> &context, std::string functionName,
                       std::vector<FunctionArgument> functionparams, std::shared_ptr<VariableType> returnType = nullptr);
 
-void createPrintfCall(std::unique_ptr<Context> &context);
+void createPrintfCall(const std::unique_ptr<Context> &context);
 
 
 void writeLnCodegen(std::unique_ptr<Context> &context, size_t length);

@@ -14,11 +14,11 @@ private:
 
 public:
     VariableDefinition getField(size_t index);
-    size_t size();
-    void addField(VariableDefinition &field);
+    [[nodiscard]] size_t size() const;
+    void addField(const VariableDefinition &field);
     std::optional<VariableDefinition> getFieldByName(const std::string &fieldName);
-    int getFieldIndexByName(const std::string &name);
+    [[nodiscard]] int getFieldIndexByName(const std::string &name) const;
 
-    RecordType(std::vector<VariableDefinition> fields, std::string typeName);
+    RecordType(std::vector<VariableDefinition> fields, const std::string &typeName);
     llvm::Type *generateLlvmType(std::unique_ptr<Context> &context) override;
 };

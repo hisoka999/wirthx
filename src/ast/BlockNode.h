@@ -8,12 +8,12 @@ class BlockNode : public ASTNode
 private:
     std::vector<std::shared_ptr<ASTNode>> m_expressions;
     std::vector<VariableDefinition> m_variableDefinitions;
-    std::string m_blockname = "";
+    std::string m_blockname;
 
 public:
-    BlockNode(const std::vector<VariableDefinition> variableDefinitions,
+    BlockNode(std::vector<VariableDefinition> variableDefinitions,
               const std::vector<std::shared_ptr<ASTNode>> &expressions);
-    ~BlockNode() = default;
+    ~BlockNode() override = default;
 
     void print() override;
     void setBlockName(const std::string &name);

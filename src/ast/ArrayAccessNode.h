@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstddef>
 #include <string>
 #include "ASTNode.h"
 #include "Token.h"
@@ -13,7 +12,7 @@ private:
     std::shared_ptr<ASTNode> m_indexNode;
 
 public:
-    ArrayAccessNode(const TokenWithFile arrayName, const std::shared_ptr<ASTNode> &indexNode);
+    ArrayAccessNode(const TokenWithFile &arrayName, const std::shared_ptr<ASTNode> &indexNode);
     ~ArrayAccessNode() = default;
     void print() override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;

@@ -11,7 +11,7 @@ private:
     std::shared_ptr<ASTNode> m_expression;
 
 public:
-    ArrayAssignmentNode(const std::string variableNam, const std::shared_ptr<ASTNode> &indexNode,
+    ArrayAssignmentNode(std::string variableNam, const std::shared_ptr<ASTNode> &indexNode,
                         const std::shared_ptr<ASTNode> &expression);
     ~ArrayAssignmentNode() = default;
     void print() override;

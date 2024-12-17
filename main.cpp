@@ -44,7 +44,7 @@ int main(int args, char **argv)
                       << WIRTHX_VERSION_PATCH << "\n";
             return 0;
         }
-        else if (argList[1] == "--help"sv || argList[1] == "-h"sv)
+        if (argList[1] == "--help"sv || argList[1] == "-h"sv)
         {
             printHelp(program);
             return 0;

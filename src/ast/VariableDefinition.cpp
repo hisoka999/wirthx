@@ -1,5 +1,6 @@
 #include "VariableDefinition.h"
 #include <cassert>
+#include <llvm/IR/IRBuilder.h>
 #include <magic_enum/magic_enum.hpp>
 #include "ASTNode.h"
 #include "RecordType.h"

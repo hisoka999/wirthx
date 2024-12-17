@@ -63,3 +63,7 @@ add_custom_command(TARGET wirthx_test POST_BUILD
 add_custom_command(TARGET wirthx_test POST_BUILD
                        COMMAND ${CMAKE_COMMAND} -E copy_directory
                            ${CMAKE_SOURCE_DIR}/tests/errortests/ $<TARGET_FILE_DIR:wirthx_test>/errortests/)
+
+                           add_custom_command(TARGET wirthx_test POST_BUILD
+                           COMMAND ${CMAKE_COMMAND} -E copy_directory
+                               ${CMAKE_SOURCE_DIR}/tests/projecteuler/ $<TARGET_FILE_DIR:wirthx_test>/projecteuler/)
