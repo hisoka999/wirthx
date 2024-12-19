@@ -36,7 +36,7 @@ wirthx -c testfiles/hello.pas
 
 ## Hello World
 ```pascal
-program test
+program test;
 
 begin
     Writeln('Hello World');
@@ -45,7 +45,7 @@ end.
 ## Functions
 
 ```pascal
-program test
+program test;
 
     function addx(a : integer;b :integer): integer;
     begin
@@ -62,7 +62,7 @@ end.
 ## Records
 
 ```pascal
-program test
+program test;
 
     type Vec2 = record
         x : int64;
