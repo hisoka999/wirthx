@@ -8,6 +8,7 @@
 #include <string>
 
 #include <magic_enum/magic_enum.hpp>
+#include <utility>
 #include "Lexer.h"
 #include "ast/ArrayAccessNode.h"
 #include "ast/ArrayAssignmentNode.h"
@@ -35,9 +36,9 @@
 #include "compare.h"
 
 
-Parser::Parser(const std::vector<std::filesystem::path> rtlDirectories, const std::filesystem::path &path,
-               std::vector<Token> &tokens) :
-    m_rtlDirectories(std::move(rtlDirectories)), m_file_path(path), m_tokens(tokens)
+Parser::Parser(const std::vector<std::filesystem::path> &rtlDirectories, std::filesystem::path path,
+               const std::vector<Token> &tokens) :
+    m_rtlDirectories(std::move(rtlDirectories)), m_file_path(std::move(path)), m_tokens(tokens)
 {
     m_typeDefinitions["shortint"] = VariableType::getInteger(8);
     m_typeDefinitions["byte"] = VariableType::getInteger(8);
@@ -51,11 +52,11 @@ Parser::Parser(const std::vector<std::filesystem::path> rtlDirectories, const st
     m_typeDefinitions["boolean"] = VariableType::getBoolean();
 }
 
-bool Parser::hasNext() { return m_current < m_tokens.size() - 1; }
+bool Parser::hasNext() const { return m_current < m_tokens.size() - 1; }
 
-Token &Parser::current() { return m_tokens[m_current]; }
+Token Parser::current() { return m_tokens[m_current]; }
 
-Token &Parser::next()
+Token Parser::next()
 {
     if (hasNext())
     {
@@ -64,10 +65,13 @@ Token &Parser::next()
     return current();
 }
 
-bool Parser::canConsume(TokenType tokenType, size_t next) { return m_tokens[m_current + next].tokenType == tokenType; }
-bool Parser::canConsume(TokenType tokenType) { return canConsume(tokenType, 1); }
+bool Parser::canConsume(const TokenType tokenType, const size_t next) const
+{
+    return m_tokens[m_current + next].tokenType == tokenType;
+}
+bool Parser::canConsume(const TokenType tokenType) const { return canConsume(tokenType, 1); }
 
-bool Parser::tryConsume(TokenType tokenType)
+bool Parser::tryConsume(const TokenType tokenType)
 {
     if (canConsume(tokenType))
     {
@@ -76,7 +80,7 @@ bool Parser::tryConsume(TokenType tokenType)
     }
     return false;
 }
-bool Parser::consume(TokenType tokenType)
+bool Parser::consume(const TokenType tokenType)
 {
     if (canConsume(tokenType))
     {
@@ -103,12 +107,12 @@ bool Parser::consumeKeyWord(const std::string &keyword)
     }
     m_errors.push_back(ParserError{.file_name = m_file_path.string(),
                                    .token = m_tokens[m_current + 1],
-                                   .message = "expected token  '" + keyword + "' but found " +
+                                   .message = "expected keyword  '" + keyword + "' but found " +
                                               std::string(m_tokens[m_current + 1].lexical) + "!"});
     throw ParserException(m_errors);
 }
 
-bool Parser::canConsumeKeyWord(const std::string &keyword)
+bool Parser::canConsumeKeyWord(const std::string &keyword) const
 {
     return canConsume(TokenType::KEYWORD) && iequals(m_tokens[m_current + 1].lexical, keyword);
 }
@@ -123,18 +127,90 @@ bool Parser::tryConsumeKeyWord(const std::string &keyword)
     return false;
 }
 
-std::optional<std::shared_ptr<VariableType>> Parser::determinVariableTypeByName(const std::string &name)
+std::optional<std::shared_ptr<VariableType>> Parser::determinVariableTypeByName(const std::string &name) const
 {
-    for (const auto &def: m_typeDefinitions)
+    for (const auto &[defName, definition]: m_typeDefinitions)
     {
-        if (iequals(def.first, name))
-            return def.second;
+        if (iequals(defName, name))
+            return definition;
     }
 
     return std::nullopt;
 }
 
-std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, size_t currentScope,
+std::shared_ptr<ASTNode> Parser::parseEscapedString(const Token &token)
+{
+    auto result = std::string{};
+    size_t x = 1;
+    while (x < token.lexical.size())
+    {
+        auto next = token.lexical.find('#', x);
+        if (next == -1)
+            next = token.lexical.size();
+        auto tmp = token.lexical.substr(x, next - x);
+        result += std::atoi(tmp.data());
+        x = next + 1;
+    }
+    return std::make_shared<StringConstantNode>(result);
+}
+std::shared_ptr<ASTNode> Parser::parseFunctionCall(const Token &token, size_t currentScope)
+{
+    auto functionName = std::string(token.lexical);
+    const bool isSysCall = isKnownSystemCall(functionName);
+    if (!isSysCall && std::ranges::find(m_known_function_names, functionName) == std::end(m_known_function_names))
+    {
+        for (auto &fun: m_known_function_names)
+            std::cerr << "func: " << fun << "\n";
+        m_errors.push_back(ParserError{.file_name = m_file_path.string(),
+                                       .token = token,
+                                       .message = "a function with the name '" + std::string(token.lexical) +
+                                                  "' is not yet defined!"});
+    }
+    consume(TokenType::LEFT_CURLY);
+
+    Token subToken = next();
+    std::vector<std::shared_ptr<ASTNode>> callArgs;
+    while (subToken.tokenType != TokenType::RIGHT_CURLY && subToken.tokenType != TokenType::SEMICOLON)
+    {
+        switch (subToken.tokenType)
+        {
+            case TokenType::CHAR:
+            case TokenType::NUMBER:
+            case TokenType::ESCAPED_STRING:
+            case TokenType::STRING:
+            case TokenType::NAMEDTOKEN:
+            case TokenType::MINUS:
+            {
+                auto node = parseExpression(subToken, currentScope);
+                subToken = current();
+                callArgs.push_back(node);
+            }
+            break;
+            case TokenType::COMMA:
+                break;
+            default:
+                m_errors.push_back(ParserError{.file_name = m_file_path.string(),
+                                               .token = subToken,
+                                               .message = "unexpected token in function call"});
+
+                throw ParserException(m_errors);
+        }
+        if (subToken.tokenType == TokenType::RIGHT_CURLY)
+        {
+            tryConsume(TokenType::RIGHT_CURLY);
+            break;
+        }
+        subToken = next();
+    }
+
+
+    if (isSysCall)
+    {
+        return std::make_shared<SystemFunctionCallNode>(functionName, callArgs);
+    }
+    return std::make_shared<FunctionCallNode>(functionName, callArgs);
+}
+std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, const size_t currentScope,
                                             std::vector<std::shared_ptr<ASTNode>> nodes)
 {
     std::vector<std::shared_ptr<ASTNode>> args;
@@ -146,18 +222,7 @@ std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, size_t currentSc
         }
         case TokenType::ESCAPED_STRING:
         {
-            auto result = std::string{};
-            size_t x = 1;
-            while (x < token.lexical.size())
-            {
-                int next = token.lexical.find('#', x);
-                if (next == -1)
-                    next = token.lexical.size();
-                auto tmp = token.lexical.substr(x, next - x);
-                result += std::atoi(tmp.data());
-                x = next + 1;
-            }
-            return std::make_shared<StringConstantNode>(result);
+            return parseEscapedString(token);
         }
         case TokenType::STRING:
         {
@@ -197,65 +262,11 @@ std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, size_t currentSc
 
             if (canConsume(TokenType::LEFT_CURLY))
             {
-                auto functionName = std::string(token.lexical);
-                bool isSysCall = isKnownSystemCall(functionName);
-                if (!isSysCall && std::find(m_known_function_names.begin(), m_known_function_names.end(),
-                                            functionName) == std::end(m_known_function_names))
-                {
-                    for (auto &fun: m_known_function_names)
-                        std::cerr << "func: " << fun << "\n";
-                    m_errors.push_back(ParserError{.file_name = m_file_path.string(),
-                                                   .token = token,
-                                                   .message = "a function with the name '" +
-                                                              std::string(token.lexical) + "' is not yet defined!"});
-                }
-                consume(TokenType::LEFT_CURLY);
-
-                Token subToken = next();
-                std::vector<std::shared_ptr<ASTNode>> callArgs;
-                while (subToken.tokenType != TokenType::RIGHT_CURLY && subToken.tokenType != TokenType::SEMICOLON)
-                {
-                    switch (subToken.tokenType)
-                    {
-                        case TokenType::CHAR:
-                        case TokenType::NUMBER:
-                        case TokenType::ESCAPED_STRING:
-                        case TokenType::STRING:
-                        case TokenType::NAMEDTOKEN:
-                        case TokenType::MINUS:
-                        {
-                            auto node = parseExpression(subToken, currentScope);
-                            subToken = current();
-                            callArgs.push_back(node);
-                        }
-                        break;
-                        case TokenType::COMMA:
-                            break;
-                        default:
-                            m_errors.push_back(ParserError{.file_name = m_file_path.string(),
-                                                           .token = subToken,
-                                                           .message = "unexpected token in function call"});
-
-                            throw ParserException(m_errors);
-                    }
-                    if (subToken.tokenType == TokenType::RIGHT_CURLY)
-                    {
-                        tryConsume(TokenType::RIGHT_CURLY);
-                        break;
-                    }
-                    subToken = next();
-                }
-
-
-                if (isSysCall)
-                {
-                    return std::make_shared<SystemFunctionCallNode>(functionName, callArgs);
-                }
-                return std::make_shared<FunctionCallNode>(functionName, callArgs);
+                return parseFunctionCall(token, currentScope);
             }
-            else if (canConsume(TokenType::LEFT_SQUAR))
+            if (canConsume(TokenType::LEFT_SQUAR))
             {
-                Token arrayName = token;
+                const Token arrayName = token;
                 if (!isVariableDefined(token.lexical, currentScope))
                 {
                     m_errors.push_back(ParserError{.file_name = m_file_path.string(),
@@ -270,7 +281,7 @@ std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, size_t currentSc
                 return std::make_shared<ArrayAccessNode>(TokenWithFile{.token = arrayName, .fileName = m_file_path},
                                                          indexNode);
             }
-            else if (canConsume(TokenType::DOT))
+            if (canConsume(TokenType::DOT))
             {
                 Token elementName = token;
                 if (!isVariableDefined(token.lexical, currentScope))
@@ -310,11 +321,11 @@ std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, size_t currentSc
             {
                 return std::make_shared<BooleanNode>(true);
             }
-            else if (iequals(token.lexical, "false"))
+            if (iequals(token.lexical, "false"))
             {
                 return std::make_shared<BooleanNode>(false);
             }
-            else if (iequals(token.lexical, "mod"))
+            if (iequals(token.lexical, "mod"))
             {
                 auto rhs = parseToken(next(), currentScope, {});
 
@@ -342,7 +353,7 @@ std::shared_ptr<ASTNode> Parser::parseToken(const Token &token, size_t currentSc
     return nullptr;
 }
 
-const std::shared_ptr<ASTNode> Parser::parseNumber(const Token &token, size_t currentScope)
+std::shared_ptr<ASTNode> Parser::parseNumber(const Token &token, size_t currentScope)
 {
     auto value = std::atoll(token.lexical.data());
     auto base = 1 + static_cast<int>(std::log2(value));
@@ -425,7 +436,7 @@ std::vector<VariableDefinition> Parser::parseVariableDefinitions(const Token &to
 
     consume(TokenType::SEMICOLON);
     consume(TokenType::ENDLINE);
-    for (auto varName: varNames)
+    for (const auto &varName: varNames)
     {
         if (isVariableDefined(varName, scope))
         {
@@ -511,7 +522,8 @@ std::shared_ptr<BlockNode> Parser::parseBlock(const Token &currentToken, size_t 
                                                           " was allready defined!"});
                 continue;
             }
-            else if (!type.has_value())
+
+            if (!type.has_value())
             {
                 m_errors.push_back(ParserError{.file_name = m_file_path.string(),
                                                .token = currentToken,
@@ -583,7 +595,7 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
     if (currentToken.lexical == "if")
     {
         auto conditionNode = parseExpression(next(), scope);
-        tryConsumeKeyWord("then");
+        consumeKeyWord("then");
         tryConsume(TokenType::ENDLINE);
         // consume(TokenType::RIGHT_CURLY);
         // parse expression list
@@ -643,7 +655,7 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
             while (!std::filesystem::exists(path))
             {
                 path = *it / filename;
-                it++;
+                ++it;
             }
             Lexer lexer;
             std::ifstream file;
@@ -661,7 +673,7 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
                 return false;
             }
             file.seekg(0, std::ios::end);
-            size_t size = file.tellg();
+            std::streamsize size = file.tellg();
             std::string buffer(size, ' ');
             file.seekg(0);
             file.read(&buffer[0], size);
@@ -761,7 +773,7 @@ void Parser::parseFunction(size_t scope, std::vector<std::shared_ptr<ASTNode>> &
     auto functionName = std::string(current().lexical);
     m_known_function_names.push_back(functionName);
     bool isExternalFunction = false;
-    std::string libName = "";
+    std::string libName;
     std::string externalName = functionName;
 
     consume(TokenType::LEFT_CURLY);
@@ -784,7 +796,7 @@ void Parser::parseFunction(size_t scope, std::vector<std::shared_ptr<ASTNode>> &
         {
             consume(TokenType::COMMA);
             consume(TokenType::NAMEDTOKEN);
-            paramNames.push_back(std::string(current().lexical));
+            paramNames.emplace_back(current().lexical);
         }
 
         consume(TokenType::COLON);
@@ -793,7 +805,7 @@ void Parser::parseFunction(size_t scope, std::vector<std::shared_ptr<ASTNode>> &
             token = next();
             auto type = determinVariableTypeByName(std::string(token.lexical));
 
-            for (auto param: paramNames)
+            for (const auto &param: paramNames)
             {
 
                 if (isVariableDefined(param, scope))
@@ -835,13 +847,20 @@ void Parser::parseFunction(size_t scope, std::vector<std::shared_ptr<ASTNode>> &
         token = next();
     }
     if (!isProcedure)
-        consume(TokenType::COLON);
+        if (!tryConsume(TokenType::COLON))
+        {
+            m_errors.push_back(
+                    ParserError{.file_name = m_file_path.string(),
+                                .token = current(),
+                                .message = "the return type for the function \"" + functionName + "\" is missing."});
+            throw ParserException(m_errors);
+        }
     std::shared_ptr<VariableType> returnType;
 
     if (!isProcedure && consume(TokenType::NAMEDTOKEN))
     {
-        auto typeName = std::string{current().lexical.begin(), current().lexical.end()};
-        auto type = determinVariableTypeByName(typeName);
+        const auto typeName = std::string{current().lexical.begin(), current().lexical.end()};
+        const auto type = determinVariableTypeByName(typeName);
         if (!type)
         {
             m_errors.push_back(
@@ -885,15 +904,25 @@ void Parser::parseFunction(size_t scope, std::vector<std::shared_ptr<ASTNode>> &
     {
         auto functionBody = parseBlock(current(), scope + 1);
         consume(TokenType::SEMICOLON);
-
+        if (!isProcedure)
+        {
+            functionBody->addVariableDefinition(VariableDefinition{.variableType = returnType,
+                                                                   .variableName = functionName,
+                                                                   .scopeId = 0,
+                                                                   .value = nullptr,
+                                                                   .constant = false});
+        }
         nodes.push_back(std::make_shared<FunctionDefinitionNode>(functionName, functionParams, functionBody,
                                                                  isProcedure, returnType));
     }
+
+
     for (auto &param: functionParams)
     {
-        m_known_variable_definitions.erase(std::remove_if(
-                m_known_variable_definitions.begin(), m_known_variable_definitions.end(),
-                [param](VariableDefinition &value) { return param.argumentName == value.variableName; }));
+        m_known_variable_definitions.erase(std::ranges::remove_if(m_known_variable_definitions,
+                                                                  [param](const VariableDefinition &value)
+                                                                  { return param.argumentName == value.variableName; })
+                                                   .begin());
     }
 }
 
@@ -1059,6 +1088,8 @@ std::shared_ptr<ASTNode> Parser::parseExpression(const Token &currentToken, size
 void Parser::parseVariableAssignment(const Token &currentToken, size_t currentScope,
                                      [[maybe_unused]] std::vector<std::shared_ptr<ASTNode>> &nodes)
 {
+    auto variableNameToken = TokenWithFile{.token = currentToken, .fileName = m_file_path};
+
     auto variableName = std::string(currentToken.lexical);
 
     if (canConsume(TokenType::COLON))
@@ -1087,7 +1118,7 @@ void Parser::parseVariableAssignment(const Token &currentToken, size_t currentSc
         // parse expression
         auto expression = parseExpression(next(), currentScope);
 
-        nodes.push_back(std::make_shared<VariableAssignmentNode>(variableName, expression));
+        nodes.push_back(std::make_shared<VariableAssignmentNode>(variableNameToken, expression));
     }
     else if (canConsume(TokenType::DOT))
     {
@@ -1148,7 +1179,7 @@ void Parser::parseVariableAssignment(const Token &currentToken, size_t currentSc
             return;
         }
         auto expression = parseExpression(next(), currentScope);
-        nodes.push_back(std::make_shared<ArrayAssignmentNode>(variableName, index, expression));
+        nodes.push_back(std::make_shared<ArrayAssignmentNode>(variableNameToken, index, expression));
     }
 }
 

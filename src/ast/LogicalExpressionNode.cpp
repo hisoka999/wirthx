@@ -52,22 +52,11 @@ llvm::Value *LogicalExpressionNode::codegen(std::unique_ptr<Context> &context)
     switch (m_operator)
     {
         case LogicalOperator::AND:
-        {
-            llvm::ArrayRef<llvm::Value *> ops = {m_lhs->codegen(context), m_rhs->codegen(context)};
-            return context->Builder->CreateAnd(ops);
-        }
-        break;
+            return context->Builder->CreateAnd(m_lhs->codegen(context), m_rhs->codegen(context));
         case LogicalOperator::OR:
-        {
-            llvm::ArrayRef<llvm::Value *> ops = {m_lhs->codegen(context), m_rhs->codegen(context)};
-            return context->Builder->CreateOr(ops);
-        }
-        break;
+            return context->Builder->CreateOr(m_lhs->codegen(context), m_rhs->codegen(context));
         case LogicalOperator::NOT:
-        {
             return context->Builder->CreateNot(m_rhs->codegen(context));
-        }
-        break;
         default:
             break;
     }

@@ -129,14 +129,14 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
     if (m_body)
     {
         m_body->setBlockName(m_name + "_block");
-        if (!m_isProcedure)
-        {
-            m_body->addVariableDefinition(VariableDefinition{.variableType = m_returnType,
-                                                             .variableName = m_name,
-                                                             .scopeId = 0,
-                                                             .value = nullptr,
-                                                             .constant = false});
-        }
+        // if (!m_isProcedure)
+        // {
+        //     m_body->addVariableDefinition(VariableDefinition{.variableType = m_returnType,
+        //                                                      .variableName = m_name,
+        //                                                      .scopeId = 0,
+        //                                                      .value = nullptr,
+        //                                                      .constant = false});
+        // }
         m_body->codegen(context);
         if (m_isProcedure)
         {
@@ -167,6 +167,11 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
 
 
     return functionDefinition;
+}
+void FunctionDefinitionNode::typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
+{
+    if (m_body)
+        m_body->typeCheck(unit, this);
 }
 
 std::optional<FunctionArgument> FunctionDefinitionNode::getParam(const std::string &paramName)

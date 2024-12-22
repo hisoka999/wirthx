@@ -151,6 +151,7 @@ INSTANTIATE_TEST_SUITE_P(CompilerTestNoError, CompilerTest,
                                          "forloop", "arraytest", "constantstest", "customint", "logicalcondition",
                                          "basicvec2", "dynarray", "externalfunction", "stringtest"));
 
-INSTANTIATE_TEST_SUITE_P(CompilerTestWithError, CompilerTestError, testing::Values("arrayaccess"));
+INSTANTIATE_TEST_SUITE_P(CompilerTestWithError, CompilerTestError,
+                         testing::Values("arrayaccess", "missing_return_type", "wrong_return_type"));
 
 INSTANTIATE_TEST_SUITE_P(ProjectEuler, ProjectEulerTest, testing::Values("problem1", "problem2", "problem3"));

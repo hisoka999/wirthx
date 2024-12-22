@@ -19,4 +19,6 @@ public:
     std::shared_ptr<VariableType> resolveType(const std::unique_ptr<UnitNode> &unitNode, ASTNode *parentNode) override;
 
     std::string name();
+
+    void typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode) override;
 };

@@ -117,3 +117,12 @@ std::set<std::string> UnitNode::collectLibsToLink()
     }
     return result;
 }
+void UnitNode::typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
+{
+    for (const auto &def: m_functionDefinitions)
+    {
+        def->typeCheck(unit, parentNode);
+    }
+
+    m_blockNode->typeCheck(unit, parentNode);
+}

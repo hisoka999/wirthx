@@ -6,14 +6,15 @@
 class ArrayAssignmentNode : public ASTNode
 {
 private:
+    TokenWithFile m_arrayToken;
     std::string m_variableName;
     std::shared_ptr<ASTNode> m_indexNode;
     std::shared_ptr<ASTNode> m_expression;
 
 public:
-    ArrayAssignmentNode(std::string variableNam, const std::shared_ptr<ASTNode> &indexNode,
+    ArrayAssignmentNode(TokenWithFile &arrayToken, const std::shared_ptr<ASTNode> &indexNode,
                         const std::shared_ptr<ASTNode> &expression);
-    ~ArrayAssignmentNode() = default;
+    ~ArrayAssignmentNode() override = default;
     void print() override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
 };

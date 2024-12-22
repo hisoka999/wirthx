@@ -4,4 +4,4 @@ build/
 # Jetbrainz
 .cache/
 .idea/
-cmake-build-debug/
+cmake-build-*

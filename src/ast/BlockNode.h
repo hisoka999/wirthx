@@ -22,4 +22,5 @@ public:
     void addVariableDefinition(VariableDefinition definition);
     void preappendExpression(std::shared_ptr<ASTNode> node);
     void appendExpression(std::shared_ptr<ASTNode> node);
+    void typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode) override;
 };

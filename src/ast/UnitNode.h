@@ -26,7 +26,7 @@ public:
              std::vector<std::shared_ptr<FunctionDefinitionNode>> functionDefinitions,
              std::map<std::string, std::shared_ptr<VariableType>> typeDefinitions,
              const std::shared_ptr<BlockNode> &blockNode);
-    ~UnitNode() = default;
+    ~UnitNode() override = default;
 
     void print() override;
 
@@ -37,4 +37,6 @@ public:
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
     std::optional<VariableDefinition> getVariableDefinition(const std::string &name);
     std::set<std::string> collectLibsToLink();
+
+    void typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode) override;
 };

@@ -1,8 +1,8 @@
 #include "BlockNode.h"
 #include <iostream>
 #include "compiler/Context.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/IRBuilder.h"
 
 
 BlockNode::BlockNode(std::vector<VariableDefinition> variableDefinitions,
@@ -110,6 +110,13 @@ void BlockNode::addVariableDefinition(VariableDefinition definition) { m_variabl
 
 
 void BlockNode::appendExpression(std::shared_ptr<ASTNode> node) { m_expressions.push_back(node); }
+void BlockNode::typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
+{
+    for (auto exp: m_expressions)
+    {
+        exp->typeCheck(unit, parentNode);
+    }
+}
 
 void BlockNode::preappendExpression(std::shared_ptr<ASTNode> node)
 {

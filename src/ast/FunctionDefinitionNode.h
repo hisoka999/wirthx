@@ -42,4 +42,6 @@ public:
     std::optional<FunctionArgument> getParam(const size_t index);
     std::shared_ptr<BlockNode> body();
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
+
+    void typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode) override;
 };

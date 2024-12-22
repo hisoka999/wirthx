@@ -6,10 +6,11 @@
 #include "FunctionCallNode.h"
 #include "UnitNode.h"
 #include "compiler/Context.h"
+#include "exceptions/CompilerException.h"
 
-VariableAssignmentNode::VariableAssignmentNode(const std::string_view variableName,
+VariableAssignmentNode::VariableAssignmentNode(const TokenWithFile variableName,
                                                const std::shared_ptr<ASTNode> &expression) :
-    m_variableName(variableName), m_expression(expression)
+    m_variable(variableName), m_variableName(std::string(m_variable.token.lexical)), m_expression(expression)
 {
 }
 
@@ -22,7 +23,6 @@ void VariableAssignmentNode::print()
 
 llvm::Value *VariableAssignmentNode::codegen(std::unique_ptr<Context> &context)
 {
-
     // Look this variable up in the function.
     llvm::AllocaInst *V = context->NamedAllocations[m_variableName];
 
@@ -71,4 +71,43 @@ llvm::Value *VariableAssignmentNode::codegen(std::unique_ptr<Context> &context)
 
     context->Builder->CreateStore(result, V);
     return result;
+}
+void VariableAssignmentNode::typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
+{
+
+    if (const auto varType = unit->getVariableDefinition(m_variableName))
+    {
+        const auto expressionType = m_expression->resolveType(unit, parentNode);
+        if (*expressionType != *varType.value().variableType)
+        {
+
+            throw CompilerException(ParserError{.file_name = m_variable.fileName,
+                                                .token = m_variable.token,
+                                                .message = "the type for the variable \"" + m_variableName +
+                                                           "\" is \"" + varType.value().variableType->typeName +
+                                                           "\" but a \"" + expressionType->typeName +
+                                                           "\" was assigned."});
+        }
+    }
+
+    if (parentNode != unit.get())
+    {
+        if (const auto functionDef = dynamic_cast<FunctionDefinitionNode *>(parentNode))
+        {
+            if (const auto varType = functionDef->body()->getVariableDefinition(m_variableName))
+            {
+                const auto expressionType = m_expression->resolveType(unit, parentNode);
+                if (*expressionType != *varType.value().variableType)
+                {
+
+                    throw CompilerException(ParserError{.file_name = m_variable.fileName,
+                                                        .token = m_variable.token,
+                                                        .message = "the type for the variable \"" + m_variableName +
+                                                                   "\" is \"" + varType.value().variableType->typeName +
+                                                                   "\" but a \"" + expressionType->typeName +
+                                                                   "\" was assigned."});
+                }
+            }
+        }
+    }
 }

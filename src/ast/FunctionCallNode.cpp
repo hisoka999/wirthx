@@ -163,12 +163,13 @@ llvm::Value *FunctionCallNode::codegen(std::unique_ptr<Context> &context)
     return callInst;
 }
 
-std::shared_ptr<VariableType> FunctionCallNode::resolveType(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
+std::shared_ptr<VariableType> FunctionCallNode::resolveType(const std::unique_ptr<UnitNode> &unitNode,
+                                                            ASTNode *parentNode)
 {
-    auto functionDefinition = unit->getFunctionDefinition(callSignature(unit, parentNode));
+    auto functionDefinition = unitNode->getFunctionDefinition(callSignature(unitNode, parentNode));
     if (!functionDefinition)
     {
-        functionDefinition = unit->getFunctionDefinition(m_name);
+        functionDefinition = unitNode->getFunctionDefinition(m_name);
     }
 
     if (!functionDefinition)
@@ -181,3 +182,4 @@ std::shared_ptr<VariableType> FunctionCallNode::resolveType(const std::unique_pt
 
 
 std::string FunctionCallNode::name() { return m_name; }
+void FunctionCallNode::typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode) {}

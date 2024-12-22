@@ -44,6 +44,8 @@ public:
     static std::shared_ptr<VariableType> getBoolean();
     static std::shared_ptr<StringType> getString();
     static std::shared_ptr<VariableType> getPointer();
+
+    bool operator==(const VariableType &other) const;
 };
 
 class FieldAccessableType
@@ -74,7 +76,14 @@ public:
     llvm::Type *generateLlvmType(std::unique_ptr<Context> &context) override;
     llvm::Value *generateFieldAccess(TokenWithFile &token, llvm::Value *indexValue,
                                      std::unique_ptr<Context> &context) override;
+
+    bool operator==(const ArrayType &other) const
+    {
+        return this->low == other.low && this->high == other.high && this->arrayBase == other.arrayBase &&
+               this->isDynArray == other.isDynArray;
+    }
 };
+
 
 class IntegerType : public VariableType
 {
@@ -92,4 +101,6 @@ public:
     llvm::Type *generateLlvmType(std::unique_ptr<Context> &context) override;
     llvm::Value *generateFieldAccess(TokenWithFile &token, llvm::Value *indexValue,
                                      std::unique_ptr<Context> &context) override;
+
+    bool operator==(const StringType &) const { return true; }
 };

@@ -20,6 +20,7 @@ llvm::Type *VariableType::generateLlvmType(std::unique_ptr<Context> &context)
             return llvm::Type::getInt1Ty(*context->TheContext);
         default:
             assert(false && "unknown base type to generate llvm type for");
+            return nullptr;
     }
 }
 
@@ -47,6 +48,7 @@ std::shared_ptr<VariableType> VariableType::getPointer()
     pointer->typeName = "pointer";
     return pointer;
 }
+bool VariableType::operator==(const VariableType &other) const { return this->baseType == other.baseType; }
 
 std::shared_ptr<StringType> VariableType::getString()
 {
@@ -161,9 +163,9 @@ llvm::Value *ArrayType::generateFieldAccess(TokenWithFile &token, llvm::Value *i
         index = context->Builder->CreateSub(
                 index, context->Builder->getIntN(index->getType()->getIntegerBitWidth(), this->low), "array.index.sub");
 
-    llvm::ArrayRef<llvm::Value *> idxList = {context->Builder->getInt64(0), index};
 
-    auto arrayValue = context->Builder->CreateGEP(V->getAllocatedType(), V, idxList, "arrayindex", false);
+    auto arrayValue = context->Builder->CreateGEP(V->getAllocatedType(), V, {context->Builder->getInt64(0), index},
+                                                  "arrayindex", false);
     return context->Builder->CreateLoad(V->getAllocatedType()->getArrayElementType(), arrayValue);
 }
 

@@ -3,13 +3,15 @@
 #include <utility>
 #include "UnitNode.h"
 #include "compiler/Context.h"
+#include "exceptions/CompilerException.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Type.h"
 
-ArrayAssignmentNode::ArrayAssignmentNode(std::string variableName, const std::shared_ptr<ASTNode> &indexNode,
+ArrayAssignmentNode::ArrayAssignmentNode(TokenWithFile &arrayToken, const std::shared_ptr<ASTNode> &indexNode,
                                          const std::shared_ptr<ASTNode> &expression) :
-    m_variableName(std::move(variableName)), m_indexNode(indexNode), m_expression(expression)
+    m_arrayToken(arrayToken), m_variableName(std::string(arrayToken.token.lexical)), m_indexNode(indexNode),
+    m_expression(expression)
 {
 }
 
@@ -27,20 +29,30 @@ llvm::Value *ArrayAssignmentNode::codegen(std::unique_ptr<Context> &context)
     const auto result = m_expression->codegen(context);
 
     auto index = m_indexNode->codegen(context);
-
-    if (const auto arrayDef = context->ProgramUnit->getVariableDefinition(m_variableName); !arrayDef)
+    const auto arrayDef = context->ProgramUnit->getVariableDefinition(m_variableName);
+    if (!arrayDef)
     {
         return LogErrorV("Unknown variable name for array assignment: " + m_variableName);
     }
-    else
+    if (const auto def = std::dynamic_pointer_cast<ArrayType>(arrayDef->variableType))
     {
-        const auto def = std::dynamic_pointer_cast<ArrayType>(arrayDef->variableType);
+        if (llvm::isa<llvm::ConstantInt>(index) && !def->isDynArray)
+        {
+            const auto value = reinterpret_cast<llvm::ConstantInt *>(index);
+
+            if (value->getSExtValue() < static_cast<int64_t>(def->low) ||
+                value->getSExtValue() > static_cast<int64_t>(def->high))
+            {
+                throw CompilerException(ParserError{.file_name = m_arrayToken.fileName,
+                                                    .token = m_arrayToken.token,
+                                                    .message = "the array index is not in the defined range."});
+            }
+        }
 
         if (def->low > 0)
             index = context->Builder->CreateSub(
                     index, context->Builder->getIntN(index->getType()->getIntegerBitWidth(), def->low), "subtmp");
 
-        llvm::ArrayRef<llvm::Value *> idxList = {context->Builder->getInt64(0), index};
 
         if (def->isDynArray)
         {
@@ -60,9 +72,11 @@ llvm::Value *ArrayAssignmentNode::codegen(std::unique_ptr<Context> &context)
             return result;
         }
 
-        const auto bounds = context->Builder->CreateGEP(V->getAllocatedType(), V, idxList, "arrayindex", false);
+        const auto bounds = context->Builder->CreateGEP(V->getAllocatedType(), V,
+                                                        {context->Builder->getInt64(0), index}, "arrayindex", false);
 
         context->Builder->CreateStore(result, bounds);
         return result;
     }
+    return nullptr;
 }

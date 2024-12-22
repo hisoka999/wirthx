@@ -1,12 +1,15 @@
 # wirthx
-Wirthx is an experimental pascal compiler. 
+
+Wirthx is an experimental pascal compiler.
 The language is named after Nicolaus Wirth the creator of pascal.
 
 ## Compiler
-The compiler is based on llvm and will generate a native binary for the target plattform. 
+
+The compiler is based on llvm and will generate a native binary for the target plattform.
 For now only `linux-x86-64` is supported.
 
 ### Options
+
 | **Option** 	   | **Values** 	 | **Description**                                  	 |
 |----------------|--------------|----------------------------------------------------|
 | --run <br>-r 	 | 	            | Runs the compiled program                        	 |
@@ -18,23 +21,24 @@ For now only `linux-x86-64` is supported.
 | --help         |              | Outputs the program help                           |
 | --version      |              | Prints the current version of the compiler         |
 
-
 # Usage
 
 ```sh
 wirthx testfiles/hello.pas
 ```
+
 ## Executing the compiler
+
 The compiler will generate a native executable based on the program name defined in the program unit.
 
 ```sh
 wirthx -c testfiles/hello.pas
 ```
 
-
 # Examples
 
 ## Hello World
+
 ```pascal
 program test;
 
@@ -42,6 +46,7 @@ begin
     Writeln('Hello World');
 end.
 ```
+
 ## Functions
 
 ```pascal
@@ -55,6 +60,23 @@ var
     my_var : integer;
 begin
     my_var := addx(1,2);
+    Writeln(my_var);
+end.
+```
+
+## Procedures
+
+```pascal
+program test;
+
+    procedure my_inc(var value: integer);
+    begin
+        value := value + 1;
+    end;
+var
+    my_var : integer := 10;
+begin
+    my_inc(my_var);
     Writeln(my_var);
 end.
 ```
@@ -82,5 +104,43 @@ begin
     myvec.y := 3;
     vec2_inc(myvec);
 end.
+```
 
+## Conditions
+
+```pascal
+program test;
+var
+    test : integer = 20;
+begin
+    if test mod 2 then
+        writeln('20 is divisible by 2 without a reminder.');
+end.
+```
+
+## For - Loops
+
+```pascal
+program test;
+var
+    i : integer;
+begin
+    for i:= 1 to 20 do
+        writeln(i);
+end.
+```
+
+## While Loops
+
+```pascal
+program test;
+var
+    loop_var : integer = 20;
+begin
+    while loop_var > 0 do
+    begin
+        writeln(loop_var);
+        loop_var := loop_var - 1;
+    end;
+end.
 ```

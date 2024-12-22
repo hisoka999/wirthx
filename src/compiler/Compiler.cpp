@@ -164,6 +164,7 @@ void compile_file(const CompilerOptions &options, std::filesystem::path inputPat
 
     try
     {
+        context->ProgramUnit->typeCheck(context->ProgramUnit, nullptr);
         context->ProgramUnit->codegen(context);
     }
     catch (CompilerException &e)
