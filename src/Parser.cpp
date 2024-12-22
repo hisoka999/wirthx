@@ -145,7 +145,7 @@ std::shared_ptr<ASTNode> Parser::parseEscapedString(const Token &token)
     while (x < token.lexical.size())
     {
         auto next = token.lexical.find('#', x);
-        if (next == -1)
+        if (next == std::string::npos)
             next = token.lexical.size();
         auto tmp = token.lexical.substr(x, next - x);
         result += std::atoi(tmp.data());
@@ -1017,15 +1017,17 @@ std::shared_ptr<ASTNode> Parser::parseExpression(const Token &currentToken, size
                 {
                     if (iequals(token.lexical, "then"))
                     {
+                        --m_current;
                         return nodes.at(0);
                     }
-                    LogicalOperator op = LogicalOperator::OR;
+                    auto op = LogicalOperator::OR;
                     if (token.lexical == "not")
                     {
                         auto rhs = parseExpression(next(), currentScope);
                         return std::make_shared<LogicalExpressionNode>(LogicalOperator::NOT, rhs);
                     }
-                    else if (token.lexical == "and")
+
+                    if (token.lexical == "and")
                     {
                         op = LogicalOperator::AND;
                     }
