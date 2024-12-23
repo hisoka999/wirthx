@@ -32,6 +32,7 @@ TEST_P(CompilerTest, TestNoError)
     std::stringstream ostream;
     std::stringstream erstream;
     CompilerOptions options;
+    options.rtlDirectories.emplace_back("rtl");
 
     options.runProgram = true;
     options.outputDirectory = std::filesystem::current_path();
@@ -74,6 +75,8 @@ TEST_P(ProjectEulerTest, TestNoError)
     std::stringstream ostream;
     std::stringstream erstream;
     CompilerOptions options;
+    options.rtlDirectories.emplace_back("rtl");
+
     options.buildMode = BuildMode::Release;
 
     options.runProgram = true;
@@ -84,6 +87,7 @@ TEST_P(ProjectEulerTest, TestNoError)
     std::istringstream is;
     std::string s;
     std::string group;
+
 
     file.open(output_path, std::ios::in);
 
@@ -98,6 +102,7 @@ TEST_P(ProjectEulerTest, TestNoError)
     std::string expected(size, ' ');
     file.seekg(0);
     file.read(&expected[0], size);
+    std::cout << "current path" << std::filesystem::current_path();
     std::cout << "expected: " << expected;
     std::cout << ostream.str() << "\n";
     ASSERT_EQ(erstream.str(), "");
@@ -117,7 +122,7 @@ TEST_P(CompilerTestError, CompilerTestWithError)
     std::stringstream ostream;
     std::stringstream erstream;
     CompilerOptions options;
-
+    options.rtlDirectories.emplace_back("rtl");
     compile_file(options, input_path, erstream, ostream);
 
     std::ifstream file;
@@ -149,7 +154,8 @@ TEST_P(CompilerTestError, CompilerTestWithError)
 INSTANTIATE_TEST_SUITE_P(CompilerTestNoError, CompilerTest,
                          testing::Values("helloworld", "functions", "math", "includetest", "whileloop", "conditions",
                                          "forloop", "arraytest", "constantstest", "customint", "logicalcondition",
-                                         "basicvec2", "dynarray", "externalfunction", "stringtest"));
+                                         "basicvec2", "dynarray", "externalfunction", "stringtest", "readfile",
+                                         "repeatuntil"));
 
 INSTANTIATE_TEST_SUITE_P(CompilerTestWithError, CompilerTestError,
                          testing::Values("arrayaccess", "missing_return_type", "wrong_return_type"));

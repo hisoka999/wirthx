@@ -58,6 +58,10 @@ llvm::Value *FieldAccessNode::codegen(std::unique_ptr<Context> &context)
 
 
                 auto arrayValue = context->Builder->CreateStructGEP(llvmRecordType, value, index, fieldName);
+                // if (fieldType->isPointerTy())
+                // {
+                //     return arrayValue;
+                // }
                 return context->Builder->CreateAlignedLoad(fieldType, arrayValue, alignment, fieldName);
             }
         }

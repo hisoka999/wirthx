@@ -85,29 +85,21 @@ llvm::Value *FunctionCallNode::codegen(std::unique_ptr<Context> &context)
     std::vector<llvm::Value *> ArgsV;
     for (unsigned i = 0, e = m_args.size(); i != e; ++i)
     {
-        auto argValue = m_args[i]->codegen(context);
+
         std::optional<FunctionArgument> argType = std::nullopt;
         if (functionDefinition.has_value())
         {
             argType = functionDefinition.value()->getParam(i);
         }
+        if (argType.has_value())
+            context->loadValue = !argType.value().isReference;
+
+        auto argValue = m_args[i]->codegen(context);
+        context->loadValue = true;
+
         if (argType.has_value() && argType.value().isReference)
         {
-            if (!argValue->getType()->isPointerTy())
-            {
-                auto fieldName = functionDefinition.value()->name() + "_" + argType->argumentName;
-
-                llvm::AllocaInst *alloca =
-                        context->Builder->CreateAlloca(argValue->getType(), nullptr, fieldName + "_ptr");
-                context->Builder->CreateStore(argValue, alloca);
-
-                ArgsV.push_back(alloca);
-            }
-
-            else
-            {
-                ArgsV.push_back(argValue);
-            }
+            ArgsV.push_back(argValue);
         }
         else if (argType.has_value() && argType.value().type->baseType == VariableBaseType::Struct)
         {

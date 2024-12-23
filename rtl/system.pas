@@ -1,40 +1,60 @@
 unit system;
 
-    function Str(value: integer) : string;
+type
+    PChar = ^char;
+    CFile = ^char;
+    File = record
+               pointer: CFile;
+               isOpen: boolean;
+            end;
+
+    function fgetc( F : CFile) : char; external 'c';
+    function fopen(fileName: PChar;mode : PChar) : CFile; external 'c';
+    function fclose(F : CFile) : integer; external 'c';
+
+    procedure Assign(var F: File;FileName: String);
     begin
-        Str := ''; // TODO: implement the function
+        F.pointer := fopen(pchar(Filename),pchar('rw'));
+        F.isOpen := true;
     end;
 
-    Procedure write(param : string );
+    procedure CloseFile(var F: File);
     begin
-        puts(param); // TODO: puts expects a c string not a pascal string
+        if F.isOpen then
+            fclose(F.pointer);
     end;
 
-    Procedure write(param : integer );
-    begin
-        write(str(param));
-    end;
-
-    procedure writeln(param: string);
-    begin
-        write(param);
-        write('\n');
-    end;
-
-    Procedure writeln(param : integer );
-    begin
-        writeln(str(param));
-    end;
-
-    Procedure inc(var value: integer) inline;
+    Procedure inc(var value: integer); inline;
     begin
         value := value + 1;
     end;
 
-    Procedure dec(var value: integer) inline;
+    Procedure dec(var value: integer); inline;
     begin
         value := value - 1;
     end;
+
+    procedure Readln(var F: File; var value: string);
+    var
+        c : char  = 10;
+    begin
+
+        if F.isOpen then
+        begin
+
+            repeat
+            begin
+                c := fgetc(F.pointer);
+                if c >= 32 and c <= 125 then
+                begin
+                    value := value + c;
+                end;
+            end;
+            until c = 10 or c = 13 or c = -1;
+        end;
+    end;
+
+
 begin
 
 end.

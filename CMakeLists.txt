@@ -72,6 +72,7 @@ file(GLOB SRC
         src/ast/VariableType.cpp
         src/ast/RecordType.cpp
         src/ast/ForNode.cpp
+        src/ast/RepeatUntilNode.cpp
         src/ast/BreakNode.cpp
         src/compiler/intrinsics.cpp
         src/compiler/CompilerOptions.cpp
@@ -79,6 +80,7 @@ file(GLOB SRC
         src/compiler/Compiler.cpp
         src/Lexer.cpp
         src/Parser.cpp
+        src/Parser2.cpp
         main.cpp)
 INCLUDE_DIRECTORIES("src")
 

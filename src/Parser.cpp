@@ -27,6 +27,7 @@
 #include "ast/LogicalExpressionNode.h"
 #include "ast/NumberNode.h"
 #include "ast/RecordType.h"
+#include "ast/RepeatUntilNode.h"
 #include "ast/ReturnNode.h"
 #include "ast/StringConstantNode.h"
 #include "ast/SystemFunctionCallNode.h"
@@ -168,40 +169,56 @@ std::shared_ptr<ASTNode> Parser::parseFunctionCall(const Token &token, size_t cu
     }
     consume(TokenType::LEFT_CURLY);
 
-    Token subToken = next();
+    // Token subToken = next();
     std::vector<std::shared_ptr<ASTNode>> callArgs;
-    while (subToken.tokenType != TokenType::RIGHT_CURLY && subToken.tokenType != TokenType::SEMICOLON)
-    {
-        switch (subToken.tokenType)
-        {
-            case TokenType::CHAR:
-            case TokenType::NUMBER:
-            case TokenType::ESCAPED_STRING:
-            case TokenType::STRING:
-            case TokenType::NAMEDTOKEN:
-            case TokenType::MINUS:
-            {
-                auto node = parseExpression(subToken, currentScope);
-                subToken = current();
-                callArgs.push_back(node);
-            }
-            break;
-            case TokenType::COMMA:
-                break;
-            default:
-                m_errors.push_back(ParserError{.file_name = m_file_path.string(),
-                                               .token = subToken,
-                                               .message = "unexpected token in function call"});
 
-                throw ParserException(m_errors);
-        }
-        if (subToken.tokenType == TokenType::RIGHT_CURLY)
+    if (!tryConsume(TokenType::RIGHT_CURLY))
+    {
+        do
         {
-            tryConsume(TokenType::RIGHT_CURLY);
-            break;
+            if (tryConsume(TokenType::COMMA) || current().tokenType == TokenType::COMMA)
+            {
+                next();
+            }
+
+            if (auto node = parseExpression(current(), currentScope))
+                callArgs.push_back(node);
         }
-        subToken = next();
+        while (!tryConsume(TokenType::RIGHT_CURLY));
     }
+
+    // while (subToken.tokenType != TokenType::RIGHT_CURLY && subToken.tokenType != TokenType::SEMICOLON)
+    // {
+    //     switch (subToken.tokenType)
+    //     {
+    //         case TokenType::CHAR:
+    //         case TokenType::NUMBER:
+    //         case TokenType::ESCAPED_STRING:
+    //         case TokenType::STRING:
+    //         case TokenType::NAMEDTOKEN:
+    //         case TokenType::MINUS:
+    //         {
+    //             auto node = parseExpression(subToken, currentScope);
+    //             subToken = current();
+    //             callArgs.push_back(node);
+    //         }
+    //         break;
+    //         case TokenType::COMMA:
+    //             break;
+    //         default:
+    //             m_errors.push_back(ParserError{.file_name = m_file_path.string(),
+    //                                            .token = subToken,
+    //                                            .message = "unexpected token in function call"});
+    //
+    //             throw ParserException(m_errors);
+    //     }
+    //     if (subToken.tokenType == TokenType::RIGHT_CURLY)
+    //     {
+    //         tryConsume(TokenType::RIGHT_CURLY);
+    //         break;
+    //     }
+    //     subToken = next();
+    // }
 
 
     if (isSysCall)
@@ -589,6 +606,88 @@ std::shared_ptr<BlockNode> Parser::parseBlock(const Token &currentToken, size_t 
     return std::make_shared<BlockNode>(blockVariableDefinitions, nodes);
 }
 
+bool Parser::importUnit(std::vector<std::shared_ptr<ASTNode>> &nodes, std::string filename)
+{
+    auto path = this->m_file_path.parent_path() / filename;
+    auto it = m_rtlDirectories.begin();
+    while (!std::filesystem::exists(path))
+    {
+        if (m_rtlDirectories.end() == it)
+            break;
+        path = *it / filename;
+        ++it;
+    }
+    Lexer lexer;
+    std::ifstream file;
+    std::istringstream is;
+    file.open(path, std::ios::in);
+    if (!file.is_open())
+    {
+        m_errors.push_back(ParserError{.file_name = m_file_path.string(),
+                                       .token = current(),
+                                       .message = std::string(current().lexical) + " is not a valid unit"});
+        m_errors.push_back(ParserError{.file_name = m_file_path.string(),
+                                       .token = current(),
+                                       .message = path.string() + " is not a valid pascal file"});
+
+
+        return true;
+    }
+    file.seekg(0, std::ios::end);
+    std::streamsize size = file.tellg();
+    std::string buffer(size, ' ');
+    file.seekg(0);
+    file.read(&buffer[0], size);
+
+    auto tokens = lexer.tokenize(std::string_view{buffer});
+    Parser parser(m_rtlDirectories, path, tokens);
+    auto unit = parser.parseUnit();
+
+    for (auto &error: parser.m_errors)
+    {
+        m_errors.push_back(error);
+    }
+    if (m_errors.size() > 0)
+    {
+        return true;
+    }
+
+    for (auto &definition: unit->getFunctionDefinitions())
+    {
+        bool functionExists = false;
+        for (auto &node: nodes)
+        {
+            if (auto function = std::dynamic_pointer_cast<FunctionDefinitionNode>(node))
+            {
+                if (function->functionSignature() == definition->functionSignature())
+                {
+                    functionExists = true;
+                    break;
+                }
+            }
+        }
+        if (!functionExists)
+        {
+            nodes.push_back(definition);
+            m_known_function_names.push_back(definition->name());
+        }
+    }
+
+    for (auto &[typeName, newType]: parser.getTypeDefinitions())
+    {
+        if (!m_typeDefinitions.contains(typeName))
+        {
+            m_typeDefinitions[typeName] = newType;
+        }
+    }
+
+    for (auto &error: parser.m_errors)
+    {
+        m_errors.push_back(error);
+    }
+    return false;
+}
+std::map<std::string, std::shared_ptr<VariableType>> Parser::getTypeDefinitions() { return m_typeDefinitions; }
 bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr<ASTNode>> &nodes, size_t scope)
 {
     bool parseOk = true;
@@ -646,56 +745,17 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
     }
     else if (iequals(currentToken.lexical, "uses"))
     {
-        if (consume(TokenType::NAMEDTOKEN))
+        while (consume(TokenType::NAMEDTOKEN))
         {
             auto filename = std::string(current().lexical) + ".pas";
 
-            auto path = this->m_file_path.parent_path() / filename;
-            auto it = m_rtlDirectories.begin();
-            while (!std::filesystem::exists(path))
-            {
-                path = *it / filename;
-                ++it;
-            }
-            Lexer lexer;
-            std::ifstream file;
-            std::istringstream is;
-            file.open(path, std::ios::in);
-            if (!file.is_open())
-            {
-                m_errors.push_back(ParserError{.file_name = m_file_path.string(),
-                                               .token = current(),
-                                               .message = std::string(current().lexical) + " is not a valid unit"});
-                m_errors.push_back(ParserError{.file_name = m_file_path.string(),
-                                               .token = current(),
-                                               .message = path.string() + " is not a valid pascal file"});
-
+            if (importUnit(nodes, filename))
                 return false;
-            }
-            file.seekg(0, std::ios::end);
-            std::streamsize size = file.tellg();
-            std::string buffer(size, ' ');
-            file.seekg(0);
-            file.read(&buffer[0], size);
 
-            auto tokens = lexer.tokenize(std::string_view{buffer});
-            Parser parser(m_rtlDirectories, path, tokens);
-            auto unit = parser.parseUnit();
-
-            for (auto &node: unit->getFunctionDefinitions())
-            {
-                nodes.push_back(node);
-            }
-            for (auto &name: parser.m_known_function_names)
-            {
-                m_known_function_names.push_back(name);
-            }
-
-            for (auto &error: parser.m_errors)
-            {
-                m_errors.push_back(error);
-            }
+            if (!tryConsume(TokenType::COMMA))
+                break;
         }
+        consume(TokenType::SEMICOLON);
     }
     else if (iequals(currentToken.lexical, "while"))
     {
@@ -760,6 +820,39 @@ bool Parser::parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr
     {
         nodes.push_back(std::make_shared<BreakNode>());
     }
+    else if (iequals(currentToken.lexical, "repeat"))
+    {
+
+        while (canConsume(TokenType::ENDLINE))
+        {
+            consume(TokenType::ENDLINE);
+        }
+        std::vector<std::shared_ptr<ASTNode>> whileNodes;
+        if (!canConsumeKeyWord("begin"))
+        {
+            whileNodes.push_back(parseExpression(next(), scope));
+        }
+        else
+        {
+            whileNodes.push_back(parseBlock(current(), scope + 1));
+        }
+        tryConsume(TokenType::SEMICOLON);
+        while (canConsume(TokenType::ENDLINE))
+        {
+            consume(TokenType::ENDLINE);
+        }
+
+        consumeKeyWord("until");
+        auto expression = parseExpression(next(), scope + 1);
+        tryConsume(TokenType::SEMICOLON);
+
+        while (canConsume(TokenType::ENDLINE))
+        {
+            consume(TokenType::ENDLINE);
+        }
+
+        nodes.push_back(std::make_shared<RepeatUntilNode>(expression, whileNodes));
+    }
     else
     {
         parseOk = false;
@@ -779,6 +872,7 @@ void Parser::parseFunction(size_t scope, std::vector<std::shared_ptr<ASTNode>> &
     consume(TokenType::LEFT_CURLY);
     auto token = next();
     std::vector<FunctionArgument> functionParams;
+    std::vector<FunctionAttribute> functionAttributes;
     while (token.tokenType != TokenType::RIGHT_CURLY)
     {
 
@@ -891,6 +985,11 @@ void Parser::parseFunction(size_t scope, std::vector<std::shared_ptr<ASTNode>> &
         }
         tryConsume(TokenType::SEMICOLON);
     }
+    else if (tryConsumeKeyWord("inline"))
+    {
+        functionAttributes.emplace_back(FunctionAttribute::Inline);
+        consume(TokenType::SEMICOLON);
+    }
 
     tryConsume(TokenType::ENDLINE);
 
@@ -912,8 +1011,12 @@ void Parser::parseFunction(size_t scope, std::vector<std::shared_ptr<ASTNode>> &
                                                                    .value = nullptr,
                                                                    .constant = false});
         }
-        nodes.push_back(std::make_shared<FunctionDefinitionNode>(functionName, functionParams, functionBody,
-                                                                 isProcedure, returnType));
+        auto functionDefinition = std::make_shared<FunctionDefinitionNode>(functionName, functionParams, functionBody,
+                                                                           isProcedure, returnType);
+        for (auto attribute: functionAttributes)
+            functionDefinition->addAttribute(attribute);
+
+        nodes.push_back(functionDefinition);
     }
 
 
@@ -975,7 +1078,7 @@ std::shared_ptr<ASTNode> Parser::parseComparrision(const Token &currentToken, si
 std::shared_ptr<ASTNode> Parser::parseExpression(const Token &currentToken, size_t currentScope)
 {
     // variant 1
-
+    // TODO: the while loop is broken and useless
     Token token = currentToken;
     std::vector<std::shared_ptr<ASTNode>> nodes;
 
@@ -987,11 +1090,15 @@ std::shared_ptr<ASTNode> Parser::parseExpression(const Token &currentToken, size
             case TokenType::STRING:
             case TokenType::CHAR:
             case TokenType::NUMBER:
+            {
                 nodes.push_back(parseToken(token, currentScope, {}));
+
                 break;
+            }
 
             case TokenType::NAMEDTOKEN:
             {
+
                 if (canConsume(TokenType::COLON) ||
                     (canConsume(TokenType::LEFT_SQUAR) && canConsume(TokenType::COLON, 4)) ||
                     (canConsume(TokenType::DOT) && canConsume(TokenType::COLON, 3)))
@@ -1008,6 +1115,11 @@ std::shared_ptr<ASTNode> Parser::parseExpression(const Token &currentToken, size
                     }
 
                     nodes.push_back(lhs);
+
+                    if (!canConsume(TokenType::GREATER) && !canConsume(TokenType::LESS) &&
+                        !canConsume(TokenType::EQUAL) && !canConsumeKeyWord("and") && !canConsumeKeyWord("or"))
+                        return nodes.back();
+                    break;
                 }
             }
             break;
@@ -1078,7 +1190,11 @@ std::shared_ptr<ASTNode> Parser::parseExpression(const Token &currentToken, size
         if (token.tokenType == TokenType::SEMICOLON || token.tokenType == TokenType::ENDLINE ||
             token.tokenType == TokenType::COMMA || token.tokenType == TokenType::T_EOF ||
             token.tokenType == TokenType::RIGHT_CURLY)
+        {
+            if (token.tokenType == TokenType::RIGHT_CURLY)
+                --m_current;
             break;
+        }
 
         token = next();
     }
@@ -1183,6 +1299,7 @@ void Parser::parseVariableAssignment(const Token &currentToken, size_t currentSc
         auto expression = parseExpression(next(), currentScope);
         nodes.push_back(std::make_shared<ArrayAssignmentNode>(variableNameToken, index, expression));
     }
+    tryConsume(TokenType::SEMICOLON);
 }
 
 std::unique_ptr<UnitNode> Parser::parseUnit()
@@ -1192,7 +1309,6 @@ std::unique_ptr<UnitNode> Parser::parseUnit()
         std::vector<std::shared_ptr<ASTNode>> nodes;
 
         Token currentToken = current();
-        int scope = 0;
 
         if (iequals(currentToken.lexical, "program") || iequals(currentToken.lexical, "unit"))
         {
@@ -1202,18 +1318,27 @@ std::unique_ptr<UnitNode> Parser::parseUnit()
 
             if (consume(TokenType::NAMEDTOKEN))
             {
-                auto functionName = std::string(current().lexical);
+                int scope = 0;
+                auto unitName = std::string(current().lexical);
                 consume(TokenType::SEMICOLON);
                 while (canConsume(TokenType::ENDLINE))
                 {
                     consume(TokenType::ENDLINE);
                 }
 
-                parseTypeDefinitions(scope);
+                if (unitName != "system")
+                {
+                    importUnit(nodes, "system.pas");
+                }
+
 
                 while (!canConsumeKeyWord("begin") && !canConsumeKeyWord("var") && !canConsumeKeyWord("const"))
                 {
-                    parseKeyWord(next(), nodes, scope + 1);
+                    parseTypeDefinitions(scope);
+
+                    if (canConsume(TokenType::KEYWORD) && !canConsumeKeyWord("begin") && !canConsumeKeyWord("var") &&
+                        !canConsumeKeyWord("const"))
+                        parseKeyWord(next(), nodes, scope + 1);
 
                     while (canConsume(TokenType::ENDLINE))
                     {
@@ -1227,15 +1352,13 @@ std::unique_ptr<UnitNode> Parser::parseUnit()
                 std::vector<std::shared_ptr<FunctionDefinitionNode>> functionDefinitions;
                 for (auto &node: nodes)
                 {
-                    auto func = std::dynamic_pointer_cast<FunctionDefinitionNode>(node);
-                    if (func != nullptr)
+                    if (const auto func = std::dynamic_pointer_cast<FunctionDefinitionNode>(node); func != nullptr)
                     {
                         functionDefinitions.emplace_back(func);
                     }
                 }
 
-                return std::make_unique<UnitNode>(unitType, functionName, functionDefinitions, m_typeDefinitions,
-                                                  block);
+                return std::make_unique<UnitNode>(unitType, unitName, functionDefinitions, m_typeDefinitions, block);
             }
         }
         m_errors.push_back(
@@ -1294,7 +1417,7 @@ std::shared_ptr<ArrayType> Parser::parseArray(size_t scope, bool includeExpressi
     }
 }
 
-void Parser::parseTypeDefinitions(int scope)
+bool Parser::parseTypeDefinitions(int scope)
 {
     if (tryConsumeKeyWord("type"))
     {
@@ -1302,13 +1425,14 @@ void Parser::parseTypeDefinitions(int scope)
         {
             consume(TokenType::ENDLINE);
         }
-        next();
+
         // parse type definitions
-        while (current().tokenType == TokenType::NAMEDTOKEN)
+        while (tryConsume(TokenType::NAMEDTOKEN))
         {
 
             auto typeName = std::string(current().lexical);
             consume(TokenType::EQUAL);
+            auto isPointerType = tryConsume(TokenType::CARET); // TODO: build type with the result
             // parse type
             if (tryConsumeKeyWord("array"))
             {
@@ -1335,6 +1459,7 @@ void Parser::parseTypeDefinitions(int scope)
             }
             else if (tryConsume(TokenType::NAMEDTOKEN))
             {
+
                 auto internalTypeName = std::string(current().lexical);
                 auto internalType = determinVariableTypeByName(internalTypeName);
                 if (!internalType.has_value())
@@ -1345,12 +1470,27 @@ void Parser::parseTypeDefinitions(int scope)
                                         .message = "The type " + internalTypeName + " could not be determined!"});
                     continue;
                 }
-                m_typeDefinitions[typeName] = internalType.value();
+                if (isPointerType)
+                {
+                    m_typeDefinitions[typeName] = PointerType::getPointerTo(internalType.value());
+                }
+                else
+                {
+                    m_typeDefinitions[typeName] = internalType.value();
+                }
+
                 consume(TokenType::SEMICOLON);
                 tryConsume(TokenType::ENDLINE);
             }
+            while (canConsume(TokenType::ENDLINE))
+            {
+                consume(TokenType::ENDLINE);
+            }
         }
+        return true;
     }
+
+    return false;
 }
 
 bool Parser::hasError() const { return !m_errors.empty(); }

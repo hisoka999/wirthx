@@ -60,7 +60,7 @@ llvm::Value *BlockNode::codegen(std::unique_ptr<Context> &context)
     }
     std::vector<llvm::Value *> values;
 
-    for (auto &exp: m_expressions)
+    for (const auto &exp: m_expressions)
     {
         values.push_back(exp->codegen(context));
     }

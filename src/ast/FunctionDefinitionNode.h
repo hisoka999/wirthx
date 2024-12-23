@@ -13,6 +13,12 @@ struct FunctionArgument
     bool isReference;
 };
 
+enum class FunctionAttribute
+{
+    Inline
+};
+
+
 class FunctionDefinitionNode : public ASTNode
 {
 private:
@@ -23,6 +29,7 @@ private:
     std::shared_ptr<BlockNode> m_body;
     bool m_isProcedure;
     std::shared_ptr<VariableType> m_returnType;
+    std::vector<FunctionAttribute> m_attributes;
 
 public:
     FunctionDefinitionNode(std::string name, std::vector<FunctionArgument> params, std::shared_ptr<BlockNode> body,
@@ -44,4 +51,5 @@ public:
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
 
     void typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode) override;
+    void addAttribute(FunctionAttribute attribute);
 };

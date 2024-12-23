@@ -6,6 +6,7 @@
 #include "FieldAccessNode.h"
 #include "FieldAssignmentNode.h"
 #include "RecordType.h"
+#include "compare.h"
 #include "compiler/Context.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
@@ -106,12 +107,21 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
         b.addAttribute("frame-pointer", "all");
         functionDefinition->addFnAttrs(b);
     }
+    for (const auto attribute: m_attributes)
+    {
+        switch (attribute)
+        {
+            case FunctionAttribute::Inline:
+                functionDefinition->addFnAttr(llvm::Attribute::AlwaysInline);
+                break;
+        }
+    }
 
     // Set names for all arguments.
     unsigned idx = 0;
     for (auto &arg: functionDefinition->args())
     {
-        auto param = m_params[idx];
+        const auto param = m_params[idx];
         if (!param.isReference && param.type->baseType == VariableBaseType::Struct)
         {
             arg.addAttr(llvm::Attribute::getWithByValType(*context->TheContext, param.type->generateLlvmType(context)));
@@ -129,14 +139,6 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
     if (m_body)
     {
         m_body->setBlockName(m_name + "_block");
-        // if (!m_isProcedure)
-        // {
-        //     m_body->addVariableDefinition(VariableDefinition{.variableType = m_returnType,
-        //                                                      .variableName = m_name,
-        //                                                      .scopeId = 0,
-        //                                                      .value = nullptr,
-        //                                                      .constant = false});
-        // }
         m_body->codegen(context);
         if (m_isProcedure)
         {
@@ -150,11 +152,10 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
 
             return functionDefinition;
         }
-        else
-        {
-            context->Builder->CreateRet(context->Builder->CreateLoad(
-                    context->NamedAllocations[m_name]->getAllocatedType(), context->NamedAllocations[m_name]));
-        }
+
+        context->Builder->CreateRet(context->Builder->CreateLoad(context->NamedAllocations[m_name]->getAllocatedType(),
+                                                                 context->NamedAllocations[m_name]));
+
         // Finish off the function.
 
         // Validate the generated code, checking for consistency.
@@ -173,12 +174,13 @@ void FunctionDefinitionNode::typeCheck(const std::unique_ptr<UnitNode> &unit, AS
     if (m_body)
         m_body->typeCheck(unit, this);
 }
+void FunctionDefinitionNode::addAttribute(FunctionAttribute attribute) { m_attributes.emplace_back(attribute); }
 
 std::optional<FunctionArgument> FunctionDefinitionNode::getParam(const std::string &paramName)
 {
     for (auto &param: m_params)
     {
-        if (param.argumentName == paramName)
+        if (iequals(param.argumentName, paramName))
         {
             return param;
         }

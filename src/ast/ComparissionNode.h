@@ -3,6 +3,7 @@
 
 enum class CMPOperator : char
 {
+    NOT_EQUALS,
     EQUALS,
     GREATER,
     GREATER_EQUAL,

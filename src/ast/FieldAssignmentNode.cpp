@@ -3,8 +3,8 @@
 #include "RecordType.h"
 #include "UnitNode.h"
 #include "compiler/Context.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Type.h"
 
 FieldAssignmentNode::FieldAssignmentNode(const TokenWithFile variable, const TokenWithFile field,
@@ -32,6 +32,11 @@ llvm::Value *FieldAssignmentNode::codegen(std::unique_ptr<Context> &context)
             {
                 auto functionDefinition =
                         context->ProgramUnit->getFunctionDefinition(context->TopLevelFunction->getName().str());
+                if (!functionDefinition.has_value())
+                {
+                    return LogErrorV("Cannot find function definition for " +
+                                     context->TopLevelFunction->getName().str());
+                }
                 auto structDef = functionDefinition.value()->getParam(m_variableName);
 
                 if (!structDef)
@@ -45,11 +50,15 @@ llvm::Value *FieldAssignmentNode::codegen(std::unique_ptr<Context> &context)
                 auto index = recordType->getFieldIndexByName(m_fieldName);
                 auto field = recordType->getField(index);
                 auto fieldType = field.variableType->generateLlvmType(context);
-                auto bitLength = fieldType->getIntegerBitWidth();
                 auto result = m_expression->codegen(context);
-                if (result->getType()->isIntegerTy() && result->getType()->getIntegerBitWidth() != bitLength)
+
+                if (fieldType->isIntegerTy())
                 {
-                    result = context->Builder->CreateIntCast(result, fieldType, true, "result_cast");
+                    auto bitLength = fieldType->getIntegerBitWidth();
+                    if (result->getType()->isIntegerTy() && result->getType()->getIntegerBitWidth() != bitLength)
+                    {
+                        result = context->Builder->CreateIntCast(result, fieldType, true, "result_cast");
+                    }
                 }
                 if (arg->getType()->isStructTy())
                 {

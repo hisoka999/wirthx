@@ -52,14 +52,16 @@ private:
                                                std::vector<std::shared_ptr<ASTNode>> &nodes);
     std::shared_ptr<ASTNode> parseExpression(const Token &currentToken, size_t currentScope);
     std::shared_ptr<BlockNode> parseBlock(const Token &currentToken, size_t scope);
+    bool importUnit(std::vector<std::shared_ptr<ASTNode>> &nodes, std::string filename);
 
 public:
-    Parser(const std::vector<std::filesystem::path>& rtlDirectories, std::filesystem::path path,
+    Parser(const std::vector<std::filesystem::path> &rtlDirectories, std::filesystem::path path,
            const std::vector<Token> &tokens);
     ~Parser() = default;
     [[nodiscard]] bool hasError() const;
     void printErrors(std::ostream &outputStream);
+    std::map<std::string, std::shared_ptr<VariableType>> getTypeDefinitions();
 
     [[nodiscard]] std::unique_ptr<UnitNode> parseUnit();
-    void parseTypeDefinitions(int scope);
+    bool parseTypeDefinitions(int scope);
 };

@@ -8,6 +8,6 @@ program wrong_return_type;
         my_function := x + y;
     end;
 begin
-    writeln(my_function(10,5);
+    writeln(my_function(10,5));
 
 end.

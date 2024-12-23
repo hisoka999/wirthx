@@ -11,8 +11,3 @@ void createSystemCall(std::unique_ptr<Context> &context, std::string functionNam
                       std::vector<FunctionArgument> functionparams, std::shared_ptr<VariableType> returnType = nullptr);
 
 void createPrintfCall(const std::unique_ptr<Context> &context);
-
-
-void writeLnCodegen(std::unique_ptr<Context> &context, size_t length);
-
-void writeLnStrCodegen(std::unique_ptr<Context> &context);

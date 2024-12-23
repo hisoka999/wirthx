@@ -67,6 +67,7 @@ struct Context
 
     std::unique_ptr<UnitNode> ProgramUnit;
     CompilerOptions compilerOptions;
+    bool loadValue = true;
 };
 
 void LogError(const char *Str);

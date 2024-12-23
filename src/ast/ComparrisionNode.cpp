@@ -47,6 +47,9 @@ llvm::Value *ComparrisionNode::codegen(std::unique_ptr<Context> &context)
     llvm::CmpInst::Predicate pred = llvm::CmpInst::ICMP_EQ;
     switch (m_operator)
     {
+        case CMPOperator::NOT_EQUALS:
+            pred = llvm::CmpInst::ICMP_NE;
+            break;
         case CMPOperator::EQUALS:
 
             break;

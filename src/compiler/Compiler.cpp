@@ -4,7 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include "Lexer.h"
-#include "Parser.h"
+#include "Parser2.h"
 #include "ast/FunctionDefinitionNode.h"
 
 #include "compiler/Context.h"
@@ -101,7 +101,7 @@ void compile_file(const CompilerOptions &options, std::filesystem::path inputPat
 
     auto tokens = lexer.tokenize(std::string_view{buffer});
 
-    Parser parser(options.rtlDirectories, inputPath, tokens);
+    Parser2 parser(options.rtlDirectories, inputPath, tokens);
     auto unit = parser.parseUnit();
     if (parser.hasError())
     {
@@ -110,16 +110,8 @@ void compile_file(const CompilerOptions &options, std::filesystem::path inputPat
     }
     auto context = InitializeModule(unit, options);
     auto intType = VariableType::getInteger();
-    getDeclaration(context->TheModule.get(), llvm::Intrinsic::vastart);
-    getDeclaration(context->TheModule.get(), llvm::Intrinsic::vacopy);
-
-    getDeclaration(context->TheModule.get(), llvm::Intrinsic::vaend);
 
     createPrintfCall(context);
-    writeLnCodegen(context, 32);
-    writeLnCodegen(context, 64);
-    writeLnCodegen(context, 8);
-    writeLnStrCodegen(context);
     createSystemCall(context, "exit", {FunctionArgument{.type = intType, .argumentName = "X", .isReference = false}});
     createSystemCall(
             context, "malloc",

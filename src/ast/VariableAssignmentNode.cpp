@@ -24,7 +24,38 @@ void VariableAssignmentNode::print()
 llvm::Value *VariableAssignmentNode::codegen(std::unique_ptr<Context> &context)
 {
     // Look this variable up in the function.
-    llvm::AllocaInst *V = context->NamedAllocations[m_variableName];
+    llvm::Value *V = context->NamedAllocations[m_variableName];
+
+    llvm::Type *type = nullptr;
+
+    if (!V)
+    {
+        for (auto &arg: context->TopLevelFunction->args())
+        {
+            if (arg.getName() == m_variableName)
+            {
+                auto functionDefinition =
+                        context->ProgramUnit->getFunctionDefinition(context->TopLevelFunction->getName().str());
+                if (functionDefinition.has_value())
+                {
+                    const auto argType = functionDefinition.value()->getParam(arg.getArgNo());
+                    type = argType->type->generateLlvmType(context);
+                    const auto argValue = context->TopLevelFunction->getArg(arg.getArgNo());
+                    if (argType->isReference)
+                    {
+
+                        V = argValue;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    else
+    {
+        type = context->NamedAllocations[m_variableName]->getAllocatedType();
+    }
+
 
     if (!V)
         return LogErrorV("Unknown variable name for assignment: " + m_variableName);
@@ -32,10 +63,10 @@ llvm::Value *VariableAssignmentNode::codegen(std::unique_ptr<Context> &context)
 
     auto result = m_expression->codegen(context);
 
-    if (V->getAllocatedType()->isIntegerTy() && result->getType()->isIntegerTy())
+    if (type->isIntegerTy() && result->getType()->isIntegerTy())
     {
-        auto targetType = llvm::IntegerType::get(*context->TheContext, V->getAllocatedType()->getIntegerBitWidth());
-        if (V->getAllocatedType()->getIntegerBitWidth() != result->getType()->getIntegerBitWidth())
+        auto targetType = llvm::IntegerType::get(*context->TheContext, type->getIntegerBitWidth());
+        if (type->getIntegerBitWidth() != result->getType()->getIntegerBitWidth())
         {
             result = context->Builder->CreateIntCast(result, targetType, true, "lhs_cast");
         }
@@ -45,9 +76,9 @@ llvm::Value *VariableAssignmentNode::codegen(std::unique_ptr<Context> &context)
     }
 
 
-    if (V->getAllocatedType()->isStructTy() && result->getType()->isPointerTy())
+    if (type->isStructTy() && result->getType()->isPointerTy())
     {
-        auto llvmArgType = V->getAllocatedType();
+        auto llvmArgType = type;
 
         auto memcpyCall = llvm::Intrinsic::getDeclaration(
                 context->TheModule.get(), llvm::Intrinsic::memcpy,

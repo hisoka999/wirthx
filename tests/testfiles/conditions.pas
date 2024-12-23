@@ -23,7 +23,7 @@ begin
     end
     else
     begin
-        writeln('con1 >= 50');;
+        writeln('con1 >= 50');
     end;
     
 end.

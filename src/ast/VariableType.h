@@ -36,6 +36,7 @@ class VariableType
 public:
     VariableType(VariableBaseType baseType = VariableBaseType::Unknown, std::string typeName = "");
     virtual ~VariableType() = default;
+    bool isSimpleType() const;
     VariableBaseType baseType = VariableBaseType::Unknown;
     std::string typeName = "";
 
@@ -103,4 +104,21 @@ public:
                                      std::unique_ptr<Context> &context) override;
 
     bool operator==(const StringType &) const { return true; }
+};
+
+
+class PointerType : public VariableType
+{
+private:
+    llvm::Type *llvmType = nullptr;
+
+public:
+    std::shared_ptr<VariableType> baseType;
+
+    static std::shared_ptr<PointerType> getPointerTo(const std::shared_ptr<VariableType> &baseType);
+
+    llvm::Type *generateLlvmType(std::unique_ptr<Context> &context) override;
+
+
+    bool operator==(const PointerType &other) const { return this->baseType == other.baseType; }
 };

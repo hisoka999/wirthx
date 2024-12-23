@@ -16,7 +16,7 @@ TEST(LexerTest, LexHelloWorld)
         WriteLn('HelloWorld');
     end.)");
 
-    EXPECT_EQ(result.size(), 15);
+    EXPECT_EQ(result.size(), 12);
     ASSERT_EQ(result[0].tokenType, TokenType::KEYWORD);
     ASSERT_EQ(result[0].lexical, "program"sv);
     ASSERT_EQ(result[1].tokenType, TokenType::NAMEDTOKEN);
@@ -116,7 +116,7 @@ TEST(LexerTest, LexProcedureDeclaration)
         {My Comment}
     END;)");
 
-    EXPECT_EQ(result.size(), 10);
+    EXPECT_EQ(result.size(), 7);
     ASSERT_EQ(result[0].tokenType, TokenType::KEYWORD);
     ASSERT_EQ(result[0].lexical, "procedure"sv);
     ASSERT_EQ(result[0].row, 1);
@@ -124,19 +124,16 @@ TEST(LexerTest, LexProcedureDeclaration)
     ASSERT_EQ(result[1].lexical, "MyProc"sv);
     ASSERT_EQ(result[2].tokenType, TokenType::SEMICOLON);
     ASSERT_EQ(result[2].lexical, ";"sv);
-    ASSERT_EQ(result[3].tokenType, TokenType::ENDLINE);
+    ASSERT_EQ(result[3].tokenType, TokenType::KEYWORD);
+    ASSERT_EQ(result[3].lexical, "Begin"sv);
+    ASSERT_EQ(result[3].row, 2);
     ASSERT_EQ(result[4].tokenType, TokenType::KEYWORD);
-    ASSERT_EQ(result[4].lexical, "Begin"sv);
-    ASSERT_EQ(result[4].row, 2);
-    ASSERT_EQ(result[5].tokenType, TokenType::ENDLINE);
-    ASSERT_EQ(result[6].tokenType, TokenType::ENDLINE);
-    ASSERT_EQ(result[7].tokenType, TokenType::KEYWORD);
-    ASSERT_EQ(result[7].lexical, "END"sv);
-    ASSERT_EQ(result[7].row, 4);
-    ASSERT_EQ(result[8].tokenType, TokenType::SEMICOLON);
-    ASSERT_EQ(result[8].lexical, ";"sv);
+    ASSERT_EQ(result[4].lexical, "END"sv);
+    ASSERT_EQ(result[4].row, 4);
+    ASSERT_EQ(result[5].tokenType, TokenType::SEMICOLON);
+    ASSERT_EQ(result[5].lexical, ";"sv);
 
-    ASSERT_EQ(result[9].tokenType, TokenType::T_EOF);
+    ASSERT_EQ(result[6].tokenType, TokenType::T_EOF);
 }
 
 TEST(LexerTest, LexProcedureDeclarationWithArgs)
@@ -148,7 +145,7 @@ TEST(LexerTest, LexProcedureDeclarationWithArgs)
         {My Comment}
     END;)");
 
-    EXPECT_EQ(result.size(), 19);
+    EXPECT_EQ(result.size(), 16);
     ASSERT_EQ(result[0].tokenType, TokenType::KEYWORD);
     ASSERT_EQ(result[0].lexical, "procedure"sv);
     ASSERT_EQ(result[1].tokenType, TokenType::NAMEDTOKEN);
@@ -175,17 +172,15 @@ TEST(LexerTest, LexProcedureDeclarationWithArgs)
 
     ASSERT_EQ(result[11].tokenType, TokenType::SEMICOLON);
     ASSERT_EQ(result[11].lexical, ";"sv);
-    ASSERT_EQ(result[12].tokenType, TokenType::ENDLINE);
-    ASSERT_EQ(result[13].tokenType, TokenType::KEYWORD);
-    ASSERT_EQ(result[13].lexical, "Begin"sv);
-    ASSERT_EQ(result[14].tokenType, TokenType::ENDLINE);
-    ASSERT_EQ(result[15].tokenType, TokenType::ENDLINE);
-    ASSERT_EQ(result[16].tokenType, TokenType::KEYWORD);
-    ASSERT_EQ(result[16].lexical, "END"sv);
-    ASSERT_EQ(result[17].tokenType, TokenType::SEMICOLON);
-    ASSERT_EQ(result[17].lexical, ";"sv);
+    ASSERT_EQ(result[12].tokenType, TokenType::KEYWORD);
+    ASSERT_EQ(result[12].lexical, "Begin"sv);
 
-    ASSERT_EQ(result[18].tokenType, TokenType::T_EOF);
+    ASSERT_EQ(result[13].tokenType, TokenType::KEYWORD);
+    ASSERT_EQ(result[13].lexical, "END"sv);
+    ASSERT_EQ(result[14].tokenType, TokenType::SEMICOLON);
+    ASSERT_EQ(result[14].lexical, ";"sv);
+
+    ASSERT_EQ(result[15].tokenType, TokenType::T_EOF);
 }
 
 TEST(LexerTest, LexFunctionDeclaration)
@@ -199,7 +194,7 @@ TEST(LexerTest, LexFunctionDeclaration)
         multiline}
     END;)");
 
-    EXPECT_EQ(result.size(), 18);
+    EXPECT_EQ(result.size(), 14);
     ASSERT_EQ(result[0].tokenType, TokenType::KEYWORD);
     ASSERT_EQ(result[0].lexical, "function"sv);
     ASSERT_EQ(result[1].tokenType, TokenType::NAMEDTOKEN);
@@ -211,31 +206,27 @@ TEST(LexerTest, LexFunctionDeclaration)
 
     ASSERT_EQ(result[4].tokenType, TokenType::SEMICOLON);
     ASSERT_EQ(result[4].lexical, ";"sv);
-    ASSERT_EQ(result[5].tokenType, TokenType::ENDLINE);
-    ASSERT_EQ(result[6].tokenType, TokenType::KEYWORD);
-    ASSERT_EQ(result[6].lexical, "Begin"sv);
-    ASSERT_EQ(result[7].tokenType, TokenType::ENDLINE);
-    ASSERT_EQ(result[8].tokenType, TokenType::NAMEDTOKEN);
+    ASSERT_EQ(result[5].tokenType, TokenType::KEYWORD);
+    ASSERT_EQ(result[5].lexical, "Begin"sv);
+    ASSERT_EQ(result[6].tokenType, TokenType::NAMEDTOKEN);
 
-    ASSERT_EQ(result[8].lexical, "MyFunc"sv);
-    ASSERT_EQ(result[9].tokenType, TokenType::COLON);
-    ASSERT_EQ(result[9].lexical, ":"sv);
-    ASSERT_EQ(result[10].tokenType, TokenType::EQUAL);
-    ASSERT_EQ(result[10].lexical, "="sv);
-    ASSERT_EQ(result[11].tokenType, TokenType::NUMBER);
-    ASSERT_EQ(result[11].lexical, "100"sv);
+    ASSERT_EQ(result[6].lexical, "MyFunc"sv);
+    ASSERT_EQ(result[7].tokenType, TokenType::COLON);
+    ASSERT_EQ(result[7].lexical, ":"sv);
+    ASSERT_EQ(result[8].tokenType, TokenType::EQUAL);
+    ASSERT_EQ(result[8].lexical, "="sv);
+    ASSERT_EQ(result[9].tokenType, TokenType::NUMBER);
+    ASSERT_EQ(result[9].lexical, "100"sv);
+    ASSERT_EQ(result[10].tokenType, TokenType::SEMICOLON);
+    ASSERT_EQ(result[10].lexical, ";"sv);
+    ASSERT_EQ(result[11].tokenType, TokenType::KEYWORD);
+    ASSERT_EQ(result[11].lexical, "END"sv);
+    ASSERT_EQ(result[11].row, 6);
     ASSERT_EQ(result[12].tokenType, TokenType::SEMICOLON);
     ASSERT_EQ(result[12].lexical, ";"sv);
-    ASSERT_EQ(result[13].tokenType, TokenType::ENDLINE);
-    ASSERT_EQ(result[14].tokenType, TokenType::ENDLINE);
-    ASSERT_EQ(result[15].tokenType, TokenType::KEYWORD);
-    ASSERT_EQ(result[15].lexical, "END"sv);
-    ASSERT_EQ(result[15].row, 6);
-    ASSERT_EQ(result[16].tokenType, TokenType::SEMICOLON);
-    ASSERT_EQ(result[16].lexical, ";"sv);
-    ASSERT_EQ(result[16].row, 6);
+    ASSERT_EQ(result[12].row, 6);
 
-    ASSERT_EQ(result[17].tokenType, TokenType::T_EOF);
+    ASSERT_EQ(result[13].tokenType, TokenType::T_EOF);
 }
 TEST(LexerTest, LexQuotedString)
 {

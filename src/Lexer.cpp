@@ -65,7 +65,7 @@ std::vector<Token> Lexer::tokenize(std::string_view content)
         {
             int offset = endPosition - i;
             auto string_length = (offset - 1);
-            if (string_length > 1)
+            if (string_length != 1)
                 tokens.push_back(Token(content.substr(i + 1, string_length), row, column, TokenType::STRING));
             else
                 tokens.push_back(Token(content.substr(i + 1, string_length), row, column, TokenType::CHAR));
@@ -82,7 +82,7 @@ std::vector<Token> Lexer::tokenize(std::string_view content)
             auto string = content.substr(i, string_length);
 
 
-            if (string_length > 1)
+            if (string_length != 1)
                 tokens.push_back(Token(string, row, column, TokenType::ESCAPED_STRING));
             else
                 tokens.push_back(Token(string, row, column, TokenType::CHAR));
@@ -105,7 +105,7 @@ std::vector<Token> Lexer::tokenize(std::string_view content)
         switch (ch)
         {
             case '\n':
-                tokens.push_back(Token(content.substr(i, 1), row, column, TokenType::ENDLINE));
+                // tokens.push_back(Token(content.substr(i, 1), row, column, TokenType::ENDLINE));
                 column = 1;
                 row++;
                 continue;
@@ -153,6 +153,9 @@ std::vector<Token> Lexer::tokenize(std::string_view content)
                 break;
             case '.':
                 tokens.push_back(Token(content.substr(i, 1), row, column, TokenType::DOT));
+                break;
+            case '^':
+                tokens.push_back(Token(content.substr(i, 1), row, column, TokenType::CARET));
                 break;
             default:
                 break;

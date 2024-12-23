@@ -26,7 +26,8 @@ enum class TokenType : uint16_t
     COMMA,
     SEMICOLON,
     DOT,
-    COLON
+    COLON,
+    CARET
 };
 
 struct Token

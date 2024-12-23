@@ -6,6 +6,25 @@
 #include "exceptions/CompilerException.h"
 
 VariableType::VariableType(VariableBaseType baseType, std::string typeName) : baseType(baseType), typeName(typeName) {}
+bool VariableType::isSimpleType() const
+{
+    switch (this->baseType)
+    {
+        case VariableBaseType::Array:
+        case VariableBaseType::Struct:
+        case VariableBaseType::String:
+        case VariableBaseType::Pointer:
+            return false;
+        case VariableBaseType::Integer:
+        case VariableBaseType::Float:
+        case VariableBaseType::Real:;
+        case VariableBaseType::Boolean:
+            return true;
+        default:
+            assert(false && "unknown base type to generate llvm type for");
+            return false;
+    }
+}
 
 llvm::Type *VariableType::generateLlvmType(std::unique_ptr<Context> &context)
 {
@@ -226,4 +245,15 @@ llvm::Value *StringType::generateFieldAccess(TokenWithFile &token, llvm::Value *
             context->Builder->CreateGEP(arrayBaseType, loadResult, llvm::ArrayRef<llvm::Value *>{indexValue}, "", true);
 
     return context->Builder->CreateLoad(arrayBaseType, bounds);
+}
+std::shared_ptr<PointerType> PointerType::getPointerTo(const std::shared_ptr<VariableType> &baseType)
+{
+    auto ptrType = std::make_shared<PointerType>();
+    ptrType->baseType = baseType;
+    return ptrType;
+}
+llvm::Type *PointerType::generateLlvmType(std::unique_ptr<Context> &context)
+{
+    const auto llvmBaseType = baseType->generateLlvmType(context);
+    return llvm::PointerType::getUnqual(llvmBaseType);
 }
