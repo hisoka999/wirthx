@@ -1,5 +1,4 @@
 #pragma once
-#include <exception>
 #include <filesystem>
 #include <map>
 #include <memory>
@@ -13,7 +12,6 @@
 
 
 using ParserException = CompilerException;
-
 class Parser
 {
 private:
@@ -25,6 +23,10 @@ private:
     std::map<std::string, std::shared_ptr<VariableType>> m_typeDefinitions;
     std::vector<VariableDefinition> m_known_variable_definitions;
     std::vector<std::string> m_known_function_names;
+    std::vector<std::shared_ptr<FunctionDefinitionNode>> m_functionDefinitions;
+    std::vector<std::shared_ptr<ASTNode>> m_nodes;
+
+
     Token next();
     Token current();
     [[nodiscard]] bool isVariableDefined(std::string_view name, size_t scope);
@@ -35,24 +37,29 @@ private:
     [[nodiscard]] bool canConsume(TokenType tokenType, size_t next) const;
     bool consumeKeyWord(const std::string &keyword);
     bool tryConsumeKeyWord(const std::string &keyword);
-    bool canConsumeKeyWord(const std::string &keyword) const;
-    std::optional<std::shared_ptr<VariableType>> determinVariableTypeByName(const std::string &name) const;
+    [[nodiscard]] bool canConsumeKeyWord(const std::string &keyword) const;
+    [[nodiscard]] std::optional<std::shared_ptr<VariableType>>
+    determinVariableTypeByName(const std::string &name) const;
     std::shared_ptr<ASTNode> parseEscapedString(const Token &token);
-    std::shared_ptr<ASTNode> parseFunctionCall(const Token &token, size_t currentScope);
-    std::shared_ptr<ASTNode> parseToken(const Token &token, size_t currentScope,
-                                        std::vector<std::shared_ptr<ASTNode>> nodes);
-    std::shared_ptr<ASTNode> parseNumber(const Token &token, size_t currentScope);
-    std::shared_ptr<ArrayType> parseArray(size_t scope, bool includeExpressionEnd = true);
-    bool parseKeyWord(const Token &currentToken, std::vector<std::shared_ptr<ASTNode>> &nodes, size_t scope);
-    void parseFunction(size_t scope, std::vector<std::shared_ptr<ASTNode>> &nodes, bool isProcedure);
-    void parseVariableAssignment(const Token &currentToken, size_t currentScope,
-                                 std::vector<std::shared_ptr<ASTNode>> &nodes);
-    std::vector<VariableDefinition> parseVariableDefinitions(const Token &token, size_t scope);
-    std::shared_ptr<ASTNode> parseComparrision(const Token &currentToken, size_t currentScope,
-                                               std::vector<std::shared_ptr<ASTNode>> &nodes);
-    std::shared_ptr<ASTNode> parseExpression(const Token &currentToken, size_t currentScope);
-    std::shared_ptr<BlockNode> parseBlock(const Token &currentToken, size_t scope);
-    bool importUnit(std::vector<std::shared_ptr<ASTNode>> &nodes, std::string filename);
+    std::shared_ptr<ASTNode> parseNumber();
+    void parseTypeDefinitions(const size_t scope);
+    std::optional<VariableDefinition> parseConstantDefinition(size_t scope);
+    std::vector<VariableDefinition> parseVariableDefinitions(const size_t scope);
+    std::shared_ptr<ArrayType> parseArray(size_t scope);
+    std::shared_ptr<ASTNode> parseStatement(size_t scope);
+    std::shared_ptr<ASTNode> parseBaseExpression(size_t scope, const std::shared_ptr<ASTNode> &origLhs = nullptr);
+    std::shared_ptr<ASTNode> parseExpression(size_t scope, const std::shared_ptr<ASTNode> &origLhs = nullptr);
+    std::shared_ptr<ASTNode> parseLogicalExpression(const size_t scope, std::shared_ptr<ASTNode> lhs);
+
+    std::shared_ptr<BlockNode> parseBlock(size_t scope);
+    std::shared_ptr<ASTNode> parseKeyword(size_t scope);
+    std::shared_ptr<ASTNode> parseFunctionCall(size_t scope);
+    std::shared_ptr<ASTNode> parseVariableAssignment(size_t scope);
+    std::shared_ptr<ASTNode> parseVariableAccess(size_t scope);
+    std::shared_ptr<ASTNode> parseToken(size_t scope);
+    std::shared_ptr<FunctionDefinitionNode> parseFunctionDefinition(size_t scope, bool isFunction);
+
+    bool importUnit(std::string filename);
 
 public:
     Parser(const std::vector<std::filesystem::path> &rtlDirectories, std::filesystem::path path,
@@ -60,8 +67,7 @@ public:
     ~Parser() = default;
     [[nodiscard]] bool hasError() const;
     void printErrors(std::ostream &outputStream);
-    std::map<std::string, std::shared_ptr<VariableType>> getTypeDefinitions();
+    // std::map<std::string, std::shared_ptr<VariableType>> getTypeDefinitions();
 
     [[nodiscard]] std::unique_ptr<UnitNode> parseUnit();
-    bool parseTypeDefinitions(int scope);
 };

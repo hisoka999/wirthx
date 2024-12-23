@@ -4,7 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include "Lexer.h"
-#include "Parser2.h"
+#include "Parser.h"
 #include "ast/FunctionDefinitionNode.h"
 
 #include "compiler/Context.h"
@@ -101,7 +101,7 @@ void compile_file(const CompilerOptions &options, std::filesystem::path inputPat
 
     auto tokens = lexer.tokenize(std::string_view{buffer});
 
-    Parser2 parser(options.rtlDirectories, inputPath, tokens);
+    Parser parser(options.rtlDirectories, inputPath, tokens);
     auto unit = parser.parseUnit();
     if (parser.hasError())
     {

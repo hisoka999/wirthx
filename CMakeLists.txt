@@ -80,7 +80,6 @@ file(GLOB SRC
         src/compiler/Compiler.cpp
         src/Lexer.cpp
         src/Parser.cpp
-        src/Parser2.cpp
         main.cpp)
 INCLUDE_DIRECTORIES("src")
 
