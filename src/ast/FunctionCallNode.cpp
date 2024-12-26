@@ -83,25 +83,25 @@ llvm::Value *FunctionCallNode::codegen(std::unique_ptr<Context> &context)
     }
 
     std::vector<llvm::Value *> ArgsV;
-    for (unsigned i = 0, e = m_args.size(); i != e; ++i)
+    for (unsigned argumentIndex = 0; argumentIndex < m_args.size(); ++argumentIndex)
     {
 
         std::optional<FunctionArgument> argType = std::nullopt;
         if (functionDefinition.has_value())
         {
-            argType = functionDefinition.value()->getParam(i);
+            argType = functionDefinition.value()->getParam(argumentIndex);
         }
         if (argType.has_value())
             context->loadValue = !argType.value().isReference;
 
-        auto argValue = m_args[i]->codegen(context);
+        auto argValue = m_args[argumentIndex]->codegen(context);
         context->loadValue = true;
 
         if (argType.has_value() && argType.value().isReference)
         {
             ArgsV.push_back(argValue);
         }
-        else if (argType.has_value() && argType.value().type->baseType == VariableBaseType::Struct)
+        else if (argType.has_value() && !argType.value().type->isSimpleType())
         {
             auto fieldName = functionDefinition.value()->name() + "_" + argType->argumentName;
             auto llvmArgType = argType->type->generateLlvmType(context);

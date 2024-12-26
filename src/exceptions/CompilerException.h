@@ -8,7 +8,6 @@
 
 struct ParserError
 {
-    std::string file_name;
     Token token;
     std::string message;
 };
@@ -23,8 +22,8 @@ public:
     {
         std::stringstream outputStream;
 
-        outputStream << error.file_name << ":" << error.token.row << ":" << error.token.col << ": " << error.message
-                     << "\n";
+        outputStream << error.token.sourceLocation.filename << ":" << error.token.row << ":" << error.token.col << ": "
+                     << error.message << "\n";
 
         m_message = outputStream.str();
     }
@@ -33,8 +32,8 @@ public:
         std::stringstream outputStream;
         for (auto &error: errors)
         {
-            outputStream << error.file_name << ":" << error.token.row << ":" << error.token.col << ": " << error.message
-                         << "\n";
+            outputStream << error.token.sourceLocation.filename << ":" << error.token.row << ":" << error.token.col
+                         << ": " << error.message << "\n";
         }
         m_message = outputStream.str();
     }

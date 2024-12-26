@@ -99,7 +99,7 @@ void compile_file(const CompilerOptions &options, std::filesystem::path inputPat
 
     Lexer lexer;
 
-    auto tokens = lexer.tokenize(std::string_view{buffer});
+    auto tokens = lexer.tokenize(inputPath.string(), buffer);
 
     Parser parser(options.rtlDirectories, inputPath, tokens);
     auto unit = parser.parseUnit();

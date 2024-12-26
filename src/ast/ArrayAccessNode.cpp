@@ -6,8 +6,8 @@
 #include "compiler/Context.h"
 
 
-ArrayAccessNode::ArrayAccessNode(const TokenWithFile &arrayName, const std::shared_ptr<ASTNode> &indexNode) :
-    m_arrayNameToken(arrayName), m_arrayName(std::string(arrayName.token.lexical)), m_indexNode(indexNode)
+ArrayAccessNode::ArrayAccessNode(Token arrayName, const std::shared_ptr<ASTNode> &indexNode) :
+    m_arrayNameToken(std::move(arrayName)), m_indexNode(indexNode)
 {
 }
 
@@ -16,13 +16,13 @@ void ArrayAccessNode::print() {}
 
 std::shared_ptr<VariableType> ArrayAccessNode::resolveType(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
 {
-    auto definition = unit->getVariableDefinition(m_arrayName);
+    auto definition = unit->getVariableDefinition(m_arrayNameToken.lexical());
     std::shared_ptr<VariableType> varType = nullptr;
     if (!definition)
     {
         if (auto functionDefinition = dynamic_cast<FunctionDefinitionNode *>(parentNode))
         {
-            if (const auto param = functionDefinition->getParam(m_arrayName))
+            if (const auto param = functionDefinition->getParam(m_arrayNameToken.lexical()))
             {
                 varType = param.value().type;
             }
@@ -45,14 +45,14 @@ std::shared_ptr<VariableType> ArrayAccessNode::resolveType(const std::unique_ptr
 
 llvm::Value *ArrayAccessNode::codegen(std::unique_ptr<Context> &context)
 {
-    const llvm::Value *V = context->NamedAllocations[m_arrayName];
+    const llvm::Value *V = context->NamedAllocations[m_arrayNameToken.lexical()];
 
 
     if (!V)
     {
         for (auto &arg: context->TopLevelFunction->args())
         {
-            if (arg.getName() == m_arrayName)
+            if (arg.getName() == m_arrayNameToken.lexical())
             {
                 V = context->TopLevelFunction->getArg(arg.getArgNo());
                 break;
@@ -61,7 +61,7 @@ llvm::Value *ArrayAccessNode::codegen(std::unique_ptr<Context> &context)
     }
 
     if (!V)
-        return LogErrorV("Unknown variable for array access: " + m_arrayName);
+        return LogErrorV("Unknown variable for array access: " + m_arrayNameToken.lexical());
 
     ASTNode *parent = context->ProgramUnit.get();
     if (context->TopLevelFunction)
@@ -72,7 +72,7 @@ llvm::Value *ArrayAccessNode::codegen(std::unique_ptr<Context> &context)
         }
     }
 
-    const auto arrayDef = context->ProgramUnit->getVariableDefinition(m_arrayName);
+    const auto arrayDef = context->ProgramUnit->getVariableDefinition(m_arrayNameToken.lexical());
     std::shared_ptr<VariableType> arrayDefType = nullptr;
     if (arrayDef)
     {
@@ -81,7 +81,7 @@ llvm::Value *ArrayAccessNode::codegen(std::unique_ptr<Context> &context)
 
     if (const auto functionDefinition = dynamic_cast<FunctionDefinitionNode *>(parent))
     {
-        if (const auto param = functionDefinition->getParam(m_arrayName))
+        if (const auto param = functionDefinition->getParam(m_arrayNameToken.lexical()))
         {
             arrayDefType = param.value().type;
         }
@@ -89,7 +89,7 @@ llvm::Value *ArrayAccessNode::codegen(std::unique_ptr<Context> &context)
 
     if (!arrayDefType)
     {
-        return LogErrorV("Unknown variable for array access: " + m_arrayName);
+        return LogErrorV("Unknown variable for array access: " + m_arrayNameToken.lexical());
     }
     if (const auto fieldAccessType = std::dynamic_pointer_cast<FieldAccessableType>(arrayDefType))
     {
@@ -97,5 +97,5 @@ llvm::Value *ArrayAccessNode::codegen(std::unique_ptr<Context> &context)
         const auto index = m_indexNode->codegen(context);
         return fieldAccessType->generateFieldAccess(m_arrayNameToken, index, context);
     }
-    return LogErrorV("variable can not access elements by [] operator: " + m_arrayName);
+    return LogErrorV("variable can not access elements by [] operator: " + m_arrayNameToken.lexical());
 }

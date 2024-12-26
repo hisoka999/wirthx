@@ -7,10 +7,10 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Type.h"
 
-FieldAssignmentNode::FieldAssignmentNode(const TokenWithFile variable, const TokenWithFile field,
+FieldAssignmentNode::FieldAssignmentNode(const Token &variable, const Token &field,
                                          const std::shared_ptr<ASTNode> &expression) :
-    m_variable(std::move(variable)), m_variableName(std::string(m_variable.token.lexical)), m_field(std::move(field)),
-    m_fieldName(std::string(m_field.token.lexical)), m_expression(expression)
+    m_variable(variable), m_variableName(std::string(m_variable.lexical())), m_field(field),
+    m_fieldName(std::string(m_field.lexical())), m_expression(expression)
 {
 }
 

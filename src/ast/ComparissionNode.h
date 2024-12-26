@@ -14,14 +14,18 @@ enum class CMPOperator : char
 class ComparrisionNode : public ASTNode
 {
 private:
+    Token m_operatorToken;
     std::shared_ptr<ASTNode> m_lhs;
     std::shared_ptr<ASTNode> m_rhs;
     CMPOperator m_operator;
 
 public:
-    ComparrisionNode(CMPOperator op, const std::shared_ptr<ASTNode> &lhs, const std::shared_ptr<ASTNode> &rhs);
-    ~ComparrisionNode() = default;
+    ComparrisionNode(const Token &operatorToken, CMPOperator op, const std::shared_ptr<ASTNode> &lhs,
+                     const std::shared_ptr<ASTNode> &rhs);
+    ~ComparrisionNode() override = default;
 
     void print() override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
+    void typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode) override;
+    std::shared_ptr<VariableType> resolveType(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode) override;
 };

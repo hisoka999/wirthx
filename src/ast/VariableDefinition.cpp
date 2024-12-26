@@ -29,7 +29,9 @@ llvm::AllocaInst *VariableDefinition::generateCode(std::unique_ptr<Context> &con
         {
             auto type = this->variableType->generateLlvmType(context);
             auto allocation = context->Builder->CreateAlloca(type, nullptr, this->variableName);
-            context->Builder->CreateStore(context->Builder->getInt64(0), allocation);
+            // if (!this->value)
+            context->Builder->CreateStore(
+                    context->Builder->getIntN(allocation->getAllocatedType()->getIntegerBitWidth(), 0), allocation);
             return allocation;
         }
         case VariableBaseType::Boolean:

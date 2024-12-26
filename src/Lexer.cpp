@@ -13,7 +13,7 @@ bool validStartNameChar(char value)
 
 bool validNameChar(char value) { return validStartNameChar(value) || (value >= '0' && value <= '9'); }
 
-std::vector<Token> Lexer::tokenize(std::string_view content)
+std::vector<Token> Lexer::tokenize(const std::string &filename, const std::string &content)
 {
     std::vector<Token> tokens;
 
@@ -42,8 +42,12 @@ std::vector<Token> Lexer::tokenize(std::string_view content)
         found = find_fixed_token(content, i, &endPosition);
         if (found)
         {
-            int offset = endPosition - i;
-            tokens.push_back(Token(content.substr(i, offset), row, column, TokenType::KEYWORD));
+            const size_t offset = endPosition - i;
+            SourceLocation source_location = {.filename = filename,
+                                              .source = std::make_shared<std::string>(content),
+                                              .byte_offset = i,
+                                              .num_bytes = offset};
+            tokens.emplace_back(source_location, row, column, TokenType::KEYWORD);
             i = endPosition - 1;
             column += offset + 1;
             continue;
@@ -52,10 +56,14 @@ std::vector<Token> Lexer::tokenize(std::string_view content)
         found = find_token(content, i, &endPosition);
         if (found)
         {
-            int offset = endPosition - i;
-            tokens.push_back(Token(content.substr(i, offset + 1), row, column, TokenType::NAMEDTOKEN));
+            const size_t offset = endPosition - i + 1;
+            SourceLocation source_location = {.filename = filename,
+                                              .source = std::make_shared<std::string>(content),
+                                              .byte_offset = i,
+                                              .num_bytes = offset};
+            tokens.emplace_back(source_location, row, column, TokenType::NAMEDTOKEN);
             i = endPosition;
-            column += offset + 1;
+            column += offset;
             continue;
         }
 
@@ -63,12 +71,16 @@ std::vector<Token> Lexer::tokenize(std::string_view content)
         found = find_string(content, i, &endPosition);
         if (found)
         {
-            int offset = endPosition - i;
+            size_t offset = endPosition - i;
             auto string_length = (offset - 1);
+            SourceLocation source_location = {.filename = filename,
+                                              .source = std::make_shared<std::string>(content),
+                                              .byte_offset = i + 1,
+                                              .num_bytes = string_length};
             if (string_length != 1)
-                tokens.push_back(Token(content.substr(i + 1, string_length), row, column, TokenType::STRING));
+                tokens.emplace_back(source_location, row, column, TokenType::STRING);
             else
-                tokens.push_back(Token(content.substr(i + 1, string_length), row, column, TokenType::CHAR));
+                tokens.emplace_back(source_location, row, column, TokenType::CHAR);
             i = endPosition;
             column += offset + 1;
             continue;
@@ -77,15 +89,17 @@ std::vector<Token> Lexer::tokenize(std::string_view content)
         found = find_escape_sequence(content, i, &endPosition);
         if (found)
         {
-            int offset = endPosition - i;
+            size_t offset = endPosition - i;
             auto string_length = (offset);
-            auto string = content.substr(i, string_length);
 
-
+            SourceLocation source_location = {.filename = filename,
+                                              .source = std::make_shared<std::string>(content),
+                                              .byte_offset = i,
+                                              .num_bytes = string_length};
             if (string_length != 1)
-                tokens.push_back(Token(string, row, column, TokenType::ESCAPED_STRING));
+                tokens.push_back(Token(source_location, row, column, TokenType::ESCAPED_STRING));
             else
-                tokens.push_back(Token(string, row, column, TokenType::CHAR));
+                tokens.push_back(Token(source_location, row, column, TokenType::CHAR));
             i = endPosition - 1;
             column += offset;
             continue;
@@ -95,78 +109,93 @@ std::vector<Token> Lexer::tokenize(std::string_view content)
         found = find_number(content, i, &endPosition);
         if (found)
         {
-            int offset = endPosition - i;
-            tokens.push_back(Token(content.substr(i, offset + 1), row, column, TokenType::NUMBER));
+            const size_t offset = endPosition - i + 1;
+            SourceLocation source_location = {.filename = filename,
+                                              .source = std::make_shared<std::string>(content),
+                                              .byte_offset = i,
+                                              .num_bytes = offset};
+            tokens.push_back(Token(source_location, row, column, TokenType::NUMBER));
             i = endPosition;
-            column += offset + 1;
+            column += offset;
             continue;
         }
         // TokenType tokenType;
+        SourceLocation source_location = {.filename = filename,
+                                          .source = std::make_shared<std::string>(content),
+                                          .byte_offset = i,
+                                          .num_bytes = 1};
         switch (ch)
         {
             case '\n':
-                // tokens.push_back(Token(content.substr(i, 1), row, column, TokenType::ENDLINE));
+                // tokens.push_back(Token(source_location, row, column, TokenType::ENDLINE));
                 column = 1;
                 row++;
                 continue;
             case '+':
-                tokens.push_back(Token(content.substr(i, 1), row, column, TokenType::PLUS));
+                tokens.emplace_back(source_location, row, column, TokenType::PLUS);
                 break;
             case '-':
-                tokens.push_back(Token(content.substr(i, 1), row, column, TokenType::MINUS));
+                tokens.emplace_back(source_location, row, column, TokenType::MINUS);
                 break;
             case '*':
-                tokens.push_back(Token(content.substr(i, 1), row, column, TokenType::MUL));
+                tokens.emplace_back(source_location, row, column, TokenType::MUL);
                 break;
             case '/':
-                tokens.push_back(Token(content.substr(i, 1), row, column, TokenType::DIV));
+                tokens.emplace_back(source_location, row, column, TokenType::DIV);
                 break;
             case '(':
-                tokens.push_back(Token(content.substr(i, 1), row, column, TokenType::LEFT_CURLY));
+                tokens.emplace_back(source_location, row, column, TokenType::LEFT_CURLY);
                 break;
             case ')':
-                tokens.push_back(Token(content.substr(i, 1), row, column, TokenType::RIGHT_CURLY));
+                tokens.emplace_back(source_location, row, column, TokenType::RIGHT_CURLY);
                 break;
             case '[':
-                tokens.push_back(Token(content.substr(i, 1), row, column, TokenType::LEFT_SQUAR));
+                tokens.emplace_back(source_location, row, column, TokenType::LEFT_SQUAR);
                 break;
             case ']':
-                tokens.push_back(Token(content.substr(i, 1), row, column, TokenType::RIGHT_SQUAR));
+                tokens.emplace_back(source_location, row, column, TokenType::RIGHT_SQUAR);
                 break;
             case '=':
-                tokens.push_back(Token(content.substr(i, 1), row, column, TokenType::EQUAL));
+                tokens.emplace_back(source_location, row, column, TokenType::EQUAL);
                 break;
             case '<':
-                tokens.push_back(Token(content.substr(i, 1), row, column, TokenType::LESS));
+                tokens.emplace_back(source_location, row, column, TokenType::LESS);
                 break;
             case '>':
-                tokens.push_back(Token(content.substr(i, 1), row, column, TokenType::GREATER));
+                tokens.emplace_back(source_location, row, column, TokenType::GREATER);
                 break;
             case ',':
-                tokens.push_back(Token(content.substr(i, 1), row, column, TokenType::COMMA));
+                tokens.emplace_back(source_location, row, column, TokenType::COMMA);
                 break;
             case ';':
-                tokens.push_back(Token(content.substr(i, 1), row, column, TokenType::SEMICOLON));
+                tokens.emplace_back(source_location, row, column, TokenType::SEMICOLON);
                 break;
             case ':':
-                tokens.push_back(Token(content.substr(i, 1), row, column, TokenType::COLON));
+                tokens.emplace_back(source_location, row, column, TokenType::COLON);
                 break;
             case '.':
-                tokens.push_back(Token(content.substr(i, 1), row, column, TokenType::DOT));
+                tokens.emplace_back(source_location, row, column, TokenType::DOT);
                 break;
             case '^':
-                tokens.push_back(Token(content.substr(i, 1), row, column, TokenType::CARET));
+                tokens.emplace_back(source_location, row, column, TokenType::CARET);
+                break;
+            case '!':
+                tokens.emplace_back(source_location, row, column, TokenType::BANG);
                 break;
             default:
                 break;
         }
         column++;
     }
-    tokens.push_back(Token("EOF", row, column, TokenType::T_EOF));
+    SourceLocation source_location = {.filename = filename,
+                                      .source = std::make_shared<std::string>(content),
+                                      .byte_offset = content.size(),
+                                      .num_bytes = 0};
+    tokens.push_back(Token(source_location, row, column, TokenType::T_EOF));
     return tokens;
 }
 
-bool Lexer::find_escape_sequence(std::string_view content, size_t start, size_t *endPosition)
+bool Lexer::find_escape_sequence(const std::string &content, size_t start, size_t *endPosition)
 {
     char current = content[start];
     if (current != '#')
@@ -195,7 +224,7 @@ bool Lexer::find_escape_sequence(std::string_view content, size_t start, size_t 
     return true;
 }
 
-bool Lexer::find_string(std::string_view content, size_t start, size_t *endPosition)
+bool Lexer::find_string(const std::string &content, size_t start, size_t *endPosition)
 {
     char current = content[start];
     if (current != '\'')
@@ -224,7 +253,7 @@ bool Lexer::find_string(std::string_view content, size_t start, size_t *endPosit
 }
 bool isNumberStart(char c) { return (c >= '0' && c <= '9') || c == '-'; }
 
-bool Lexer::find_number(std::string_view content, size_t start, size_t *endPosition)
+bool Lexer::find_number(const std::string &content, size_t start, size_t *endPosition)
 {
     int index = 0;
     char current = content[start];
@@ -244,7 +273,7 @@ bool Lexer::find_number(std::string_view content, size_t start, size_t *endPosit
     return true;
 }
 
-bool Lexer::find_token(std::string_view content, size_t start, size_t *endPosition)
+bool Lexer::find_token(const std::string &content, size_t start, size_t *endPosition)
 {
     char current = content[start];
     *endPosition = start;
@@ -265,7 +294,7 @@ bool Lexer::find_token(std::string_view content, size_t start, size_t *endPositi
     return true;
 }
 
-bool Lexer::find_fixed_token(std::string_view content, size_t start, size_t *endPosition)
+bool Lexer::find_fixed_token(const std::string &content, size_t start, size_t *endPosition)
 {
 
     char current = content[start];
@@ -292,7 +321,7 @@ bool Lexer::find_fixed_token(std::string_view content, size_t start, size_t *end
     return false;
 }
 
-bool Lexer::find_comment(std::string_view content, size_t start, size_t *endPosition)
+bool Lexer::find_comment(const std::string &content, size_t start, size_t *endPosition)
 {
     if (content[start] == '{')
     {

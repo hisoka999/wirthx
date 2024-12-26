@@ -53,7 +53,10 @@ llvm::Value *BlockNode::codegen(std::unique_ptr<Context> &context)
             {
 
                 auto result = def.value->codegen(context);
-
+                if (result->getType()->isIntegerTy())
+                {
+                    result = context->Builder->CreateIntCast(result, def.variableType->generateLlvmType(context), true);
+                }
                 context->Builder->CreateStore(result, context->NamedAllocations[def.variableName]);
             }
         }
@@ -72,7 +75,10 @@ llvm::Value *BlockNode::codegen(std::unique_ptr<Context> &context)
     {
 
         if (!context->TopLevelFunction || def.variableName != topLevelFunctionName)
+        {
             context->NamedAllocations[def.variableName] = nullptr;
+            context->NamedValues[def.variableName] = nullptr;
+        }
     }
     return llvm::Constant::getNullValue(llvm::Type::getDoubleTy(*context->TheContext));
 }

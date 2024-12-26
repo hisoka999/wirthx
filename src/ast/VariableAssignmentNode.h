@@ -5,12 +5,12 @@
 class VariableAssignmentNode : public ASTNode
 {
 private:
-    TokenWithFile m_variable;
+    Token m_variable;
     std::string m_variableName;
     std::shared_ptr<ASTNode> m_expression;
 
 public:
-    VariableAssignmentNode(const TokenWithFile variableName, const std::shared_ptr<ASTNode> &expression);
+    VariableAssignmentNode(const Token variableName, const std::shared_ptr<ASTNode> &expression);
     ~VariableAssignmentNode() override = default;
     void print() override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;

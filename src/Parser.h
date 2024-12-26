@@ -14,7 +14,6 @@
 using ParserException = CompilerException;
 class Parser
 {
-private:
     std::vector<std::filesystem::path> m_rtlDirectories;
     std::filesystem::path m_file_path;
     size_t m_current = 0;
@@ -42,14 +41,14 @@ private:
     determinVariableTypeByName(const std::string &name) const;
     std::shared_ptr<ASTNode> parseEscapedString(const Token &token);
     std::shared_ptr<ASTNode> parseNumber();
-    void parseTypeDefinitions(const size_t scope);
+    void parseTypeDefinitions(size_t scope);
     std::optional<VariableDefinition> parseConstantDefinition(size_t scope);
-    std::vector<VariableDefinition> parseVariableDefinitions(const size_t scope);
+    std::vector<VariableDefinition> parseVariableDefinitions(size_t scope);
     std::shared_ptr<ArrayType> parseArray(size_t scope);
     std::shared_ptr<ASTNode> parseStatement(size_t scope);
     std::shared_ptr<ASTNode> parseBaseExpression(size_t scope, const std::shared_ptr<ASTNode> &origLhs = nullptr);
     std::shared_ptr<ASTNode> parseExpression(size_t scope, const std::shared_ptr<ASTNode> &origLhs = nullptr);
-    std::shared_ptr<ASTNode> parseLogicalExpression(const size_t scope, std::shared_ptr<ASTNode> lhs);
+    std::shared_ptr<ASTNode> parseLogicalExpression(size_t scope, std::shared_ptr<ASTNode> lhs);
 
     std::shared_ptr<BlockNode> parseBlock(size_t scope);
     std::shared_ptr<ASTNode> parseKeyword(size_t scope);
@@ -59,7 +58,7 @@ private:
     std::shared_ptr<ASTNode> parseToken(size_t scope);
     std::shared_ptr<FunctionDefinitionNode> parseFunctionDefinition(size_t scope, bool isFunction);
 
-    bool importUnit(std::string filename);
+    bool importUnit(const std::string &filename);
 
 public:
     Parser(const std::vector<std::filesystem::path> &rtlDirectories, std::filesystem::path path,
@@ -67,7 +66,6 @@ public:
     ~Parser() = default;
     [[nodiscard]] bool hasError() const;
     void printErrors(std::ostream &outputStream);
-    // std::map<std::string, std::shared_ptr<VariableType>> getTypeDefinitions();
 
     [[nodiscard]] std::unique_ptr<UnitNode> parseUnit();
 };

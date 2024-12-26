@@ -53,7 +53,7 @@ class FieldAccessableType
 {
 public:
     virtual ~FieldAccessableType() = default;
-    virtual llvm::Value *generateFieldAccess(TokenWithFile &token, llvm::Value *indexValue,
+    virtual llvm::Value *generateFieldAccess(Token &token, llvm::Value *indexValue,
                                              std::unique_ptr<Context> &context) = 0;
 };
 
@@ -75,8 +75,7 @@ public:
     static std::shared_ptr<ArrayType> getDynArray(const std::shared_ptr<VariableType> &baseType);
 
     llvm::Type *generateLlvmType(std::unique_ptr<Context> &context) override;
-    llvm::Value *generateFieldAccess(TokenWithFile &token, llvm::Value *indexValue,
-                                     std::unique_ptr<Context> &context) override;
+    llvm::Value *generateFieldAccess(Token &token, llvm::Value *indexValue, std::unique_ptr<Context> &context) override;
 
     bool operator==(const ArrayType &other) const
     {
@@ -100,8 +99,7 @@ private:
 
 public:
     llvm::Type *generateLlvmType(std::unique_ptr<Context> &context) override;
-    llvm::Value *generateFieldAccess(TokenWithFile &token, llvm::Value *indexValue,
-                                     std::unique_ptr<Context> &context) override;
+    llvm::Value *generateFieldAccess(Token &token, llvm::Value *indexValue, std::unique_ptr<Context> &context) override;
 
     bool operator==(const StringType &) const { return true; }
 };
@@ -113,7 +111,7 @@ private:
     llvm::Type *llvmType = nullptr;
 
 public:
-    std::shared_ptr<VariableType> baseType;
+    std::shared_ptr<VariableType> pointerBase;
 
     static std::shared_ptr<PointerType> getPointerTo(const std::shared_ptr<VariableType> &baseType);
 

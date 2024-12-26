@@ -13,8 +13,8 @@ bool VariableType::isSimpleType() const
         case VariableBaseType::Array:
         case VariableBaseType::Struct:
         case VariableBaseType::String:
-        case VariableBaseType::Pointer:
             return false;
+        case VariableBaseType::Pointer:
         case VariableBaseType::Integer:
         case VariableBaseType::Float:
         case VariableBaseType::Real:;
@@ -138,10 +138,9 @@ llvm::Type *ArrayType::generateLlvmType(std::unique_ptr<Context> &context)
     return llvmType;
 }
 
-llvm::Value *ArrayType::generateFieldAccess(TokenWithFile &token, llvm::Value *indexValue,
-                                            std::unique_ptr<Context> &context)
+llvm::Value *ArrayType::generateFieldAccess(Token &token, llvm::Value *indexValue, std::unique_ptr<Context> &context)
 {
-    auto arrayName = std::string(token.token.lexical);
+    auto arrayName = std::string(token.lexical());
     llvm::AllocaInst *V = context->NamedAllocations[arrayName];
 
     if (!V)
@@ -172,9 +171,8 @@ llvm::Value *ArrayType::generateFieldAccess(TokenWithFile &token, llvm::Value *i
         if (value->getSExtValue() < static_cast<int64_t>(this->low) ||
             value->getSExtValue() > static_cast<int64_t>(this->high))
         {
-            throw CompilerException(ParserError{.file_name = token.fileName,
-                                                .token = token.token,
-                                                .message = "the array index is not in the defined range."});
+            throw CompilerException(
+                    ParserError{.token = token, .message = "the array index is not in the defined range."});
         }
     }
     llvm::Value *index = indexValue;
@@ -193,8 +191,8 @@ llvm::Type *StringType::generateLlvmType(std::unique_ptr<Context> &context)
 {
     if (llvmType == nullptr)
     {
-        auto baseType = IntegerType::getInteger(8);
-        auto charType = baseType->generateLlvmType(context);
+        const auto baseType = IntegerType::getInteger(8);
+        const auto charType = baseType->generateLlvmType(context);
         std::vector<llvm::Type *> types;
         types.emplace_back(VariableType::getInteger(64)->generateLlvmType(context));
         types.emplace_back(VariableType::getInteger(64)->generateLlvmType(context));
@@ -209,10 +207,9 @@ llvm::Type *StringType::generateLlvmType(std::unique_ptr<Context> &context)
     return llvmType;
 }
 
-llvm::Value *StringType::generateFieldAccess(TokenWithFile &token, llvm::Value *indexValue,
-                                             std::unique_ptr<Context> &context)
+llvm::Value *StringType::generateFieldAccess(Token &token, llvm::Value *indexValue, std::unique_ptr<Context> &context)
 {
-    auto arrayName = std::string(token.token.lexical);
+    auto arrayName = std::string(token.lexical());
     llvm::Value *V = context->NamedAllocations[arrayName];
 
     if (!V)
@@ -249,11 +246,14 @@ llvm::Value *StringType::generateFieldAccess(TokenWithFile &token, llvm::Value *
 std::shared_ptr<PointerType> PointerType::getPointerTo(const std::shared_ptr<VariableType> &baseType)
 {
     auto ptrType = std::make_shared<PointerType>();
-    ptrType->baseType = baseType;
+
+    ptrType->pointerBase = baseType;
+    ptrType->baseType = VariableBaseType::Pointer;
+    ptrType->typeName = baseType->typeName + "_ptr";
     return ptrType;
 }
 llvm::Type *PointerType::generateLlvmType(std::unique_ptr<Context> &context)
 {
-    const auto llvmBaseType = baseType->generateLlvmType(context);
+    const auto llvmBaseType = pointerBase->generateLlvmType(context);
     return llvm::PointerType::getUnqual(llvmBaseType);
 }

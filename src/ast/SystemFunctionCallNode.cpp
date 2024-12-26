@@ -78,12 +78,12 @@ llvm::Value *SystemFunctionCallNode::codegen_setlength(std::unique_ptr<Context> 
 llvm::Value *SystemFunctionCallNode::codegen_length(std::unique_ptr<Context> &context, ASTNode *parent)
 {
     const auto paramType = m_args[0]->resolveType(context->ProgramUnit, parent);
-    if (const auto arrayType = std::dynamic_pointer_cast<StringType>(paramType))
+    if (const auto stringType = std::dynamic_pointer_cast<StringType>(paramType))
     {
 
         // const llvm::DataLayout &DL = context->TheModule->getDataLayout();
         auto value = m_args[0]->codegen(context);
-        auto llvmRecordType = arrayType->generateLlvmType(context);
+        auto llvmRecordType = stringType->generateLlvmType(context);
 
         auto arraySizeOffset = context->Builder->CreateStructGEP(llvmRecordType, value, 1, "length");
         auto indexType = VariableType::getInteger(64)->generateLlvmType(context);

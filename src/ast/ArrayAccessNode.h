@@ -7,13 +7,12 @@
 class ArrayAccessNode : public ASTNode
 {
 private:
-    TokenWithFile m_arrayNameToken;
-    std::string m_arrayName;
+    Token m_arrayNameToken;
     std::shared_ptr<ASTNode> m_indexNode;
 
 public:
-    ArrayAccessNode(const TokenWithFile &arrayName, const std::shared_ptr<ASTNode> &indexNode);
-    ~ArrayAccessNode() = default;
+    ArrayAccessNode(Token arrayName, const std::shared_ptr<ASTNode> &indexNode);
+    ~ArrayAccessNode() override = default;
     void print() override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
 

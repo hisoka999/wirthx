@@ -11,17 +11,17 @@ inline auto possible_tokens = {"program", "unit",  "uses", "begin",  "end",     
 class Lexer
 {
 private:
-    bool find_fixed_token(std::string_view content, size_t start, size_t *endPosition);
-    bool find_token(std::string_view content, size_t start, size_t *endPosition);
+    bool find_fixed_token(const std::string &content, size_t start, size_t *endPosition);
+    bool find_token(const std::string &content, size_t start, size_t *endPosition);
 
-    bool find_string(std::string_view content, size_t start, size_t *endPosition);
-    bool find_number(std::string_view content, size_t start, size_t *endPosition);
-    bool find_comment(std::string_view content, size_t start, size_t *endPosition);
-    bool find_escape_sequence(std::string_view content, size_t start, size_t *endPosition);
+    bool find_string(const std::string &content, size_t start, size_t *endPosition);
+    bool find_number(const std::string &content, size_t start, size_t *endPosition);
+    bool find_comment(const std::string &content, size_t start, size_t *endPosition);
+    bool find_escape_sequence(const std::string &content, size_t start, size_t *endPosition);
 
 public:
     Lexer();
     ~Lexer();
 
-    std::vector<Token> tokenize(std::string_view content);
+    std::vector<Token> tokenize(const std::string &filename, const std::string &content);
 };

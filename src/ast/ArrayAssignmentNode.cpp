@@ -8,9 +8,9 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Type.h"
 
-ArrayAssignmentNode::ArrayAssignmentNode(TokenWithFile &arrayToken, const std::shared_ptr<ASTNode> &indexNode,
+ArrayAssignmentNode::ArrayAssignmentNode(Token &arrayToken, const std::shared_ptr<ASTNode> &indexNode,
                                          const std::shared_ptr<ASTNode> &expression) :
-    m_arrayToken(arrayToken), m_variableName(std::string(arrayToken.token.lexical)), m_indexNode(indexNode),
+    m_arrayToken(arrayToken), m_variableName(std::string(arrayToken.lexical())), m_indexNode(indexNode),
     m_expression(expression)
 {
 }
@@ -43,9 +43,8 @@ llvm::Value *ArrayAssignmentNode::codegen(std::unique_ptr<Context> &context)
             if (value->getSExtValue() < static_cast<int64_t>(def->low) ||
                 value->getSExtValue() > static_cast<int64_t>(def->high))
             {
-                throw CompilerException(ParserError{.file_name = m_arrayToken.fileName,
-                                                    .token = m_arrayToken.token,
-                                                    .message = "the array index is not in the defined range."});
+                throw CompilerException(
+                        ParserError{.token = m_arrayToken, .message = "the array index is not in the defined range."});
             }
         }
 

@@ -3,10 +3,13 @@
 #include <llvm/IR/IRBuilder.h>
 
 #include "ComparissionNode.h"
+#include "UnitNode.h"
 #include "compiler/Context.h"
+#include "exceptions/CompilerException.h"
 
-ComparrisionNode::ComparrisionNode(CMPOperator op, const std::shared_ptr<ASTNode> &lhs,
-                                   const std::shared_ptr<ASTNode> &rhs) : m_lhs(lhs), m_rhs(rhs), m_operator(op)
+ComparrisionNode::ComparrisionNode(const Token &operatorToken, CMPOperator op, const std::shared_ptr<ASTNode> &lhs,
+                                   const std::shared_ptr<ASTNode> &rhs) :
+    m_operatorToken(operatorToken), m_lhs(lhs), m_rhs(rhs), m_operator(op)
 {
 }
 
@@ -68,12 +71,26 @@ llvm::Value *ComparrisionNode::codegen(std::unique_ptr<Context> &context)
         default:
             break;
     }
-    if (lhs->getType() != rhs->getType())
+
+    ASTNode *parent = context->ProgramUnit.get();
+    if (context->TopLevelFunction)
+    {
+        if (auto def = context->ProgramUnit->getFunctionDefinition(context->TopLevelFunction->getName().str()))
+        {
+            parent = def.value().get();
+        }
+    }
+
+    auto lhsType = m_lhs->resolveType(context->ProgramUnit, parent);
+    auto rhsType = m_lhs->resolveType(context->ProgramUnit, parent);
+
+    if (*lhsType == *rhsType && lhsType->baseType == VariableBaseType::Integer)
     {
         if (lhs->getType()->isIntegerTy() && rhs->getType()->isIntegerTy())
         {
-            size_t maxBitWith = std::max(lhs->getType()->getIntegerBitWidth(), rhs->getType()->getIntegerBitWidth());
-            auto targetType = llvm::IntegerType::get(*context->TheContext, maxBitWith);
+            const size_t maxBitWith =
+                    std::max(lhs->getType()->getIntegerBitWidth(), rhs->getType()->getIntegerBitWidth());
+            const auto targetType = llvm::IntegerType::get(*context->TheContext, maxBitWith);
             if (maxBitWith != lhs->getType()->getIntegerBitWidth())
             {
                 lhs = context->Builder->CreateIntCast(lhs, targetType, true, "lhs_cast");
@@ -84,6 +101,57 @@ llvm::Value *ComparrisionNode::codegen(std::unique_ptr<Context> &context)
             }
         }
     }
+    else if (lhsType->baseType == VariableBaseType::Pointer || rhsType->baseType == VariableBaseType::Pointer)
+    {
+        auto targetType = llvm::IntegerType::getInt64Ty(*context->TheContext);
+        if (lhsType->baseType == VariableBaseType::Pointer)
+        {
+            lhs = context->Builder->CreateBitOrPointerCast(lhs, targetType);
+        }
+        else if (lhsType->baseType == VariableBaseType::Integer)
+        {
+            lhs = context->Builder->CreateIntCast(lhs, targetType, true, "lhs_cast");
+        }
+        if (rhsType->baseType == VariableBaseType::Pointer)
+        {
+            rhs = context->Builder->CreateBitOrPointerCast(rhs, targetType);
+        }
+        else if (lhsType->baseType == VariableBaseType::Integer)
+        {
+            rhs = context->Builder->CreateIntCast(rhs, targetType, true, "rhs_cast");
+        }
+    }
+
+    else
+    {
+        if (lhsType && lhsType->baseType == VariableBaseType::String)
+        {
+
+            if (llvm::Function *CalleeF = context->TheModule->getFunction("CompareStr(string,string)"))
+            {
+                std::vector<llvm::Value *> ArgsV = {lhs, rhs};
+
+                lhs = context->Builder->CreateCall(CalleeF, ArgsV);
+                rhs = context->Builder->getInt32(0);
+            }
+        }
+    }
 
     return context->Builder->CreateCmp(pred, lhs, rhs);
+}
+void ComparrisionNode::typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
+{
+    const auto lhsType = m_lhs->resolveType(unit, parentNode);
+    const auto rhsType = m_rhs->resolveType(unit, parentNode);
+    if (*lhsType != *rhsType)
+    {
+        throw CompilerException(ParserError{.token = m_operatorToken,
+                                            .message = "the comparison of \"" + lhsType->typeName + "\" and \"" +
+                                                       rhsType->typeName +
+                                                       "\" is not possible because the types are not the same"});
+    }
+}
+std::shared_ptr<VariableType> ComparrisionNode::resolveType(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
+{
+    return VariableType::getBoolean();
 }

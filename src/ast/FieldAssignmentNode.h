@@ -6,15 +6,14 @@
 class FieldAssignmentNode : public ASTNode
 {
 private:
-    const TokenWithFile m_variable;
+    const Token m_variable;
     const std::string m_variableName;
-    const TokenWithFile m_field;
+    const Token m_field;
     const std::string m_fieldName;
     std::shared_ptr<ASTNode> m_expression;
 
 public:
-    FieldAssignmentNode(const TokenWithFile variable, const TokenWithFile field,
-                        const std::shared_ptr<ASTNode> &expression);
+    FieldAssignmentNode(const Token &variable, const Token &field, const std::shared_ptr<ASTNode> &expression);
     ~FieldAssignmentNode() = default;
     void print() override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;

@@ -58,6 +58,7 @@ llvm::Value *VariableAccessNode::codegen(std::unique_ptr<Context> &context)
     if (A->getAllocatedType()->isStructTy() || !context->loadValue)
         return A;
 
+
     return context->Builder->CreateLoad(A->getAllocatedType(), A, m_variableName.c_str());
 }
 

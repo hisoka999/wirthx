@@ -3,6 +3,7 @@
 #include <llvm/IR/IRBuilder.h>
 
 #include "compiler/Context.h"
+#include "exceptions/CompilerException.h"
 
 
 IfConditionNode::IfConditionNode(std::shared_ptr<ASTNode> conditionNode,
@@ -38,7 +39,7 @@ llvm::Value *IfConditionNode::codegenIf(std::unique_ptr<Context> &context)
     llvm::Value *CondV = m_conditionNode->codegen(context);
     if (!CondV)
         return nullptr;
-    CondV = context->Builder->CreateICmpEQ(CondV, context->Builder->getInt1(1), "ifcond");
+    CondV = context->Builder->CreateICmpEQ(CondV, context->Builder->getTrue(), "ifcond");
 
     llvm::Function *TheFunction = context->Builder->GetInsertBlock()->getParent();
     llvm::BasicBlock *ThenBB = llvm::BasicBlock::Create(*context->TheContext, "then", TheFunction);
@@ -120,4 +121,16 @@ llvm::Value *IfConditionNode::codegen(std::unique_ptr<Context> &context)
         return codegenIfElse(context);
     else
         return codegenIf(context);
+}
+void IfConditionNode::typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
+{
+    auto conditionType = m_conditionNode->resolveType(unit, parentNode);
+    if (conditionType->baseType != VariableBaseType::Boolean)
+    {
+        std::cerr << "ifcondition type not supported!" << std::endl;
+        // throw CompilerException(ParserError{.token = m_conditionNode->token,
+        //                             .message = "the comparison of \"" + lhsType->typeName + "\" and \"" +
+        //                                        rhsType->typeName +
+        //                                        "\" is not possible because the types are not the same"});
+    }
 }

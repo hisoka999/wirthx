@@ -1,7 +1,7 @@
 #pragma once
 #include <filesystem>
 #include <string_view>
-
+#include "SourceLocation.h"
 enum class TokenType : uint16_t
 {
     NUMBER,
@@ -27,31 +27,29 @@ enum class TokenType : uint16_t
     SEMICOLON,
     DOT,
     COLON,
-    CARET
+    CARET,
+    BANG
 };
+
 
 struct Token
 {
-    std::string_view lexical;
-    size_t row;
-    size_t col;
+    SourceLocation sourceLocation;
+    size_t row{};
+    size_t col{};
     TokenType tokenType;
-    Token() = default;
-    Token(const std::string_view lexical, const size_t row, const size_t col, const TokenType tokenType) :
-        lexical(lexical), row(row), col(col), tokenType(tokenType)
+    Token(const SourceLocation &sourceLocation, const size_t row, const size_t col, const TokenType tokenType) :
+        sourceLocation(sourceLocation), row(row), col(col), tokenType(tokenType)
     {
     }
 
-    Token(const Token &other) : lexical(other.lexical), row(other.row), col(other.col), tokenType(other.tokenType) {}
-    Token(Token &&other) noexcept : lexical(other.lexical), row(other.row), col(other.col), tokenType(other.tokenType)
+    Token(const Token &other) = default;
+    Token(Token &&other) noexcept :
+        sourceLocation(other.sourceLocation), row(other.row), col(other.col), tokenType(other.tokenType)
     {
     }
 
     Token &operator=(const Token &other) = default;
-};
 
-struct TokenWithFile
-{
-    Token token;
-    std::filesystem::path fileName;
+    [[nodiscard]] std::string lexical() const { return sourceLocation.text(); }
 };

@@ -8,13 +8,13 @@
 class FieldAccessNode : public ASTNode
 {
 private:
-    TokenWithFile m_element;
+    Token m_element;
     std::string m_elementName;
-    TokenWithFile m_field;
+    Token m_field;
     std::string m_fieldName;
 
 public:
-    FieldAccessNode(const TokenWithFile &element, const TokenWithFile &field);
+    FieldAccessNode(const Token &element, const Token &field);
     ~FieldAccessNode() = default;
     void print() override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
