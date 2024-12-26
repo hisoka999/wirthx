@@ -53,11 +53,37 @@ llvm::Value *BlockNode::codegen(std::unique_ptr<Context> &context)
             {
 
                 auto result = def.value->codegen(context);
+                auto type = def.variableType->generateLlvmType(context);
                 if (result->getType()->isIntegerTy())
                 {
-                    result = context->Builder->CreateIntCast(result, def.variableType->generateLlvmType(context), true);
+                    result = context->Builder->CreateIntCast(result, type, true);
                 }
-                context->Builder->CreateStore(result, context->NamedAllocations[def.variableName]);
+                if (type->isStructTy() && result->getType()->isPointerTy())
+                {
+                    auto llvmArgType = type;
+
+                    auto memcpyCall =
+                            llvm::Intrinsic::getDeclaration(context->TheModule.get(), llvm::Intrinsic::memcpy,
+                                                            {context->Builder->getPtrTy(), context->Builder->getPtrTy(),
+                                                             context->Builder->getInt64Ty()});
+                    std::vector<llvm::Value *> memcopyArgs;
+
+                    const llvm::DataLayout &DL = context->TheModule->getDataLayout();
+                    uint64_t structSize = DL.getTypeAllocSize(llvmArgType);
+
+
+                    memcopyArgs.push_back(context->Builder->CreateBitCast(context->NamedAllocations[def.variableName],
+                                                                          context->Builder->getPtrTy()));
+                    memcopyArgs.push_back(context->Builder->CreateBitCast(result, context->Builder->getPtrTy()));
+                    memcopyArgs.push_back(context->Builder->getInt64(structSize));
+                    memcopyArgs.push_back(context->Builder->getFalse());
+
+                    context->Builder->CreateCall(memcpyCall, memcopyArgs);
+                }
+                else
+                {
+                    context->Builder->CreateStore(result, context->NamedAllocations[def.variableName]);
+                }
             }
         }
     }

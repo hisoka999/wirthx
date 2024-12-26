@@ -1,12 +1,11 @@
 program stringcompare;
 
 var
-    test : String ;
+    test : String = 'Hello World';
     test2 : String;
     length_S1 : int64;
     length_S2 : int64;
 begin
-    test := 'Hello World';
     test2 := test;
 
     length_S1 := length(test);
