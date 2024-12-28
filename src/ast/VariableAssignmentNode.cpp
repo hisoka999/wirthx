@@ -77,6 +77,40 @@ llvm::Value *VariableAssignmentNode::codegen(std::unique_ptr<Context> &context)
 
     if (type->isStructTy() && expressionResult->getType()->isPointerTy())
     {
+        // we might have to free the value
+        auto variable_definition = context->ProgramUnit->getVariableDefinition(m_variableName);
+        std::shared_ptr<VariableType> varType =
+                (variable_definition) ? variable_definition.value().variableType : nullptr;
+        if (context->TopLevelFunction && !variable_definition)
+        {
+            if (const auto def =
+                        context->ProgramUnit->getFunctionDefinition(context->TopLevelFunction->getName().str()))
+            {
+                variable_definition = def.value()->body()->getVariableDefinition(m_variableName);
+
+                if (!variable_definition)
+                {
+                    varType = def.value()->getParam(m_variableName)->type;
+                }
+                else
+                {
+                    varType = variable_definition->variableType;
+                }
+            }
+        }
+        // TODO not everything is allocated by malloc this needs proper ref counting
+        // if (varType->baseType == VariableBaseType::String)
+        // {
+        //     auto stringStructPtr = allocatedValue;
+        //     const auto arrayPointerOffset =
+        //             context->Builder->CreateStructGEP(type, stringStructPtr, 2, m_variableName + ".ptr.offset");
+        //     // auto strValuePtr = context->Builder->CreateLoad(llvm::PointerType::getUnqual(*context->TheContext),
+        //     //                                                 arrayPointerOffset, m_variableName + ".loaded");
+        //
+        //     context->Builder->CreateCall(context->TheModule->getFunction("freemem(integer8_ptr)"),
+        //                                  llvm::ArrayRef<llvm::Value *>{arrayPointerOffset});
+        // }
+
         auto llvmArgType = type;
 
         auto memcpyCall = llvm::Intrinsic::getDeclaration(
@@ -97,6 +131,7 @@ llvm::Value *VariableAssignmentNode::codegen(std::unique_ptr<Context> &context)
 
         return expressionResult;
     }
+
 
     context->Builder->CreateStore(expressionResult, allocatedValue);
     return expressionResult;

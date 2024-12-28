@@ -93,7 +93,7 @@ include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 # Find and link LLD libraries
 
-llvm_map_components_to_libnames(llvm_libs support core irreader native nativecodegen linker passes)
+llvm_map_components_to_libnames(llvm_libs support core irreader native nativecodegen passes)
 
 
 include(FetchContent)

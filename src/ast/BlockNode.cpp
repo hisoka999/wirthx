@@ -100,6 +100,19 @@ llvm::Value *BlockNode::codegen(std::unique_ptr<Context> &context)
     for (auto &def: m_variableDefinitions)
     {
 
+        if (def.variableType->baseType == VariableBaseType::String)
+        {
+            // auto stringStructPtr = context->NamedAllocations[def.variableName];
+            // auto type = def.variableType;
+            // const auto arrayPointerOffset = context->Builder->CreateStructGEP(type->generateLlvmType(context),
+            //                                                                   stringStructPtr, 2,
+            //                                                                   "string.ptr.offset");
+            // auto strValuePtr = context->Builder->CreateLoad(llvm::PointerType::getUnqual(*context->TheContext),
+            //                                                 arrayPointerOffset);
+
+            // context->Builder->CreateCall(context->TheModule->getFunction("free"), strValuePtr);
+        }
+
         if (!context->TopLevelFunction || def.variableName != topLevelFunctionName)
         {
             context->NamedAllocations[def.variableName] = nullptr;

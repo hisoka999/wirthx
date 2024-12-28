@@ -87,7 +87,9 @@ llvm::Value *BinaryOperationNode::generateForStringPlusInteger(llvm::Value *lhs,
     // change array size
     context->Builder->CreateStore(context->Builder->getInt64(1), arrayRefCountOffset);
     context->Builder->CreateStore(newSize, arraySizeOffset);
-    const auto allocCall = context->Builder->CreateCall(context->TheModule->getFunction("malloc"), newSize);
+    const auto allocCall =
+            context->Builder->CreateCall(context->TheModule->getFunction("malloc"),
+                                         context->Builder->CreateAdd(newSize, context->Builder->getInt64(1)));
 
     {
         const auto memcpyCall = llvm::Intrinsic::getDeclaration(
@@ -115,7 +117,15 @@ llvm::Value *BinaryOperationNode::generateForStringPlusInteger(llvm::Value *lhs,
 
         context->Builder->CreateStore(rhs, bounds);
     }
+    {
 
+        const auto bounds = context->Builder->CreateGEP(
+                valueType, allocCall,
+                llvm::ArrayRef<llvm::Value *>{context->Builder->CreateAdd(lhsIndex, context->Builder->getInt64(1))}, "",
+                false);
+
+        context->Builder->CreateStore(context->Builder->getInt8(0), bounds);
+    }
     return stringAlloc;
 }
 
@@ -147,12 +157,15 @@ llvm::Value *BinaryOperationNode::generateForString(llvm::Value *lhs, llvm::Valu
     const auto rhsIndex = context->Builder->CreateLoad(indexType, rhsIndexPtr, "rhs.size");
 
     const auto newSize = context->Builder->CreateAdd(lhsIndex, rhsIndex, "new_size");
+    ;
 
 
     // change array size
     context->Builder->CreateStore(context->Builder->getInt64(1), arrayRefCountOffset);
     context->Builder->CreateStore(newSize, arraySizeOffset);
-    const auto allocCall = context->Builder->CreateCall(context->TheModule->getFunction("malloc"), newSize);
+    const auto allocCall =
+            context->Builder->CreateCall(context->TheModule->getFunction("malloc"),
+                                         context->Builder->CreateAdd(newSize, context->Builder->getInt64(1)));
 
     const auto memcpyCall = llvm::Intrinsic::getDeclaration(
             context->TheModule.get(), llvm::Intrinsic::memcpy,
@@ -183,7 +196,7 @@ llvm::Value *BinaryOperationNode::generateForString(llvm::Value *lhs, llvm::Valu
         std::vector<llvm::Value *> memcopyArgs;
         memcopyArgs.push_back(context->Builder->CreateBitCast(bounds, context->Builder->getPtrTy()));
         memcopyArgs.push_back(context->Builder->CreateBitCast(loadResult, context->Builder->getPtrTy()));
-        memcopyArgs.push_back(rhsIndex);
+        memcopyArgs.push_back(context->Builder->CreateAdd(rhsIndex, context->Builder->getInt64(1), "", false));
         memcopyArgs.push_back(context->Builder->getFalse());
 
         context->Builder->CreateCall(memcpyCall, memcopyArgs);

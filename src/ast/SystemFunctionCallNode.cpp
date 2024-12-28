@@ -176,14 +176,16 @@ llvm::Value *SystemFunctionCallNode::codegen(std::unique_ptr<Context> &context)
         {
             if (arrayType->isDynArray)
             {
-                // const llvm::DataLayout &DL = context->TheModule->getDataLayout();
-                auto value = m_args[0]->codegen(context);
-                auto llvmRecordType = arrayType->generateLlvmType(context);
+                const auto value = m_args[0]->codegen(context);
+                const auto llvmRecordType = arrayType->generateLlvmType(context);
 
-                auto arraySizeOffset = context->Builder->CreateStructGEP(llvmRecordType, value, 0, "array.size.offset");
-                auto indexType = VariableType::getInteger(64)->generateLlvmType(context);
+                const auto arraySizeOffset =
+                        context->Builder->CreateStructGEP(llvmRecordType, value, 0, "array.size.offset");
+                const auto indexType = VariableType::getInteger(64)->generateLlvmType(context);
 
-                return context->Builder->CreateLoad(indexType, arraySizeOffset);
+                const auto length = context->Builder->CreateLoad(indexType, arraySizeOffset);
+
+                return context->Builder->CreateSub(length, context->Builder->getInt64(1));
             }
             return context->Builder->getInt64(arrayType->high);
         }
