@@ -4,6 +4,7 @@
 #include <llvm/IR/IRBuilder.h>
 
 #include "compiler/Context.h"
+#include "exceptions/CompilerException.h"
 
 RepeatUntilNode::RepeatUntilNode(const Token &token, std::shared_ptr<ASTNode> loopCondition,
                                  std::vector<std::shared_ptr<ASTNode>> nodes) :
@@ -54,4 +55,19 @@ llvm::Value *RepeatUntilNode::codegen(std::unique_ptr<Context> &context)
 
     // for expr always returns 0.0.
     return llvm::Constant::getNullValue(llvm::Type::getInt64Ty(*context->TheContext));
+}
+void RepeatUntilNode::typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
+{
+    if (const auto &conditionType = m_loopCondition->resolveType(unit, parentNode))
+    {
+        if (conditionType->baseType != VariableBaseType::Boolean)
+        {
+            throw CompilerException(ParserError{.token = expressionToken(),
+                                                .message = "the loop expression does not return a boolean"});
+        }
+    }
+    for (const auto &exp: m_nodes)
+    {
+        exp->typeCheck(unit, parentNode);
+    }
 }

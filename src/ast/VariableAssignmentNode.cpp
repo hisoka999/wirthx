@@ -139,21 +139,6 @@ llvm::Value *VariableAssignmentNode::codegen(std::unique_ptr<Context> &context)
 }
 void VariableAssignmentNode::typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
 {
-
-    if (const auto varType = unit->getVariableDefinition(m_variableName))
-    {
-        const auto expressionType = m_expression->resolveType(unit, parentNode);
-        if (*expressionType != *varType.value().variableType)
-        {
-
-            throw CompilerException(ParserError{.token = m_variable,
-                                                .message = "the type for the variable \"" + m_variableName +
-                                                           "\" is \"" + varType.value().variableType->typeName +
-                                                           "\" but a \"" + expressionType->typeName +
-                                                           "\" was assigned."});
-        }
-    }
-
     if (parentNode != unit.get())
     {
         if (const auto functionDef = dynamic_cast<FunctionDefinitionNode *>(parentNode))
@@ -171,6 +156,19 @@ void VariableAssignmentNode::typeCheck(const std::unique_ptr<UnitNode> &unit, AS
                                                                    "\" was assigned."});
                 }
             }
+        }
+    }
+    else if (const auto varType = unit->getVariableDefinition(m_variableName))
+    {
+        const auto expressionType = m_expression->resolveType(unit, parentNode);
+        if (*expressionType != *varType.value().variableType)
+        {
+
+            throw CompilerException(ParserError{.token = m_variable,
+                                                .message = "the type for the variable \"" + m_variableName +
+                                                           "\" is \"" + varType.value().variableType->typeName +
+                                                           "\" but a \"" + expressionType->typeName +
+                                                           "\" was assigned."});
         }
     }
 }

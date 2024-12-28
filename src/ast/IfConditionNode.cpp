@@ -113,24 +113,32 @@ llvm::Value *IfConditionNode::codegenIfElse(std::unique_ptr<Context> &context)
     // PN->addIncoming(ThenV, ThenBB);
     // PN->addIncoming(ElseV, ElseBB);
     // return PN;
-    return nullptr;
+    return CondV;
 }
 llvm::Value *IfConditionNode::codegen(std::unique_ptr<Context> &context)
 {
-    if (m_elseExpressions.size() > 0)
+    if (!m_elseExpressions.empty())
         return codegenIfElse(context);
     else
         return codegenIf(context);
 }
 void IfConditionNode::typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
 {
-    auto conditionType = m_conditionNode->resolveType(unit, parentNode);
+    const auto conditionType = m_conditionNode->resolveType(unit, parentNode);
     if (conditionType->baseType != VariableBaseType::Boolean)
     {
-        std::cerr << "ifcondition type not supported!" << std::endl;
-        // throw CompilerException(ParserError{.token = m_conditionNode->token,
-        //                             .message = "the comparison of \"" + lhsType->typeName + "\" and \"" +
-        //                                        rhsType->typeName +
-        //                                        "\" is not possible because the types are not the same"});
+        throw CompilerException(
+                ParserError{.token = m_conditionNode->expressionToken(),
+                            .message = "The type of the expression in the if condition is not a boolean."});
+    }
+
+    for (const auto &exp: m_ifExpressions)
+    {
+        exp->typeCheck(unit, parentNode);
+    }
+
+    for (const auto &exp: m_elseExpressions)
+    {
+        exp->typeCheck(unit, parentNode);
     }
 }

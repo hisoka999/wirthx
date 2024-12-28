@@ -63,3 +63,8 @@ llvm::Value *LogicalExpressionNode::codegen(std::unique_ptr<Context> &context)
     }
     return nullptr;
 }
+std::shared_ptr<VariableType> LogicalExpressionNode::resolveType(const std::unique_ptr<UnitNode> &unit,
+                                                                 ASTNode *parentNode)
+{
+    return VariableType::getBoolean();
+}

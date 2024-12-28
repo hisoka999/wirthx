@@ -7,6 +7,7 @@
 #include "BlockNode.h"
 #include "UnitNode.h"
 #include "compiler/Context.h"
+#include "exceptions/CompilerException.h"
 
 ForNode::ForNode(const Token &token, std::string loopVariable, const std::shared_ptr<ASTNode> &startExpression,
                  const std::shared_ptr<ASTNode> &endExpression, const std::vector<std::shared_ptr<ASTNode>> &body) :
@@ -125,6 +126,15 @@ std::optional<std::shared_ptr<ASTNode>> ForNode::block()
 }
 void ForNode::typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
 {
+    const auto startType = m_startExpression->resolveType(unit, parentNode);
+    const auto endType = m_endExpression->resolveType(unit, parentNode);
+
+    if (*startType != *endType)
+    {
+        throw CompilerException(ParserError{
+                .token = m_startExpression->expressionToken(),
+                .message = "The type if the start expression does not match the type of the end expression."});
+    }
 
     for (const auto &exp: m_body)
     {
