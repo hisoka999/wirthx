@@ -4,13 +4,12 @@
 #include <utility>
 
 #include "FieldAccessNode.h"
-#include "FieldAssignmentNode.h"
-#include "RecordType.h"
 #include "compare.h"
 #include "compiler/Context.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
+#include "types/RecordType.h"
 
 
 FunctionDefinitionNode::FunctionDefinitionNode(const Token &token, std::string name,
@@ -205,13 +204,14 @@ std::string FunctionDefinitionNode::functionSignature()
     if (!m_libName.empty())
         return m_externalName;
 
-    auto result = m_name + "(";
+    std::stringstream stream;
+    stream << m_name << "(";
     for (size_t i = 0; i < m_params.size(); ++i)
     {
-        result += m_params[i].type->typeName + ((i < m_params.size() - 1) ? "," : "");
+        stream << m_params[i].type->typeName << ((i < m_params.size() - 1) ? "," : "");
     }
-    result += ")";
-    return result;
+    stream << ")";
+    return stream.str();
 }
 
 std::string &FunctionDefinitionNode::externalName() { return m_externalName; }

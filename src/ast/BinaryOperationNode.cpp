@@ -5,6 +5,7 @@
 #include "UnitNode.h"
 #include "compiler/Context.h"
 #include "exceptions/CompilerException.h"
+#include "types/StringType.h"
 
 BinaryOperationNode::BinaryOperationNode(const Token &operatorToken, const Operator op,
                                          const std::shared_ptr<ASTNode> &lhs, const std::shared_ptr<ASTNode> &rhs) :
@@ -54,7 +55,7 @@ llvm::Value *BinaryOperationNode::generateForInteger(llvm::Value *lhs, llvm::Val
 llvm::Value *BinaryOperationNode::generateForStringPlusInteger(llvm::Value *lhs, llvm::Value *rhs,
                                                                std::unique_ptr<Context> &context)
 {
-    const auto varType = VariableType::getString();
+    const auto varType = StringType::getString();
     const auto valueType = VariableType::getInteger(8)->generateLlvmType(context);
     const auto llvmRecordType = varType->generateLlvmType(context);
     const auto indexType = VariableType::getInteger(64)->generateLlvmType(context);
@@ -134,7 +135,7 @@ llvm::Value *BinaryOperationNode::generateForString(llvm::Value *lhs, llvm::Valu
                                                     std::unique_ptr<Context> &context)
 {
 
-    const auto varType = VariableType::getString();
+    const auto varType = StringType::getString();
     const auto valueType = VariableType::getInteger(8)->generateLlvmType(context);
     const auto llvmRecordType = varType->generateLlvmType(context);
     const auto indexType = VariableType::getInteger(64)->generateLlvmType(context);
@@ -267,7 +268,7 @@ std::shared_ptr<VariableType> BinaryOperationNode::resolveType(const std::unique
 }
 void BinaryOperationNode::typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
 {
-    if (auto lhsType = m_lhs->resolveType(unit, parentNode); auto rhsType = m_rhs->resolveType(unit, parentNode))
+    if (const auto lhsType = m_lhs->resolveType(unit, parentNode); auto rhsType = m_rhs->resolveType(unit, parentNode))
     {
         if (*lhsType != *rhsType)
         {

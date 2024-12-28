@@ -1,5 +1,7 @@
 #pragma once
 #include <optional>
+#include <vector>
+
 #include "ASTNode.h"
 #include "ast/VariableDefinition.h"
 
@@ -21,6 +23,6 @@ public:
     std::optional<VariableDefinition> getVariableDefinition(const std::string &name);
     void addVariableDefinition(VariableDefinition definition);
     void preappendExpression(std::shared_ptr<ASTNode> node);
-    void appendExpression(std::shared_ptr<ASTNode> node);
+    void appendExpression(const std::shared_ptr<ASTNode> &node);
     void typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode) override;
 };

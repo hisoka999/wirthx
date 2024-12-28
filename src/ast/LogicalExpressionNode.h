@@ -1,5 +1,4 @@
 #include "ASTNode.h"
-#include "NumberNode.h"
 
 enum class LogicalOperator : char
 {

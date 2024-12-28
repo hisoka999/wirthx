@@ -3,6 +3,7 @@
 #include <llvm/IR/IRBuilder.h>
 
 #include "compiler/Context.h"
+#include "types/StringType.h"
 
 
 StringConstantNode::StringConstantNode(const Token &token, const std::string &literal) :
@@ -49,21 +50,23 @@ llvm::Value *StringConstantNode::codegen(std::unique_ptr<Context> &context)
             result += m_literal[i];
         }
     }
-    auto varType = VariableType::getString();
-    auto llvmRecordType = varType->generateLlvmType(context);
-    auto stringAlloc = context->Builder->CreateAlloca(llvmRecordType, nullptr, "string_constant");
+    const auto varType = StringType::getString();
+    const auto llvmRecordType = varType->generateLlvmType(context);
+    const auto stringAlloc = context->Builder->CreateAlloca(llvmRecordType, nullptr, "string_constant");
 
-    auto constant = context->Builder->CreateGlobalString(result, ".str");
+    const auto constant = context->Builder->CreateGlobalString(result, ".str");
 
-    auto arrayRefCountOffset =
+    const auto arrayRefCountOffset =
             context->Builder->CreateStructGEP(llvmRecordType, stringAlloc, 0, "string.refCount.offset");
-    auto arraySizeOffset = context->Builder->CreateStructGEP(llvmRecordType, stringAlloc, 1, "string.size.offset");
+    const auto arraySizeOffset =
+            context->Builder->CreateStructGEP(llvmRecordType, stringAlloc, 1, "string.size.offset");
 
 
-    auto arrayPointerOffset = context->Builder->CreateStructGEP(llvmRecordType, stringAlloc, 2, "string.ptr.offset");
+    const auto arrayPointerOffset =
+            context->Builder->CreateStructGEP(llvmRecordType, stringAlloc, 2, "string.ptr.offset");
     // auto arrayPointer =
     //         context->Builder->CreateAlignedLoad(arrayBaseType, arrayPointerOffset, alignment, "array.ptr");
-    auto newSize = context->Builder->getInt64(result.size());
+    const auto newSize = context->Builder->getInt64(result.size());
     // change array size
     context->Builder->CreateStore(context->Builder->getInt64(1), arrayRefCountOffset);
     context->Builder->CreateStore(newSize, arraySizeOffset);
@@ -75,5 +78,5 @@ llvm::Value *StringConstantNode::codegen(std::unique_ptr<Context> &context)
 std::shared_ptr<VariableType> StringConstantNode::resolveType([[maybe_unused]] const std::unique_ptr<UnitNode> &unit,
                                                               ASTNode *parentNode)
 {
-    return VariableType::getString();
+    return StringType::getString();
 }

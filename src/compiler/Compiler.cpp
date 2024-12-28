@@ -57,13 +57,16 @@ std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit, const
 
     // Add transform passes.
     // Do simple "peephole" optimizations and bit-twiddling optzns.
-    context->TheFPM->addPass(llvm::InstCombinePass());
-    // Reassociate expressions.
-    context->TheFPM->addPass(llvm::ReassociatePass());
-    // Eliminate Common SubExpressions.
-    context->TheFPM->addPass(llvm::GVNPass());
-    // Simplify the control flow graph (deleting unreachable blocks, etc).
-    context->TheFPM->addPass(llvm::SimplifyCFGPass());
+    if (context->compilerOptions.buildMode == BuildMode::Release)
+    {
+        context->TheFPM->addPass(llvm::InstCombinePass());
+        // Reassociate expressions.
+        context->TheFPM->addPass(llvm::ReassociatePass());
+        // Eliminate Common SubExpressions.
+        context->TheFPM->addPass(llvm::GVNPass());
+        // Simplify the control flow graph (deleting unreachable blocks, etc).
+        context->TheFPM->addPass(llvm::SimplifyCFGPass());
+    }
 
 
     // context->TheFPM->addPass(llvm::createLoopSimplifyPass());
@@ -80,7 +83,7 @@ std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit, const
 }
 
 
-void compile_file(const CompilerOptions &options, std::filesystem::path inputPath, std::ostream &errorStream,
+void compile_file(const CompilerOptions &options, const std::filesystem::path &inputPath, std::ostream &errorStream,
                   std::ostream &outputStream)
 {
     std::ifstream file;
@@ -188,9 +191,8 @@ void compile_file(const CompilerOptions &options, std::filesystem::path inputPat
         pass.add(llvm::createInstructionCombiningPass());
     }
 
-    auto FileType = CodeGenFileType::ObjectFile;
 
-    if (TheTargetMachine->addPassesToEmitFile(pass, dest, nullptr, FileType))
+    if (TheTargetMachine->addPassesToEmitFile(pass, dest, nullptr, CodeGenFileType::ObjectFile))
     {
         errs() << "TheTargetMachine can't emit a file of this type";
         return;

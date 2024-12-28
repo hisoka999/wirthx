@@ -2,14 +2,13 @@
 #include <iostream>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/IRBuilder.h>
-
 #include "compiler/Context.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 
 
-UnitNode::UnitNode(const Token &token, UnitType unitType, const std::string &unitName,
+UnitNode::UnitNode(const Token &token, const UnitType unitType, const std::string &unitName,
                    const std::vector<std::shared_ptr<FunctionDefinitionNode>> &functionDefinitions,
                    const std::map<std::string, std::shared_ptr<VariableType>> &typeDefinitions,
                    const std::shared_ptr<BlockNode> &blockNode) :

@@ -1,8 +1,8 @@
 #pragma once
 #include <memory>
 #include <optional>
-#include <vector>
-#include "VariableType.h"
+#include "types/VariableType.h"
+
 namespace llvm
 {
     class Value;

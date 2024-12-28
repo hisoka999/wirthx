@@ -29,12 +29,11 @@ struct Context;
 
 class IntegerType;
 
-class StringType;
 
 class VariableType
 {
 public:
-    explicit VariableType(VariableBaseType baseType = VariableBaseType::Unknown, std::string typeName = "");
+    explicit VariableType(VariableBaseType baseType = VariableBaseType::Unknown, const std::string &typeName = "");
     virtual ~VariableType() = default;
     [[nodiscard]] bool isSimpleType() const;
     VariableBaseType baseType = VariableBaseType::Unknown;
@@ -43,7 +42,6 @@ public:
     virtual llvm::Type *generateLlvmType(std::unique_ptr<Context> &context);
     static std::shared_ptr<IntegerType> getInteger(size_t length = 32);
     static std::shared_ptr<VariableType> getBoolean();
-    static std::shared_ptr<StringType> getString();
     static std::shared_ptr<VariableType> getPointer();
 
     bool operator==(const VariableType &other) const;
@@ -57,7 +55,7 @@ public:
                                              std::unique_ptr<Context> &context) = 0;
 };
 
-class ArrayType : public VariableType, public FieldAccessableType
+class ArrayType final : public VariableType, public FieldAccessableType
 {
 private:
     llvm::Type *llvmType = nullptr;
@@ -85,23 +83,11 @@ public:
 };
 
 
-class IntegerType : public VariableType
+class IntegerType final : public VariableType
 {
 public:
     size_t length;
     llvm::Type *generateLlvmType(std::unique_ptr<Context> &context) override;
-};
-
-class StringType : public VariableType, public FieldAccessableType
-{
-private:
-    llvm::Type *llvmType = nullptr;
-
-public:
-    llvm::Type *generateLlvmType(std::unique_ptr<Context> &context) override;
-    llvm::Value *generateFieldAccess(Token &token, llvm::Value *indexValue, std::unique_ptr<Context> &context) override;
-
-    bool operator==(const StringType &) const { return true; }
 };
 
 

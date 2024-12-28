@@ -4,7 +4,6 @@
 #include <vector>
 #include "ASTNode.h"
 #include "BlockNode.h"
-#include "VariableType.h"
 
 struct FunctionArgument
 {

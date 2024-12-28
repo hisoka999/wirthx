@@ -4,7 +4,7 @@
 #include <string>
 #include "Context.h"
 #include "ast/FunctionDefinitionNode.h"
-#include "ast/VariableType.h"
+#include "ast/types/VariableType.h"
 
 
 void createSystemCall(std::unique_ptr<Context> &context, std::string functionName,

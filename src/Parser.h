@@ -7,7 +7,7 @@
 #include "ast/ASTNode.h"
 #include "ast/UnitNode.h"
 #include "ast/VariableDefinition.h"
-#include "ast/VariableType.h"
+#include "ast/types/VariableType.h"
 #include "exceptions/CompilerException.h"
 
 

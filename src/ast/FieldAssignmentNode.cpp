@@ -1,11 +1,11 @@
 #include "FieldAssignmentNode.h"
 #include "FunctionCallNode.h"
-#include "RecordType.h"
 #include "UnitNode.h"
 #include "compiler/Context.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Type.h"
+#include "types/RecordType.h"
 
 FieldAssignmentNode::FieldAssignmentNode(const Token &variable, const Token &field,
                                          const std::shared_ptr<ASTNode> &expression) :

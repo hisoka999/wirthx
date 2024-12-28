@@ -18,13 +18,14 @@
 #include "ast/IfConditionNode.h"
 #include "ast/LogicalExpressionNode.h"
 #include "ast/NumberNode.h"
-#include "ast/RecordType.h"
 #include "ast/RepeatUntilNode.h"
 #include "ast/StringConstantNode.h"
 #include "ast/SystemFunctionCallNode.h"
 #include "ast/VariableAccessNode.h"
 #include "ast/VariableAssignmentNode.h"
 #include "ast/WhileNode.h"
+#include "ast/types/RecordType.h"
+#include "ast/types/StringType.h"
 #include "compare.h"
 #include "magic_enum/magic_enum.hpp"
 
@@ -41,7 +42,7 @@ Parser::Parser(const std::vector<std::filesystem::path> &rtlDirectories, std::fi
     m_typeDefinitions["longint"] = VariableType::getInteger();
     m_typeDefinitions["integer"] = VariableType::getInteger();
     m_typeDefinitions["int64"] = VariableType::getInteger(64);
-    m_typeDefinitions["string"] = VariableType::getString();
+    m_typeDefinitions["string"] = StringType::getString();
     m_typeDefinitions["boolean"] = VariableType::getBoolean();
 }
 bool Parser::hasError() const { return !m_errors.empty(); }

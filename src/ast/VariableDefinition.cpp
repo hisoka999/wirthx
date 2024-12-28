@@ -3,17 +3,16 @@
 #include <llvm/IR/IRBuilder.h>
 #include <magic_enum/magic_enum.hpp>
 #include "ASTNode.h"
-#include "RecordType.h"
-#include "compare.h"
 #include "compiler/Context.h"
+#include "types/RecordType.h"
+#include "types/StringType.h"
 using namespace std::literals;
 
 llvm::AllocaInst *VariableDefinition::generateCode(std::unique_ptr<Context> &context) const
 {
-    auto array = std::dynamic_pointer_cast<ArrayType>(this->variableType);
-    if (array != nullptr)
+    if (const auto array = std::dynamic_pointer_cast<ArrayType>(this->variableType))
     {
-        auto arrayType = array->generateLlvmType(context);
+        const auto arrayType = array->generateLlvmType(context);
 
         if (array->isDynArray)
         {

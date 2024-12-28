@@ -1,11 +1,14 @@
-#include "ast/VariableType.h"
+#include "VariableType.h"
 #include <cassert>
 #include <llvm/IR/IRBuilder.h>
 
 #include "compiler/Context.h"
 #include "exceptions/CompilerException.h"
 
-VariableType::VariableType(VariableBaseType baseType, std::string typeName) : baseType(baseType), typeName(typeName) {}
+VariableType::VariableType(const VariableBaseType baseType, const std::string &typeName) :
+    baseType(baseType), typeName(typeName)
+{
+}
 bool VariableType::isSimpleType() const
 {
     switch (this->baseType)
@@ -69,13 +72,6 @@ std::shared_ptr<VariableType> VariableType::getPointer()
 }
 bool VariableType::operator==(const VariableType &other) const { return this->baseType == other.baseType; }
 
-std::shared_ptr<StringType> VariableType::getString()
-{
-    static auto stringType = std::make_shared<StringType>();
-    stringType->baseType = VariableBaseType::String;
-    stringType->typeName = "string";
-    return stringType;
-}
 
 std::shared_ptr<ArrayType> ArrayType::getFixedArray(size_t low, size_t heigh,
                                                     const std::shared_ptr<VariableType> &baseType)
@@ -186,63 +182,6 @@ llvm::Value *ArrayType::generateFieldAccess(Token &token, llvm::Value *indexValu
     return context->Builder->CreateLoad(V->getAllocatedType()->getArrayElementType(), arrayValue);
 }
 
-
-llvm::Type *StringType::generateLlvmType(std::unique_ptr<Context> &context)
-{
-    if (llvmType == nullptr)
-    {
-        const auto baseType = IntegerType::getInteger(8);
-        const auto charType = baseType->generateLlvmType(context);
-        std::vector<llvm::Type *> types;
-        types.emplace_back(VariableType::getInteger(64)->generateLlvmType(context));
-        types.emplace_back(VariableType::getInteger(64)->generateLlvmType(context));
-        types.emplace_back(llvm::PointerType::getUnqual(charType));
-
-
-        llvm::ArrayRef<llvm::Type *> Elements(types);
-
-
-        llvmType = llvm::StructType::create(Elements, "string");
-    }
-    return llvmType;
-}
-
-llvm::Value *StringType::generateFieldAccess(Token &token, llvm::Value *indexValue, std::unique_ptr<Context> &context)
-{
-    auto arrayName = std::string(token.lexical());
-    llvm::Value *V = context->NamedAllocations[arrayName];
-
-    if (!V)
-    {
-        for (auto &arg: context->TopLevelFunction->args())
-        {
-            if (arg.getName() == arrayName)
-            {
-                V = context->TopLevelFunction->getArg(arg.getArgNo());
-                break;
-            }
-        }
-    }
-
-    if (!V)
-        return LogErrorV("Unknown variable for string access: " + arrayName);
-
-
-    auto llvmRecordType = this->generateLlvmType(context);
-    auto arrayBaseType = IntegerType::getInteger(8)->generateLlvmType(context);
-
-    auto arrayPointerOffset = context->Builder->CreateStructGEP(llvmRecordType, V, 2, "string.ptr.offset");
-    // const llvm::DataLayout &DL = context->TheModule->getDataLayout();
-    // auto alignment = DL.getPrefTypeAlign(ptrType);
-    auto loadResult =
-            context->Builder->CreateLoad(llvm::PointerType::getUnqual(*context->TheContext), arrayPointerOffset);
-
-
-    auto bounds =
-            context->Builder->CreateGEP(arrayBaseType, loadResult, llvm::ArrayRef<llvm::Value *>{indexValue}, "", true);
-
-    return context->Builder->CreateLoad(arrayBaseType, bounds);
-}
 std::shared_ptr<PointerType> PointerType::getPointerTo(const std::shared_ptr<VariableType> &baseType)
 {
     auto ptrType = std::make_shared<PointerType>();

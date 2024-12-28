@@ -10,7 +10,7 @@ private:
 public:
     SystemFunctionCallNode(const Token &token, std::string name, std::vector<std::shared_ptr<ASTNode>> args);
     llvm::Value *codegen_setlength(std::unique_ptr<Context> &context, ASTNode *parent);
-    llvm::Value *codegen_length(std::unique_ptr<Context> &context, ASTNode *parent);
+    llvm::Value *codegen_length(std::unique_ptr<Context> &context, ASTNode *parent) const;
     llvm::Value *codegen_write(std::unique_ptr<Context> &context, ASTNode *parent);
     llvm::Value *codegen_writeln(std::unique_ptr<Context> &context, ASTNode *parent);
     ~SystemFunctionCallNode() override = default;

@@ -1,9 +1,6 @@
 #include "WhileNode.h"
-
 #include <llvm/IR/IRBuilder.h>
-
 #include <utility>
-
 #include "compiler/Context.h"
 #include "exceptions/CompilerException.h"
 

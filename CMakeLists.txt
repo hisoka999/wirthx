@@ -69,8 +69,9 @@ file(GLOB SRC
         src/ast/BlockNode.cpp
         src/ast/UnitNode.cpp
         src/ast/SystemFunctionCallNode.cpp
-        src/ast/VariableType.cpp
-        src/ast/RecordType.cpp
+        src/ast/types/VariableType.cpp
+        src/ast/types/RecordType.cpp
+        src/ast/types/StringType.cpp
         src/ast/ForNode.cpp
         src/ast/RepeatUntilNode.cpp
         src/ast/BreakNode.cpp

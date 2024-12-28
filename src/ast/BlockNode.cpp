@@ -154,10 +154,10 @@ std::optional<VariableDefinition> BlockNode::getVariableDefinition(const std::st
 void BlockNode::addVariableDefinition(VariableDefinition definition) { m_variableDefinitions.emplace_back(definition); }
 
 
-void BlockNode::appendExpression(std::shared_ptr<ASTNode> node) { m_expressions.push_back(node); }
+void BlockNode::appendExpression(const std::shared_ptr<ASTNode> &node) { m_expressions.push_back(node); }
 void BlockNode::typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
 {
-    for (auto exp: m_expressions)
+    for (const auto &exp: m_expressions)
     {
         exp->typeCheck(unit, parentNode);
     }

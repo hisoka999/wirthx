@@ -6,6 +6,7 @@
 #include "../compare.h"
 #include "UnitNode.h"
 #include "compiler/Context.h"
+#include "types/StringType.h"
 
 
 static std::vector<std::string> knownSystemCalls = {"writeln", "write",     "printf", "exit", "low",
@@ -76,7 +77,7 @@ llvm::Value *SystemFunctionCallNode::codegen_setlength(std::unique_ptr<Context> 
 
     return nullptr;
 }
-llvm::Value *SystemFunctionCallNode::codegen_length(std::unique_ptr<Context> &context, ASTNode *parent)
+llvm::Value *SystemFunctionCallNode::codegen_length(std::unique_ptr<Context> &context, ASTNode *parent) const
 {
     const auto paramType = m_args[0]->resolveType(context->ProgramUnit, parent);
     if (const auto stringType = std::dynamic_pointer_cast<StringType>(paramType))

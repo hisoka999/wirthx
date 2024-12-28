@@ -4,6 +4,7 @@
 
 #include "UnitNode.h"
 #include "compiler/Context.h"
+#include "types/StringType.h"
 
 
 ArrayAccessNode::ArrayAccessNode(Token arrayName, const std::shared_ptr<ASTNode> &indexNode) :

@@ -1,5 +1,5 @@
 #pragma once
-#include "VariableDefinition.h"
+#include "../VariableDefinition.h"
 #include "VariableType.h"
 
 #include <cstddef>

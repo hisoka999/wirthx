@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include "VariableType.h"
+#include "types/VariableType.h"
 
 class ASTNode;
 

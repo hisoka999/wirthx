@@ -19,6 +19,7 @@ std::vector<Token> Lexer::tokenize(const std::string &filename, const std::strin
 
     size_t row = 1;
     size_t column = 1;
+    auto contentPtr = std::make_shared<std::string>(content);
     for (size_t i = 0; i < content.size(); ++i)
     {
 
@@ -43,10 +44,8 @@ std::vector<Token> Lexer::tokenize(const std::string &filename, const std::strin
         if (found)
         {
             const size_t offset = endPosition - i;
-            SourceLocation source_location = {.filename = filename,
-                                              .source = std::make_shared<std::string>(content),
-                                              .byte_offset = i,
-                                              .num_bytes = offset};
+            SourceLocation source_location = {
+                    .filename = filename, .source = contentPtr, .byte_offset = i, .num_bytes = offset};
             tokens.emplace_back(source_location, row, column, TokenType::KEYWORD);
             i = endPosition - 1;
             column += offset + 1;
@@ -57,10 +56,8 @@ std::vector<Token> Lexer::tokenize(const std::string &filename, const std::strin
         if (found)
         {
             const size_t offset = endPosition - i + 1;
-            SourceLocation source_location = {.filename = filename,
-                                              .source = std::make_shared<std::string>(content),
-                                              .byte_offset = i,
-                                              .num_bytes = offset};
+            SourceLocation source_location = {
+                    .filename = filename, .source = contentPtr, .byte_offset = i, .num_bytes = offset};
             tokens.emplace_back(source_location, row, column, TokenType::NAMEDTOKEN);
             i = endPosition;
             column += offset;
@@ -73,10 +70,8 @@ std::vector<Token> Lexer::tokenize(const std::string &filename, const std::strin
         {
             size_t offset = endPosition - i;
             auto string_length = (offset - 1);
-            SourceLocation source_location = {.filename = filename,
-                                              .source = std::make_shared<std::string>(content),
-                                              .byte_offset = i + 1,
-                                              .num_bytes = string_length};
+            SourceLocation source_location = {
+                    .filename = filename, .source = contentPtr, .byte_offset = i + 1, .num_bytes = string_length};
             if (string_length != 1)
                 tokens.emplace_back(source_location, row, column, TokenType::STRING);
             else
@@ -92,10 +87,8 @@ std::vector<Token> Lexer::tokenize(const std::string &filename, const std::strin
             size_t offset = endPosition - i;
             auto string_length = (offset);
 
-            SourceLocation source_location = {.filename = filename,
-                                              .source = std::make_shared<std::string>(content),
-                                              .byte_offset = i,
-                                              .num_bytes = string_length};
+            SourceLocation source_location = {
+                    .filename = filename, .source = contentPtr, .byte_offset = i, .num_bytes = string_length};
             if (string_length != 1)
                 tokens.push_back(Token(source_location, row, column, TokenType::ESCAPED_STRING));
             else
@@ -110,20 +103,15 @@ std::vector<Token> Lexer::tokenize(const std::string &filename, const std::strin
         if (found)
         {
             const size_t offset = endPosition - i + 1;
-            SourceLocation source_location = {.filename = filename,
-                                              .source = std::make_shared<std::string>(content),
-                                              .byte_offset = i,
-                                              .num_bytes = offset};
+            SourceLocation source_location = {
+                    .filename = filename, .source = contentPtr, .byte_offset = i, .num_bytes = offset};
             tokens.push_back(Token(source_location, row, column, TokenType::NUMBER));
             i = endPosition;
             column += offset;
             continue;
         }
         // TokenType tokenType;
-        SourceLocation source_location = {.filename = filename,
-                                          .source = std::make_shared<std::string>(content),
-                                          .byte_offset = i,
-                                          .num_bytes = 1};
+        SourceLocation source_location = {.filename = filename, .source = contentPtr, .byte_offset = i, .num_bytes = 1};
         switch (ch)
         {
             case '\n':
@@ -187,10 +175,8 @@ std::vector<Token> Lexer::tokenize(const std::string &filename, const std::strin
         }
         column++;
     }
-    SourceLocation source_location = {.filename = filename,
-                                      .source = std::make_shared<std::string>(content),
-                                      .byte_offset = content.size(),
-                                      .num_bytes = 0};
+    SourceLocation source_location = {
+            .filename = filename, .source = contentPtr, .byte_offset = content.size(), .num_bytes = 0};
     tokens.push_back(Token(source_location, row, column, TokenType::T_EOF));
     return tokens;
 }

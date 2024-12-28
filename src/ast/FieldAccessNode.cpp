@@ -1,12 +1,12 @@
 #include "FieldAccessNode.h"
 #include "FunctionCallNode.h"
 #include "FunctionDefinitionNode.h"
-#include "RecordType.h"
 #include "UnitNode.h"
 #include "compiler/Context.h"
 #include "exceptions/CompilerException.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "types/RecordType.h"
 
 
 FieldAccessNode::FieldAccessNode(const Token &element, const Token &field) :
