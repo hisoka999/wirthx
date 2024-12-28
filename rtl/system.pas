@@ -43,6 +43,11 @@ type
         value := value + 1;
     end;
 
+    Procedure inc(var value: int64); inline;
+    begin
+        value := value + 1;
+    end;
+
     Procedure dec(var value: integer); inline;
     begin
         value := value - 1;
@@ -51,6 +56,11 @@ type
     procedure Readln(var F: File; var value: string);
     var
         c : char  ;
+        buffer : array [0..100] of char;
+        offset : int64 = 0;
+        bufferIndex : int64 = 0;
+        i : int64;
+        j: int64;
     begin
 
         if F.isOpen then
@@ -62,12 +72,32 @@ type
 
                 if c >= 32 and c <= 125 then
                 begin
-                    value := value + c;
+                    //value := value + c;
+                    buffer[bufferIndex] := c;
+                    inc(bufferIndex);
+                    // flush buffer
+                    if high(buffer) = bufferIndex  then
+                    begin
+                        SetLength(value,offset + bufferIndex+1);
+                        for i := 0 to bufferIndex - 1  do
+                        begin
+                            value[i+offset] := buffer[i];
+                        end;
+                        offset := offset + bufferIndex;
+                        bufferIndex := 0;
+                    end;
+
                 end;
 
             end;
             until c = 10 or c = 13 or c = -1;
 
+            SetLength(value,offset + bufferIndex);
+            for j := 0 to bufferIndex - 1 do
+            begin
+                value[j+offset] := buffer[j];
+            end;
+            value[bufferIndex+offset] := 0;
         end;
     end;
 

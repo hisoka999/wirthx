@@ -74,6 +74,41 @@ llvm::Value *SystemFunctionCallNode::codegen_setlength(std::unique_ptr<Context> 
 
         return context->Builder->CreateStore(allocCall, arrayPointerOffset);
     }
+    if (arrayType->baseType == VariableBaseType::String)
+    {
+        auto realType = std::dynamic_pointer_cast<StringType>(arrayType);
+        auto indexType = VariableType::getInteger(64)->generateLlvmType(context);
+        auto value = array->codegen(context);
+        // const llvm::DataLayout &DL = context->TheModule->getDataLayout();
+        // auto alignment = DL.getPrefTypeAlign(indexType);
+        auto arrayBaseType = IntegerType::getInteger(8)->generateLlvmType(context);
+        auto llvmRecordType = realType->generateLlvmType(context);
+
+
+        // auto ptrType = llvm::PointerType::getUnqual(arrayBaseType);
+
+        auto arraySizeOffset = context->Builder->CreateStructGEP(llvmRecordType, value, 1, "array.size.offset");
+
+
+        auto arrayPointerOffset = context->Builder->CreateStructGEP(llvmRecordType, value, 2, "array.ptr.offset");
+        // auto arrayPointer =
+        //         context->Builder->CreateAlignedLoad(arrayBaseType, arrayPointerOffset, alignment, "array.ptr");
+        if (64 != newSize->getType()->getIntegerBitWidth())
+        {
+            newSize = context->Builder->CreateIntCast(newSize, indexType, true, "lhs_cast");
+        }
+
+        // change array size
+        context->Builder->CreateStore(newSize, arraySizeOffset);
+
+        // allocate memory for pointer
+
+        auto allocSize = context->Builder->CreateMul(
+                newSize, context->Builder->getInt64(arrayBaseType->getPrimitiveSizeInBits()));
+        auto allocCall = context->Builder->CreateCall(context->TheModule->getFunction("malloc"), allocSize);
+
+        return context->Builder->CreateStore(allocCall, arrayPointerOffset);
+    }
 
     return nullptr;
 }
@@ -91,6 +126,21 @@ llvm::Value *SystemFunctionCallNode::codegen_length(std::unique_ptr<Context> &co
         auto indexType = VariableType::getInteger(64)->generateLlvmType(context);
 
         return context->Builder->CreateLoad(indexType, arraySizeOffset, "loaded.length");
+    }
+    if (const auto arrayType = std::dynamic_pointer_cast<ArrayType>(paramType))
+    {
+        if (arrayType->isDynArray)
+        {
+            const auto value = m_args[0]->codegen(context);
+            const auto llvmRecordType = arrayType->generateLlvmType(context);
+
+            const auto arraySizeOffset =
+                    context->Builder->CreateStructGEP(llvmRecordType, value, 0, "array.size.offset");
+            const auto indexType = VariableType::getInteger(64)->generateLlvmType(context);
+
+            return context->Builder->CreateLoad(indexType, arraySizeOffset);
+        }
+        return context->Builder->getInt64(arrayType->high - arrayType->low);
     }
     return nullptr;
 }

@@ -215,13 +215,13 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
     {
         flags.push_back("-l" + lib);
     }
-    /*
+
     if (context->compilerOptions.buildMode == BuildMode::Debug)
     {
         flags.emplace_back("-fsanitize=address");
         flags.emplace_back("-fno-omit-frame-pointer");
     }
-    */
+
     if (!pascal_link_modules(errorStream, basePath, context->ProgramUnit->getUnitName(), flags, objectFiles))
     {
         return;

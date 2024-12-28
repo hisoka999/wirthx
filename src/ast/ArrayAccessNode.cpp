@@ -27,6 +27,11 @@ std::shared_ptr<VariableType> ArrayAccessNode::resolveType(const std::unique_ptr
             {
                 varType = param.value().type;
             }
+            else if (const auto variableDef =
+                             functionDefinition->body()->getVariableDefinition(m_arrayNameToken.lexical()))
+            {
+                varType = variableDef->variableType;
+            }
         }
     }
     else
@@ -85,6 +90,10 @@ llvm::Value *ArrayAccessNode::codegen(std::unique_ptr<Context> &context)
         if (const auto param = functionDefinition->getParam(m_arrayNameToken.lexical()))
         {
             arrayDefType = param.value().type;
+        }
+        else if (const auto variableDef = functionDefinition->body()->getVariableDefinition(m_arrayNameToken.lexical()))
+        {
+            arrayDefType = variableDef->variableType;
         }
     }
 

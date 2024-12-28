@@ -999,10 +999,10 @@ std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope)
                 .variableType = VariableType::getInteger(64), .variableName = loopVariable, .scopeId = scope + 1});
         consume(TokenType::COLON);
         consume(TokenType::EQUAL);
-        auto loopStart = parseToken(scope + 1);
+        auto loopStart = parseBaseExpression(scope + 1);
 
         consumeKeyWord("to");
-        auto loopEnd = parseToken(scope + 1);
+        auto loopEnd = parseBaseExpression(scope + 1);
 
         std::vector<std::shared_ptr<ASTNode>> forNodes;
 
