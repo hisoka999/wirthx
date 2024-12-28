@@ -145,7 +145,7 @@ std::shared_ptr<ASTNode> Parser::parseEscapedString(const Token &token)
         result += std::atoi(tmp.data());
         x = next + 1;
     }
-    return std::make_shared<StringConstantNode>(result);
+    return std::make_shared<StringConstantNode>(token, result);
 }
 
 std::shared_ptr<ASTNode> Parser::parseNumber()
@@ -155,7 +155,7 @@ std::shared_ptr<ASTNode> Parser::parseNumber()
     auto value = std::atoll(token.lexical().data());
     auto base = 1 + static_cast<int>(std::log2(value));
     base = (base > 32) ? 64 : 32;
-    return std::make_shared<NumberNode>(value, base);
+    return std::make_shared<NumberNode>(token, value, base);
 }
 
 
@@ -406,8 +406,9 @@ std::shared_ptr<ASTNode> Parser::parseLogicalExpression(const size_t scope, std:
     if (canConsumeKeyWord("not"))
     {
         consumeKeyWord("not");
+        auto token = current();
         auto rhs = parseExpression(scope);
-        return parseExpression(scope, std::make_shared<LogicalExpressionNode>(LogicalOperator::NOT, rhs));
+        return parseExpression(scope, std::make_shared<LogicalExpressionNode>(token, LogicalOperator::NOT, rhs));
     }
 
     if (!lhs)
@@ -416,96 +417,108 @@ std::shared_ptr<ASTNode> Parser::parseLogicalExpression(const size_t scope, std:
     if (canConsumeKeyWord("or"))
     {
         consumeKeyWord("or");
+        auto token = current();
         auto rhs = parseExpression(scope);
-        return parseExpression(scope, std::make_shared<LogicalExpressionNode>(LogicalOperator::OR, lhs, rhs));
+        return parseExpression(scope, std::make_shared<LogicalExpressionNode>(token, LogicalOperator::OR, lhs, rhs));
     }
     if (canConsumeKeyWord("and"))
     {
         consumeKeyWord("and");
+        auto token = current();
         auto rhs = parseExpression(scope);
-        return parseExpression(scope, std::make_shared<LogicalExpressionNode>(LogicalOperator::AND, lhs, rhs));
+        return parseExpression(scope, std::make_shared<LogicalExpressionNode>(token, LogicalOperator::AND, lhs, rhs));
     }
     return lhs;
 }
 
 
-std::shared_ptr<ASTNode> Parser::parseBaseExpression(const size_t scope, const std::shared_ptr<ASTNode> &origLhs)
+std::shared_ptr<ASTNode> Parser::parseBaseExpression(const size_t scope, const std::shared_ptr<ASTNode> &origLhs,
+                                                     bool includeCompare)
 {
     auto lhs = (origLhs) ? origLhs : parseToken(scope);
 
     if (tryConsume(TokenType::PLUS))
     {
-        auto rhs = parseBaseExpression(scope);
-        return parseExpression(scope, std::make_shared<BinaryOperationNode>(Operator::PLUS, lhs, rhs));
+        Token operatorToken = current();
+        auto rhs = parseBaseExpression(scope, nullptr, false);
+        return parseExpression(scope, std::make_shared<BinaryOperationNode>(operatorToken, Operator::PLUS, lhs, rhs));
     }
     if (tryConsume(TokenType::MINUS))
     {
-        auto rhs = parseBaseExpression(scope);
-        return parseExpression(scope, std::make_shared<BinaryOperationNode>(Operator::MINUS, lhs, rhs));
+        Token operatorToken = current();
+        auto rhs = parseBaseExpression(scope, nullptr, false);
+        return parseExpression(scope, std::make_shared<BinaryOperationNode>(operatorToken, Operator::MINUS, lhs, rhs));
     }
     if (tryConsume(TokenType::MUL))
     {
-        auto rhs = parseBaseExpression(scope);
-        return parseExpression(scope, std::make_shared<BinaryOperationNode>(Operator::MUL, lhs, rhs));
+        Token operatorToken = current();
+        auto rhs = parseBaseExpression(scope, nullptr, false);
+        return parseExpression(scope, std::make_shared<BinaryOperationNode>(operatorToken, Operator::MUL, lhs, rhs));
     }
     if (tryConsume(TokenType::DIV))
     {
-        auto rhs = parseBaseExpression(scope);
-        return parseExpression(scope, std::make_shared<BinaryOperationNode>(Operator::DIV, lhs, rhs));
+        Token operatorToken = current();
+        auto rhs = parseBaseExpression(scope, nullptr, false);
+        return parseExpression(scope, std::make_shared<BinaryOperationNode>(operatorToken, Operator::DIV, lhs, rhs));
     }
     if (canConsumeKeyWord("mod"))
     {
+        Token operatorToken = current();
         consumeKeyWord("mod");
         auto rhs = parseToken(scope);
-        return parseExpression(scope, std::make_shared<BinaryOperationNode>(Operator::MOD, lhs, rhs));
+        return parseExpression(scope, std::make_shared<BinaryOperationNode>(operatorToken, Operator::MOD, lhs, rhs));
     }
 
-
-    if (canConsume(TokenType::GREATER))
+    if (includeCompare)
     {
-        consume(TokenType::GREATER);
-        auto operatorToken = current();
+        if (canConsume(TokenType::GREATER))
+        {
+            consume(TokenType::GREATER);
+            auto operatorToken = current();
+            if (canConsume(TokenType::EQUAL))
+            {
+                consume(TokenType::EQUAL);
+                auto rhs = parseBaseExpression(scope);
+                return std::make_shared<ComparrisionNode>(operatorToken, CMPOperator::GREATER_EQUAL, lhs, rhs);
+            }
+            auto rhs = parseBaseExpression(scope);
+            return parseExpression(scope,
+                                   std::make_shared<ComparrisionNode>(operatorToken, CMPOperator::GREATER, lhs, rhs));
+        }
+
+        if (canConsume(TokenType::LESS))
+        {
+            consume(TokenType::LESS);
+            auto operatorToken = current();
+            if (canConsume(TokenType::EQUAL))
+            {
+                consume(TokenType::EQUAL);
+                auto rhs = parseBaseExpression(scope);
+                return std::make_shared<ComparrisionNode>(operatorToken, CMPOperator::LESS_EQUAL, lhs, rhs);
+            }
+            auto rhs = parseBaseExpression(scope);
+            return parseExpression(scope,
+                                   std::make_shared<ComparrisionNode>(operatorToken, CMPOperator::LESS, lhs, rhs));
+        }
+
+        if (canConsume(TokenType::BANG) && canConsume(TokenType::EQUAL, 2))
+        {
+            consume(TokenType::BANG);
+            consume(TokenType::EQUAL);
+            auto operatorToken = current();
+            auto rhs = parseBaseExpression(scope);
+            return parseExpression(
+                    scope, std::make_shared<ComparrisionNode>(operatorToken, CMPOperator::NOT_EQUALS, lhs, rhs));
+        }
+
         if (canConsume(TokenType::EQUAL))
         {
             consume(TokenType::EQUAL);
+            auto operatorToken = current();
             auto rhs = parseBaseExpression(scope);
-            return std::make_shared<ComparrisionNode>(operatorToken, CMPOperator::GREATER_EQUAL, lhs, rhs);
+            return parseExpression(scope,
+                                   std::make_shared<ComparrisionNode>(operatorToken, CMPOperator::EQUALS, lhs, rhs));
         }
-        auto rhs = parseBaseExpression(scope);
-        return parseExpression(scope,
-                               std::make_shared<ComparrisionNode>(operatorToken, CMPOperator::GREATER, lhs, rhs));
-    }
-
-    if (canConsume(TokenType::LESS))
-    {
-        consume(TokenType::LESS);
-        auto operatorToken = current();
-        if (canConsume(TokenType::EQUAL))
-        {
-            consume(TokenType::EQUAL);
-            auto rhs = parseBaseExpression(scope);
-            return std::make_shared<ComparrisionNode>(operatorToken, CMPOperator::LESS_EQUAL, lhs, rhs);
-        }
-        auto rhs = parseBaseExpression(scope);
-        return parseExpression(scope, std::make_shared<ComparrisionNode>(operatorToken, CMPOperator::LESS, lhs, rhs));
-    }
-
-    if (canConsume(TokenType::BANG) && canConsume(TokenType::EQUAL, 2))
-    {
-        consume(TokenType::BANG);
-        consume(TokenType::EQUAL);
-        auto operatorToken = current();
-        auto rhs = parseBaseExpression(scope);
-        return parseExpression(scope,
-                               std::make_shared<ComparrisionNode>(operatorToken, CMPOperator::NOT_EQUALS, lhs, rhs));
-    }
-
-    if (canConsume(TokenType::EQUAL))
-    {
-        consume(TokenType::EQUAL);
-        auto operatorToken = current();
-        auto rhs = parseBaseExpression(scope);
-        return parseExpression(scope, std::make_shared<ComparrisionNode>(operatorToken, CMPOperator::EQUALS, lhs, rhs));
     }
 
     return lhs;
@@ -654,7 +667,7 @@ std::shared_ptr<ASTNode> Parser::parseVariableAccess(size_t scope)
                 .token = token, .message = "A variable with the name '" + token.lexical() + "' is not yet defined!"});
         return nullptr;
     }
-    return std::make_shared<VariableAccessNode>(token.lexical());
+    return std::make_shared<VariableAccessNode>(token);
 }
 std::shared_ptr<ASTNode> Parser::parseToken(size_t scope)
 {
@@ -666,12 +679,12 @@ std::shared_ptr<ASTNode> Parser::parseToken(size_t scope)
     {
         consume(TokenType::STRING);
 
-        return std::make_shared<StringConstantNode>(std::string(current().lexical()));
+        return std::make_shared<StringConstantNode>(current(), std::string(current().lexical()));
     }
     if (canConsume(TokenType::CHAR))
     {
         consume(TokenType::CHAR);
-        return std::make_shared<CharConstantNode>(std::string(current().lexical()));
+        return std::make_shared<CharConstantNode>(current(), std::string(current().lexical()));
     }
     if (canConsume(TokenType::ESCAPED_STRING))
     {
@@ -689,17 +702,18 @@ std::shared_ptr<ASTNode> Parser::parseToken(size_t scope)
     }
     if (tryConsumeKeyWord("true"))
     {
-        return std::make_shared<BooleanNode>(true);
+        return std::make_shared<BooleanNode>(current(), true);
     }
     if (tryConsumeKeyWord("false"))
     {
-        return std::make_shared<BooleanNode>(false);
+        return std::make_shared<BooleanNode>(current(), false);
     }
     return nullptr;
 }
 std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDefinition(size_t scope, bool isFunction)
 {
     consume(TokenType::NAMEDTOKEN);
+    auto functionNameToken = current();
     auto functionName = current().lexical();
     m_known_function_names.push_back(functionName);
     bool isExternalFunction = false;
@@ -827,8 +841,8 @@ std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDefinition(size_t s
     // parse function body
     if (isExternalFunction)
     {
-        functionDefinition = std::make_shared<FunctionDefinitionNode>(functionName, externalName, libName,
-                                                                      functionParams, !isFunction, returnType);
+        functionDefinition = std::make_shared<FunctionDefinitionNode>(functionNameToken, functionName, externalName,
+                                                                      libName, functionParams, !isFunction, returnType);
     }
     else
     {
@@ -842,8 +856,8 @@ std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDefinition(size_t s
                                                                    .value = nullptr,
                                                                    .constant = false});
         }
-        functionDefinition = std::make_shared<FunctionDefinitionNode>(functionName, functionParams, functionBody,
-                                                                      !isFunction, returnType);
+        functionDefinition = std::make_shared<FunctionDefinitionNode>(functionNameToken, functionName, functionParams,
+                                                                      functionBody, !isFunction, returnType);
         for (auto attribute: functionAttributes)
             functionDefinition->addAttribute(attribute);
     }
@@ -920,6 +934,7 @@ std::shared_ptr<BlockNode> Parser::parseBlock(size_t scope)
         }
     }
     consumeKeyWord("begin");
+    auto beginToken = current();
     std::vector<std::shared_ptr<ASTNode>> expressions;
     while (!tryConsumeKeyWord("end"))
     {
@@ -937,12 +952,14 @@ std::shared_ptr<BlockNode> Parser::parseBlock(size_t scope)
         }
     }
 
-    return std::make_shared<BlockNode>(variable_definitions, expressions);
+    return std::make_shared<BlockNode>(beginToken, variable_definitions, expressions);
 }
 std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope)
 {
     if (tryConsumeKeyWord("if"))
     {
+        auto ifToken = current();
+
         auto condition = parseExpression(scope);
         std::vector<std::shared_ptr<ASTNode>> ifStatements;
         std::vector<std::shared_ptr<ASTNode>> elseStatements;
@@ -969,11 +986,12 @@ std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope)
             }
         }
 
-        return std::make_shared<IfConditionNode>(condition, ifStatements, elseStatements);
+        return std::make_shared<IfConditionNode>(ifToken, condition, ifStatements, elseStatements);
     }
 
     if (tryConsumeKeyWord("for"))
     {
+        auto forToken = current();
         consume(TokenType::NAMEDTOKEN);
         auto loopVariable = std::string(current().lexical());
         m_known_variable_definitions.push_back(VariableDefinition{
@@ -1000,10 +1018,12 @@ std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope)
         }
 
 
-        return std::make_shared<ForNode>(loopVariable, loopStart, loopEnd, forNodes);
+        return std::make_shared<ForNode>(forToken, loopVariable, loopStart, loopEnd, forNodes);
     }
     if (tryConsumeKeyWord("while"))
     {
+        auto whileToken = current();
+
         auto expression = parseExpression(scope + 1);
         std::vector<std::shared_ptr<ASTNode>> whileNodes;
 
@@ -1019,11 +1039,13 @@ std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope)
             consume(TokenType::SEMICOLON);
         }
 
-        return std::make_shared<WhileNode>(expression, whileNodes);
+        return std::make_shared<WhileNode>(whileToken, expression, whileNodes);
     }
 
     if (tryConsumeKeyWord("repeat"))
     {
+        auto repeatToken = current();
+
         std::vector<std::shared_ptr<ASTNode>> whileNodes;
         if (!canConsumeKeyWord("begin"))
         {
@@ -1039,13 +1061,13 @@ std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope)
         auto expression = parseExpression(scope + 1);
         tryConsume(TokenType::SEMICOLON);
 
-        return std::make_shared<RepeatUntilNode>(expression, whileNodes);
+        return std::make_shared<RepeatUntilNode>(repeatToken, expression, whileNodes);
     }
 
     if (tryConsumeKeyWord("break"))
     {
         tryConsume(TokenType::SEMICOLON);
-        return std::make_shared<BreakNode>();
+        return std::make_shared<BreakNode>(current());
     }
 
     m_errors.push_back(
@@ -1057,7 +1079,7 @@ std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope)
 std::shared_ptr<ASTNode> Parser::parseFunctionCall(size_t scope)
 {
     consume(TokenType::NAMEDTOKEN);
-    // auto nameToken = current();
+    auto nameToken = current();
     auto functionName = std::string(current().lexical());
     const bool isSysCall = isKnownSystemCall(functionName);
     if (!isSysCall && std::ranges::find(m_known_function_names, functionName) == std::end(m_known_function_names))
@@ -1086,9 +1108,9 @@ std::shared_ptr<ASTNode> Parser::parseFunctionCall(size_t scope)
     consume(TokenType::RIGHT_CURLY);
     if (isSysCall)
     {
-        return std::make_shared<SystemFunctionCallNode>(functionName, callArgs);
+        return std::make_shared<SystemFunctionCallNode>(nameToken, functionName, callArgs);
     }
-    return std::make_shared<FunctionCallNode>(functionName, callArgs);
+    return std::make_shared<FunctionCallNode>(nameToken, functionName, callArgs);
 }
 
 bool Parser::importUnit(const std::string &filename)
@@ -1182,6 +1204,7 @@ std::unique_ptr<UnitNode> Parser::parseUnit()
 
             consume(TokenType::NAMEDTOKEN);
             auto unitName = std::string(current().lexical());
+            auto unitNameToken = current();
 
             consume(TokenType::SEMICOLON);
 
@@ -1245,7 +1268,8 @@ std::unique_ptr<UnitNode> Parser::parseUnit()
             }
 
 
-            return std::make_unique<UnitNode>(unitType, unitName, m_functionDefinitions, m_typeDefinitions, blockNode);
+            return std::make_unique<UnitNode>(unitNameToken, unitType, unitName, m_functionDefinitions,
+                                              m_typeDefinitions, blockNode);
         }
 
         m_errors.push_back(

@@ -2,9 +2,8 @@
 #include "compiler/Context.h"
 #include "llvm/IR/IRBuilder.h"
 
-BreakNode::BreakNode() {}
+BreakNode::BreakNode(const Token &token) : ASTNode(token) {}
 
-BreakNode::~BreakNode() {}
 
 void BreakNode::print() {}
 

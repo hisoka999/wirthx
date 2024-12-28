@@ -10,7 +10,7 @@
 
 
 FieldAccessNode::FieldAccessNode(const Token &element, const Token &field) :
-    m_element(element), m_elementName(element.lexical()), m_field(field), m_fieldName(field.lexical())
+    ASTNode(element), m_element(element), m_elementName(element.lexical()), m_field(field), m_fieldName(field.lexical())
 {
 }
 

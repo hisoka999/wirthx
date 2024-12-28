@@ -14,9 +14,10 @@ private:
     llvm::Value *codegenIfElse(std::unique_ptr<Context> &context);
 
 public:
-    IfConditionNode(std::shared_ptr<ASTNode> conditionNode, std::vector<std::shared_ptr<ASTNode>> ifExpressions,
-                    std::vector<std::shared_ptr<ASTNode>> elseExpressions);
-    ~IfConditionNode() = default;
+    IfConditionNode(const Token &token, const std::shared_ptr<ASTNode> &conditionNode,
+                    const std::vector<std::shared_ptr<ASTNode>> &ifExpressions,
+                    const std::vector<std::shared_ptr<ASTNode>> &elseExpressions);
+    ~IfConditionNode() override = default;
     void print() override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
 

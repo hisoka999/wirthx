@@ -6,10 +6,10 @@
 #include "exceptions/CompilerException.h"
 
 
-IfConditionNode::IfConditionNode(std::shared_ptr<ASTNode> conditionNode,
-                                 std::vector<std::shared_ptr<ASTNode>> ifExpressions,
-                                 std::vector<std::shared_ptr<ASTNode>> elseExpressions) :
-    m_conditionNode(conditionNode), m_ifExpressions(ifExpressions), m_elseExpressions(elseExpressions)
+IfConditionNode::IfConditionNode(const Token &token, const std::shared_ptr<ASTNode> &conditionNode,
+                                 const std::vector<std::shared_ptr<ASTNode>> &ifExpressions,
+                                 const std::vector<std::shared_ptr<ASTNode>> &elseExpressions) :
+    ASTNode(token), m_conditionNode(conditionNode), m_ifExpressions(ifExpressions), m_elseExpressions(elseExpressions)
 {
 }
 

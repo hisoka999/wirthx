@@ -9,11 +9,11 @@
 #include "llvm/IR/Verifier.h"
 
 
-UnitNode::UnitNode(UnitType unitType, const std::string unitName,
-                   std::vector<std::shared_ptr<FunctionDefinitionNode>> functionDefinitions,
-                   std::map<std::string, std::shared_ptr<VariableType>> typeDefinitions,
+UnitNode::UnitNode(const Token &token, UnitType unitType, const std::string &unitName,
+                   const std::vector<std::shared_ptr<FunctionDefinitionNode>> &functionDefinitions,
+                   const std::map<std::string, std::shared_ptr<VariableType>> &typeDefinitions,
                    const std::shared_ptr<BlockNode> &blockNode) :
-    m_unitType(unitType), m_unitName(unitName), m_functionDefinitions(functionDefinitions),
+    ASTNode(token), m_unitType(unitType), m_unitName(unitName), m_functionDefinitions(functionDefinitions),
     m_typeDefinitions(typeDefinitions), m_blockNode(blockNode)
 {
 }

@@ -12,7 +12,7 @@ private:
     std::shared_ptr<ASTNode> m_expression;
 
 public:
-    ArrayAssignmentNode(Token &arrayToken, const std::shared_ptr<ASTNode> &indexNode,
+    ArrayAssignmentNode(const Token &arrayToken, const std::shared_ptr<ASTNode> &indexNode,
                         const std::shared_ptr<ASTNode> &expression);
     ~ArrayAssignmentNode() override = default;
     void print() override;

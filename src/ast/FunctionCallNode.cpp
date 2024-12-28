@@ -5,13 +5,13 @@
 #include <utility>
 
 #include "FunctionDefinitionNode.h"
-#include "RecordType.h"
 #include "UnitNode.h"
 #include "compiler/Context.h"
 
 
-FunctionCallNode::FunctionCallNode(std::string name, const std::vector<std::shared_ptr<ASTNode>> &args) :
-    m_name(std::move(name)), m_args(args)
+FunctionCallNode::FunctionCallNode(const Token &token, std::string name,
+                                   const std::vector<std::shared_ptr<ASTNode>> &args) :
+    ASTNode(token), m_name(std::move(name)), m_args(args)
 {
 }
 
@@ -104,24 +104,24 @@ llvm::Value *FunctionCallNode::codegen(std::unique_ptr<Context> &context)
         else if (argType.has_value() && !argType.value().type->isSimpleType())
         {
             auto fieldName = functionDefinition.value()->name() + "_" + argType->argumentName;
-            auto llvmArgType = argType->type->generateLlvmType(context);
+            const auto llvmArgType = argType->type->generateLlvmType(context);
 
             auto memcpyCall = llvm::Intrinsic::getDeclaration(
                     context->TheModule.get(), llvm::Intrinsic::memcpy,
                     {context->Builder->getPtrTy(), context->Builder->getPtrTy(), context->Builder->getInt64Ty()});
-            std::vector<llvm::Value *> memcopyArgs;
+            std::vector<llvm::Value *> memcpyArgs;
             llvm::AllocaInst *alloca = context->Builder->CreateAlloca(llvmArgType, nullptr, fieldName + "_ptr");
 
             const llvm::DataLayout &DL = context->TheModule->getDataLayout();
             uint64_t structSize = DL.getTypeAllocSize(argType->type->generateLlvmType(context));
 
 
-            memcopyArgs.push_back(context->Builder->CreateBitCast(alloca, context->Builder->getPtrTy()));
-            memcopyArgs.push_back(context->Builder->CreateBitCast(argValue, context->Builder->getPtrTy()));
-            memcopyArgs.push_back(context->Builder->getInt64(structSize));
-            memcopyArgs.push_back(context->Builder->getFalse());
+            memcpyArgs.push_back(context->Builder->CreateBitCast(alloca, context->Builder->getPtrTy()));
+            memcpyArgs.push_back(context->Builder->CreateBitCast(argValue, context->Builder->getPtrTy()));
+            memcpyArgs.push_back(context->Builder->getInt64(structSize));
+            memcpyArgs.push_back(context->Builder->getFalse());
 
-            context->Builder->CreateCall(memcpyCall, memcopyArgs);
+            context->Builder->CreateCall(memcpyCall, memcpyArgs);
 
             ArgsV.push_back(alloca);
         }

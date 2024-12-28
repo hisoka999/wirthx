@@ -4,10 +4,11 @@
 
 #include "UnitNode.h"
 #include "compiler/Context.h"
+#include "exceptions/CompilerException.h"
 
-BinaryOperationNode::BinaryOperationNode(const Operator op, const std::shared_ptr<ASTNode> &lhs,
-                                         const std::shared_ptr<ASTNode> &rhs) :
-    ASTNode(), m_lhs(lhs), m_rhs(rhs), m_operator(op)
+BinaryOperationNode::BinaryOperationNode(const Token &operatorToken, const Operator op,
+                                         const std::shared_ptr<ASTNode> &lhs, const std::shared_ptr<ASTNode> &rhs) :
+    ASTNode(operatorToken), m_operatorToken(operatorToken), m_lhs(lhs), m_rhs(rhs), m_operator(op)
 {
 }
 
@@ -263,4 +264,20 @@ std::shared_ptr<VariableType> BinaryOperationNode::resolveType(const std::unique
         return type;
     }
     return std::make_shared<VariableType>();
+}
+void BinaryOperationNode::typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
+{
+    if (auto lhsType = m_lhs->resolveType(unit, parentNode); auto rhsType = m_rhs->resolveType(unit, parentNode))
+    {
+        if (*lhsType != *rhsType)
+        {
+            if (not(lhsType->baseType == VariableBaseType::String && rhsType->baseType == VariableBaseType::Integer))
+            {
+                throw CompilerException(ParserError{
+                        .token = m_operatorToken,
+                        .message = "the binary operation of \"" + lhsType->typeName + "\" and \"" + rhsType->typeName +
+                                   "\" is not possible because the types are not the same"});
+            }
+        }
+    }
 }

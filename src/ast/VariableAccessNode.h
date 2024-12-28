@@ -8,8 +8,8 @@ private:
     std::string m_variableName;
 
 public:
-    VariableAccessNode(const std::string_view variableName);
-    ~VariableAccessNode() = default;
+    VariableAccessNode(const Token &token);
+    ~VariableAccessNode() override = default;
     void print() override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
 

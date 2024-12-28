@@ -1,6 +1,7 @@
 #pragma once
 #include <filesystem>
 #include <string_view>
+#include <utility>
 #include "SourceLocation.h"
 enum class TokenType : uint16_t
 {
@@ -38,8 +39,11 @@ struct Token
     size_t row{};
     size_t col{};
     TokenType tokenType;
-    Token(const SourceLocation &sourceLocation, const size_t row, const size_t col, const TokenType tokenType) :
-        sourceLocation(sourceLocation), row(row), col(col), tokenType(tokenType)
+
+    Token() : sourceLocation(), tokenType(TokenType::T_EOF) {}
+
+    Token(SourceLocation sourceLocation, const size_t row, const size_t col, const TokenType tokenType) :
+        sourceLocation(std::move(sourceLocation)), row(row), col(col), tokenType(tokenType)
     {
     }
 

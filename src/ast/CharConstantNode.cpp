@@ -2,7 +2,10 @@
 #include "compiler/Context.h"
 #include "llvm/IR/Constants.h"
 
-CharConstantNode::CharConstantNode(std::string_view literal) : m_literal(literal.at(0)) {}
+CharConstantNode::CharConstantNode(const Token &token, std::string_view literal) :
+    ASTNode(token), m_literal(literal.at(0))
+{
+}
 
 void CharConstantNode::print() {}
 llvm::Value *CharConstantNode::codegen(std::unique_ptr<Context> &context)

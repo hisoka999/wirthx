@@ -8,8 +8,9 @@
 #include "compiler/Context.h"
 #include "exceptions/CompilerException.h"
 
-VariableAssignmentNode::VariableAssignmentNode(const Token variableName, const std::shared_ptr<ASTNode> &expression) :
-    m_variable(variableName), m_variableName(std::string(m_variable.lexical())), m_expression(expression)
+VariableAssignmentNode::VariableAssignmentNode(const Token &variableName, const std::shared_ptr<ASTNode> &expression) :
+    ASTNode(variableName), m_variable(variableName), m_variableName(std::string(m_variable.lexical())),
+    m_expression(expression)
 {
 }
 

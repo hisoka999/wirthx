@@ -4,7 +4,7 @@
 #include "llvm/IR/IRBuilder.h"
 
 
-BooleanNode::BooleanNode(const bool value) : m_value(value) {}
+BooleanNode::BooleanNode(const Token &token, const bool value) : ASTNode(token), m_value(value) {}
 
 void BooleanNode::print()
 {

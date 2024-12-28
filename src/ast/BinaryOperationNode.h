@@ -12,7 +12,7 @@ enum class Operator : char
 
 class BinaryOperationNode : public ASTNode
 {
-private:
+    Token m_operatorToken;
     std::shared_ptr<ASTNode> m_lhs;
     std::shared_ptr<ASTNode> m_rhs;
     Operator m_operator;
@@ -21,11 +21,14 @@ private:
     llvm::Value *generateForString(llvm::Value *lhs, llvm::Value *rhs, std::unique_ptr<Context> &context);
 
 public:
-    BinaryOperationNode(Operator op, const std::shared_ptr<ASTNode> &lhs, const std::shared_ptr<ASTNode> &rhs);
-    ~BinaryOperationNode() = default;
+    BinaryOperationNode(const Token &operatorToken, Operator op, const std::shared_ptr<ASTNode> &lhs,
+                        const std::shared_ptr<ASTNode> &rhs);
+    ~BinaryOperationNode() override = default;
 
     void print() override;
     llvm::Value *generateForStringPlusInteger(llvm::Value *lhs, llvm::Value *rhs, std::unique_ptr<Context> &context);
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
     std::shared_ptr<VariableType> resolveType(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode) override;
+
+    void typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode) override;
 };

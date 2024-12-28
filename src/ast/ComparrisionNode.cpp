@@ -9,7 +9,7 @@
 
 ComparrisionNode::ComparrisionNode(const Token &operatorToken, CMPOperator op, const std::shared_ptr<ASTNode> &lhs,
                                    const std::shared_ptr<ASTNode> &rhs) :
-    m_operatorToken(operatorToken), m_lhs(lhs), m_rhs(rhs), m_operator(op)
+    ASTNode(operatorToken), m_operatorToken(operatorToken), m_lhs(lhs), m_rhs(rhs), m_operator(op)
 {
 }
 

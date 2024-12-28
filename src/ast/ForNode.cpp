@@ -2,18 +2,19 @@
 
 #include <llvm/IR/IRBuilder.h>
 
+#include <utility>
+
 #include "BlockNode.h"
 #include "UnitNode.h"
 #include "compiler/Context.h"
 
-ForNode::ForNode(std::string loopVariable, std::shared_ptr<ASTNode> &startExpression,
-                 std::shared_ptr<ASTNode> &endExpression, std::vector<std::shared_ptr<ASTNode>> &body) :
-    ASTNode(), m_loopVariable(loopVariable), m_startExpression(startExpression), m_endExpression(endExpression),
-    m_body(body)
+ForNode::ForNode(const Token &token, std::string loopVariable, const std::shared_ptr<ASTNode> &startExpression,
+                 const std::shared_ptr<ASTNode> &endExpression, const std::vector<std::shared_ptr<ASTNode>> &body) :
+    ASTNode(token), m_loopVariable(std::move(loopVariable)), m_startExpression(startExpression),
+    m_endExpression(endExpression), m_body(body)
 {
 }
 
-ForNode::~ForNode() {}
 
 void ForNode::print() {}
 
@@ -121,4 +122,12 @@ std::optional<std::shared_ptr<ASTNode>> ForNode::block()
         }
     }
     return std::nullopt;
+}
+void ForNode::typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
+{
+
+    for (const auto &exp: m_body)
+    {
+        exp->typeCheck(unit, parentNode);
+    }
 }

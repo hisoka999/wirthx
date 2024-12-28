@@ -11,7 +11,7 @@ private:
     std::string m_blockname;
 
 public:
-    BlockNode(std::vector<VariableDefinition> variableDefinitions,
+    BlockNode(const Token &token, const std::vector<VariableDefinition> &variableDefinitions,
               const std::vector<std::shared_ptr<ASTNode>> &expressions);
     ~BlockNode() override = default;
 

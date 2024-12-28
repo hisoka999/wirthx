@@ -16,9 +16,10 @@ private:
     LogicalOperator m_operator;
 
 public:
-    LogicalExpressionNode(LogicalOperator op, const std::shared_ptr<ASTNode> &lhs, const std::shared_ptr<ASTNode> &rhs);
-    LogicalExpressionNode(LogicalOperator op, const std::shared_ptr<ASTNode> &rhs);
-    ~LogicalExpressionNode() = default;
+    LogicalExpressionNode(const Token &token, LogicalOperator op, const std::shared_ptr<ASTNode> &lhs,
+                          const std::shared_ptr<ASTNode> &rhs);
+    LogicalExpressionNode(const Token &token, LogicalOperator op, const std::shared_ptr<ASTNode> &rhs);
+    ~LogicalExpressionNode() override = default;
 
     void print() override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;

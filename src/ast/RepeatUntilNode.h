@@ -9,7 +9,8 @@ private:
     std::vector<std::shared_ptr<ASTNode>> m_nodes;
 
 public:
-    RepeatUntilNode(std::shared_ptr<ASTNode> loopCondition, std::vector<std::shared_ptr<ASTNode>> nodes);
+    RepeatUntilNode(const Token &token, std::shared_ptr<ASTNode> loopCondition,
+                    std::vector<std::shared_ptr<ASTNode>> nodes);
     ~RepeatUntilNode() override = default;
     void print() override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;

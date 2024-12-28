@@ -5,7 +5,10 @@
 #include "compiler/Context.h"
 
 
-StringConstantNode::StringConstantNode(std::string literal) : ASTNode(), m_literal(literal) {}
+StringConstantNode::StringConstantNode(const Token &token, const std::string &literal) :
+    ASTNode(token), m_literal(literal)
+{
+}
 
 void StringConstantNode::print() { std::cout << "\'" << m_literal << "\'"; }
 

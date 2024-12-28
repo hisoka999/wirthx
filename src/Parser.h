@@ -46,7 +46,8 @@ class Parser
     std::vector<VariableDefinition> parseVariableDefinitions(size_t scope);
     std::shared_ptr<ArrayType> parseArray(size_t scope);
     std::shared_ptr<ASTNode> parseStatement(size_t scope);
-    std::shared_ptr<ASTNode> parseBaseExpression(size_t scope, const std::shared_ptr<ASTNode> &origLhs = nullptr);
+    std::shared_ptr<ASTNode> parseBaseExpression(size_t scope, const std::shared_ptr<ASTNode> &origLhs = nullptr,
+                                                 bool includeCompare = true);
     std::shared_ptr<ASTNode> parseExpression(size_t scope, const std::shared_ptr<ASTNode> &origLhs = nullptr);
     std::shared_ptr<ASTNode> parseLogicalExpression(size_t scope, std::shared_ptr<ASTNode> lhs);
 

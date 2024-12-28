@@ -8,7 +8,7 @@
 #include "compiler/Context.h"
 
 
-VariableAccessNode::VariableAccessNode(const std::string_view variableName) : m_variableName(variableName) {}
+VariableAccessNode::VariableAccessNode(const Token &token) : ASTNode(token), m_variableName(token.lexical()) {}
 
 void VariableAccessNode::print() { std::cout << m_variableName; }
 
@@ -78,11 +78,9 @@ std::shared_ptr<VariableType> VariableAccessNode::resolveType(const std::unique_
 
     if (auto *functionCall = dynamic_cast<FunctionCallNode *>(parent))
     {
-        auto functionDefinition = unit->getFunctionDefinition(functionCall->name());
-        if (functionDefinition)
+        if (auto functionDefinition = unit->getFunctionDefinition(functionCall->name()))
         {
-            auto param = functionDefinition.value()->getParam(m_variableName);
-            if (param)
+            if (auto param = functionDefinition.value()->getParam(m_variableName))
             {
                 return param.value().type;
             }
@@ -94,8 +92,7 @@ std::shared_ptr<VariableType> VariableAccessNode::resolveType(const std::unique_
         }
     }
 
-    auto definition = unit->getVariableDefinition(m_variableName);
-    if (definition)
+    if (auto definition = unit->getVariableDefinition(m_variableName))
     {
         return definition.value().variableType;
     }

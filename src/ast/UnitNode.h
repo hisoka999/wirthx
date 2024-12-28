@@ -22,9 +22,9 @@ private:
     std::shared_ptr<BlockNode> m_blockNode;
 
 public:
-    UnitNode(UnitType unitType, const std::string unitName,
-             std::vector<std::shared_ptr<FunctionDefinitionNode>> functionDefinitions,
-             std::map<std::string, std::shared_ptr<VariableType>> typeDefinitions,
+    UnitNode(const Token &token, UnitType unitType, const std::string &unitName,
+             const std::vector<std::shared_ptr<FunctionDefinitionNode>> &functionDefinitions,
+             const std::map<std::string, std::shared_ptr<VariableType>> &typeDefinitions,
              const std::shared_ptr<BlockNode> &blockNode);
     ~UnitNode() override = default;
 

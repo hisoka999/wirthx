@@ -4,7 +4,10 @@
 
 #include "compiler/Context.h"
 
-ReturnNode::ReturnNode(std::shared_ptr<ASTNode> expression) : m_expression(expression) {}
+ReturnNode::ReturnNode(const Token &token, std::shared_ptr<ASTNode> expression) :
+    ASTNode(token), m_expression(expression)
+{
+}
 
 void ReturnNode::print()
 {

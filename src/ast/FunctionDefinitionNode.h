@@ -32,13 +32,13 @@ private:
     std::vector<FunctionAttribute> m_attributes;
 
 public:
-    FunctionDefinitionNode(std::string name, std::vector<FunctionArgument> params, std::shared_ptr<BlockNode> body,
-                           bool isProcedure,
+    FunctionDefinitionNode(const Token &token, std::string name, std::vector<FunctionArgument> params,
+                           std::shared_ptr<BlockNode> body, bool isProcedure,
                            std::shared_ptr<VariableType> returnType = std::make_shared<VariableType>());
-    FunctionDefinitionNode(std::string name, std::string externalName, std::string libName,
+    FunctionDefinitionNode(const Token &token, std::string name, std::string externalName, std::string libName,
                            std::vector<FunctionArgument> params, bool isProcedure,
                            std::shared_ptr<VariableType> returnType = std::make_shared<VariableType>());
-    ~FunctionDefinitionNode() = default;
+    ~FunctionDefinitionNode() override = default;
     void print() override;
     std::string functionSignature();
     std::string &name();

@@ -10,8 +10,8 @@ private:
     std::shared_ptr<ASTNode> m_expression;
 
 public:
-    ReturnNode(std::shared_ptr<ASTNode> expression);
-    ~ReturnNode() = default;
+    ReturnNode(const Token &token, std::shared_ptr<ASTNode> expression);
+    ~ReturnNode() override = default;
     void print() override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
 };

@@ -15,8 +15,10 @@ class UnitNode;
 
 class ASTNode
 {
+    Token m_token;
+
 public:
-    ASTNode();
+    explicit ASTNode(const Token &token);
     virtual ~ASTNode() = default;
 
     virtual void print() = 0;
@@ -25,4 +27,6 @@ public:
     virtual std::shared_ptr<VariableType> resolveType(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode);
     virtual std::optional<std::shared_ptr<ASTNode>> block() { return std::nullopt; }
     virtual void typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode) {};
+
+    virtual Token expressionToken() { return m_token; }
 };

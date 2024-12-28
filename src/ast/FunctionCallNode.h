@@ -12,8 +12,8 @@ protected:
     std::string callSignature(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode) const;
 
 public:
-    FunctionCallNode(std::string name, const std::vector<std::shared_ptr<ASTNode>> &args);
-    ~FunctionCallNode() = default;
+    FunctionCallNode(const Token &token, std::string name, const std::vector<std::shared_ptr<ASTNode>> &args);
+    ~FunctionCallNode() override = default;
     void print() override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
     std::shared_ptr<VariableType> resolveType(const std::unique_ptr<UnitNode> &unitNode, ASTNode *parentNode) override;

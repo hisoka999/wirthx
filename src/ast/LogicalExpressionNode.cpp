@@ -5,14 +5,15 @@
 #include "compiler/Context.h"
 
 
-LogicalExpressionNode::LogicalExpressionNode(LogicalOperator op, const std::shared_ptr<ASTNode> &lhs,
-                                             const std::shared_ptr<ASTNode> &rhs) :
-    m_lhs(lhs), m_rhs(rhs), m_operator(op)
+LogicalExpressionNode::LogicalExpressionNode(const Token &token, LogicalOperator op,
+                                             const std::shared_ptr<ASTNode> &lhs, const std::shared_ptr<ASTNode> &rhs) :
+    ASTNode(token), m_lhs(lhs), m_rhs(rhs), m_operator(op)
 {
 }
 
-LogicalExpressionNode::LogicalExpressionNode(LogicalOperator op, const std::shared_ptr<ASTNode> &rhs) :
-    m_lhs(nullptr), m_rhs(rhs), m_operator(op)
+LogicalExpressionNode::LogicalExpressionNode(const Token &token, LogicalOperator op,
+                                             const std::shared_ptr<ASTNode> &rhs) :
+    ASTNode(token), m_lhs(nullptr), m_rhs(rhs), m_operator(op)
 {
 }
 

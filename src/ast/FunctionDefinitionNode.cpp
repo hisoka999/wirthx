@@ -13,18 +13,18 @@
 #include "llvm/IR/Verifier.h"
 
 
-FunctionDefinitionNode::FunctionDefinitionNode(std::string name, std::vector<FunctionArgument> params,
-                                               std::shared_ptr<BlockNode> body, const bool isProcedure,
-                                               std::shared_ptr<VariableType> returnType) :
-    m_name(std::move(name)), m_externalName(m_name), m_params(std::move(params)), m_body(std::move(body)),
-    m_isProcedure(isProcedure), m_returnType(std::move(returnType))
+FunctionDefinitionNode::FunctionDefinitionNode(const Token &token, std::string name,
+                                               std::vector<FunctionArgument> params, std::shared_ptr<BlockNode> body,
+                                               const bool isProcedure, std::shared_ptr<VariableType> returnType) :
+    ASTNode(token), m_name(std::move(name)), m_externalName(m_name), m_params(std::move(params)),
+    m_body(std::move(body)), m_isProcedure(isProcedure), m_returnType(std::move(returnType))
 {
 }
 
-FunctionDefinitionNode::FunctionDefinitionNode(std::string name, std::string externalName, std::string libName,
-                                               std::vector<FunctionArgument> params, const bool isProcedure,
-                                               std::shared_ptr<VariableType> returnType) :
-    m_name(std::move(name)), m_externalName(std::move(externalName)), m_libName(std::move(libName)),
+FunctionDefinitionNode::FunctionDefinitionNode(const Token &token, std::string name, std::string externalName,
+                                               std::string libName, std::vector<FunctionArgument> params,
+                                               const bool isProcedure, std::shared_ptr<VariableType> returnType) :
+    ASTNode(token), m_name(std::move(name)), m_externalName(std::move(externalName)), m_libName(std::move(libName)),
     m_params(std::move(params)), m_body(nullptr), m_isProcedure(isProcedure), m_returnType(std::move(returnType))
 {
 }

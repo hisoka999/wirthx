@@ -5,7 +5,10 @@
 #include "compiler/Context.h"
 
 
-NumberNode::NumberNode(int64_t value, size_t numBits) : ASTNode(), m_value(value), m_numBits(numBits) {}
+NumberNode::NumberNode(const Token &token, int64_t value, size_t numBits) :
+    ASTNode(token), m_value(value), m_numBits(numBits)
+{
+}
 
 void NumberNode::print() { std::cout << m_value; }
 
@@ -20,4 +23,4 @@ std::shared_ptr<VariableType> NumberNode::resolveType([[maybe_unused]] const std
     return VariableType::getInteger(m_numBits);
 }
 
-int64_t NumberNode::getValue() { return m_value; }
+int64_t NumberNode::getValue() const { return m_value; }

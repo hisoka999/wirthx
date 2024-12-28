@@ -9,8 +9,8 @@ private:
     const bool m_value;
 
 public:
-    BooleanNode(const bool value);
-    ~BooleanNode() = default;
+    BooleanNode(const Token &token, bool value);
+    ~BooleanNode() override = default;
 
     void print() override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;

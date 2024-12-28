@@ -5,8 +5,9 @@
 
 #include "compiler/Context.h"
 
-RepeatUntilNode::RepeatUntilNode(std::shared_ptr<ASTNode> loopCondition, std::vector<std::shared_ptr<ASTNode>> nodes) :
-    m_loopCondition(std::move(loopCondition)), m_nodes(std::move(nodes))
+RepeatUntilNode::RepeatUntilNode(const Token &token, std::shared_ptr<ASTNode> loopCondition,
+                                 std::vector<std::shared_ptr<ASTNode>> nodes) :
+    ASTNode(token), m_loopCondition(std::move(loopCondition)), m_nodes(std::move(nodes))
 {
 }
 void RepeatUntilNode::print() {}

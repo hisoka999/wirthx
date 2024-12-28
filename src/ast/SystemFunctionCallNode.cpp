@@ -21,8 +21,9 @@ bool isKnownSystemCall(const std::string &name)
     return false;
 }
 
-SystemFunctionCallNode::SystemFunctionCallNode(std::string name, std::vector<std::shared_ptr<ASTNode>> args) :
-    FunctionCallNode(name, args)
+SystemFunctionCallNode::SystemFunctionCallNode(const Token &token, std::string name,
+                                               std::vector<std::shared_ptr<ASTNode>> args) :
+    FunctionCallNode(token, name, args)
 {
 }
 

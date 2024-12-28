@@ -7,7 +7,7 @@
 
 
 ArrayAccessNode::ArrayAccessNode(Token arrayName, const std::shared_ptr<ASTNode> &indexNode) :
-    m_arrayNameToken(std::move(arrayName)), m_indexNode(indexNode)
+    ASTNode(arrayName), m_arrayNameToken(std::move(arrayName)), m_indexNode(indexNode)
 {
 }
 

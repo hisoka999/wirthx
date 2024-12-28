@@ -10,7 +10,7 @@ private:
     std::shared_ptr<ASTNode> m_expression;
 
 public:
-    VariableAssignmentNode(const Token variableName, const std::shared_ptr<ASTNode> &expression);
+    VariableAssignmentNode(const Token &variableName, const std::shared_ptr<ASTNode> &expression);
     ~VariableAssignmentNode() override = default;
     void print() override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;

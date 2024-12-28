@@ -5,9 +5,9 @@
 #include "llvm/IR/IRBuilder.h"
 
 
-BlockNode::BlockNode(std::vector<VariableDefinition> variableDefinitions,
+BlockNode::BlockNode(const Token &token, const std::vector<VariableDefinition> &variableDefinitions,
                      const std::vector<std::shared_ptr<ASTNode>> &expressions) :
-    m_expressions(expressions), m_variableDefinitions(variableDefinitions)
+    ASTNode(token), m_expressions(expressions), m_variableDefinitions(variableDefinitions)
 {
 }
 

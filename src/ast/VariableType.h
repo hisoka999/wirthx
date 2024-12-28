@@ -34,9 +34,9 @@ class StringType;
 class VariableType
 {
 public:
-    VariableType(VariableBaseType baseType = VariableBaseType::Unknown, std::string typeName = "");
+    explicit VariableType(VariableBaseType baseType = VariableBaseType::Unknown, std::string typeName = "");
     virtual ~VariableType() = default;
-    bool isSimpleType() const;
+    [[nodiscard]] bool isSimpleType() const;
     VariableBaseType baseType = VariableBaseType::Unknown;
     std::string typeName = "";
 

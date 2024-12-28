@@ -8,10 +8,10 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Type.h"
 
-ArrayAssignmentNode::ArrayAssignmentNode(Token &arrayToken, const std::shared_ptr<ASTNode> &indexNode,
+ArrayAssignmentNode::ArrayAssignmentNode(const Token &arrayToken, const std::shared_ptr<ASTNode> &indexNode,
                                          const std::shared_ptr<ASTNode> &expression) :
-    m_arrayToken(arrayToken), m_variableName(std::string(arrayToken.lexical())), m_indexNode(indexNode),
-    m_expression(expression)
+    ASTNode(arrayToken), m_arrayToken(arrayToken), m_variableName(std::string(arrayToken.lexical())),
+    m_indexNode(indexNode), m_expression(expression)
 {
 }
 

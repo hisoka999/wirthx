@@ -9,7 +9,7 @@
 
 FieldAssignmentNode::FieldAssignmentNode(const Token &variable, const Token &field,
                                          const std::shared_ptr<ASTNode> &expression) :
-    m_variable(variable), m_variableName(std::string(m_variable.lexical())), m_field(field),
+    ASTNode(variable), m_variable(variable), m_variableName(std::string(m_variable.lexical())), m_field(field),
     m_fieldName(std::string(m_field.lexical())), m_expression(expression)
 {
 }
