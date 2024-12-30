@@ -2,10 +2,12 @@
 
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <sstream>
 #include "Lexer.h"
 #include "Parser.h"
 #include "ast/FunctionDefinitionNode.h"
+#include "ast/UnitNode.h"
 
 #include "compiler/Context.h"
 #include "compiler/intrinsics.h"
@@ -31,6 +33,7 @@
 #include "llvm/Transforms/Scalar/Reassociate.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "os/command.h"
+
 
 std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit, const CompilerOptions &options)
 {
@@ -200,6 +203,7 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
 
     pass.run(*context->TheModule);
     dest.flush();
+    dest.close();
 
 
     llvm::verifyModule(*context->TheModule, &llvm::errs());
@@ -208,7 +212,7 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
         context->TheModule->print(llvm::errs(), nullptr, false, false);
     }
 
-    outs() << "Wrote " << objectFileName << "\n";
+    outs() << "Wrote " << objectFileName.string() << "\n";
 
     std::vector<std::string> flags;
     for (const auto &lib: context->ProgramUnit->collectLibsToLink())
@@ -216,13 +220,18 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
         flags.push_back("-l" + lib);
     }
 
+
     if (context->compilerOptions.buildMode == BuildMode::Debug)
     {
         flags.emplace_back("-fsanitize=address");
         flags.emplace_back("-fno-omit-frame-pointer");
     }
-
-    if (!pascal_link_modules(errorStream, basePath, context->ProgramUnit->getUnitName(), flags, objectFiles))
+    std::string executableName = context->ProgramUnit->getUnitName();
+#ifdef _WIN32
+    executableName+=".exe";
+    flags.erase(std::ranges::find(flags, "-lc"));
+#endif
+    if (!pascal_link_modules(errorStream, basePath, executableName, flags, objectFiles))
     {
         return;
     }
@@ -230,7 +239,7 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
     if (context->compilerOptions.runProgram)
     {
 
-        if (!execute_command(outputStream, (basePath / context->ProgramUnit->getUnitName()).string()))
+        if (!execute_command(errorStream, (basePath / executableName).string()))
         {
             errorStream << "program could not be executed!\n";
         }

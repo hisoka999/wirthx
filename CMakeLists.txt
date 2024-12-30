@@ -23,9 +23,7 @@ if (UNIX)
     # G++
     file(GLOB LINKER_SRC src/linker/unix/pascal_linker.cpp src/os/unix/command.cpp)
 elseif (WIN32)
-    message(ERROR "Windows is not yet supported")
-
-    set(LINKER_SRC)
+    file(GLOB LINKER_SRC src/linker/windows/pascal_linker.cpp src/os/windows/command.cpp)
 endif ()
 
 set(WIRTHX_VERSION_MAJOR 0)
@@ -122,12 +120,16 @@ elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
     add_compile_options(-Wall -Werror)
 elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
     # MSVC
-    target_compile_options(${PROJECT_NAME} PRIVATE /EHsc /MTd /W2 /c)
+    target_compile_options(${PROJECT_NAME} PRIVATE /MT /EHsc  /W2 /c)
 
     # Set the DLLEXPORT variable to export symbols
-    target_compile_definitions(${PROJECT_NAME} PRIVATE WIN_EXPORT)
+    #target_compile_definitions(${PROJECT_NAME} PRIVATE WIN_EXPORT)
 endif ()
 
 
 add_executable(${PROJECT_NAME} "main.cpp" ${SRC})
+if (${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
+    set_property(TARGET ${PROJECT_NAME} PROPERTY
+            MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif ()
 target_link_libraries(${PROJECT_NAME} ${llvm_libs})

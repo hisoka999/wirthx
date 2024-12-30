@@ -17,12 +17,12 @@ set_target_properties(gmock PROPERTIES FOLDER extern)
 set_target_properties(gmock_main PROPERTIES FOLDER extern)
 
 set(TEST_SRC "")
-file(GLOB_RECURSE TEST_SRC ${PROJECT_SOURCE_DIR}/src/*)
-
+file(GLOB_RECURSE TEST_SRC ${SRC})
+message(${SRC})
 macro(package_add_test TESTNAME)
     #INCLUDE_DIRECTORIES()
 
-    include_directories(${PROJECT_SOURCE_DIR}/src/ ${LLVM_INCLUDE_DIRS})
+    include_directories(${PROJECT_SOURCE_DIR}/src/ ${LLVM_INCLUDE_DIRS} ${PROJECT_BINARY_DIR})
     # create an exectuable in which the tests will be stored
     add_executable(${TESTNAME} ${TEST_SRC} ${ARGN})
     # link the Google test infrastructure, mocking library, and a default main fuction to

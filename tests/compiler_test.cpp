@@ -47,7 +47,7 @@ TEST_P(CompilerTest, TestNoError)
 
     if (!file.is_open())
     {
-        std::cerr << input_path.c_str() << "\n";
+        std::cerr << input_path.string() << "\n";
         std::cerr << std::filesystem::absolute(input_path);
         FAIL();
     }
@@ -93,7 +93,7 @@ TEST_P(ProjectEulerTest, TestNoError)
 
     if (!file.is_open())
     {
-        std::cerr << input_path.c_str() << "\n";
+        std::cerr << input_path.string() << "\n";
         std::cerr << std::filesystem::absolute(input_path);
         FAIL();
     }
@@ -134,7 +134,7 @@ TEST_P(CompilerTestError, CompilerTestWithError)
 
     if (!file.is_open())
     {
-        std::cerr << input_path.c_str() << "\n";
+        std::cerr << input_path.string() << "\n";
         std::cerr << std::filesystem::absolute(input_path);
         FAIL();
     }
