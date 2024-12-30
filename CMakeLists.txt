@@ -78,8 +78,7 @@ file(GLOB SRC
         src/compiler/Context.cpp
         src/compiler/Compiler.cpp
         src/Lexer.cpp
-        src/Parser.cpp
-        main.cpp)
+        src/Parser.cpp)
 INCLUDE_DIRECTORIES("src")
 
 # include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
@@ -120,7 +119,7 @@ elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
     add_compile_options(-Wall -Werror)
 elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
     # MSVC
-    target_compile_options(${PROJECT_NAME} PRIVATE /MT /EHsc  /W2 /c)
+    target_compile_options(${PROJECT_NAME} PRIVATE /MT /EHsc /W2 /c)
 
     # Set the DLLEXPORT variable to export symbols
     #target_compile_definitions(${PROJECT_NAME} PRIVATE WIN_EXPORT)

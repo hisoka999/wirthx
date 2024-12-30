@@ -44,6 +44,7 @@ Parser::Parser(const std::vector<std::filesystem::path> &rtlDirectories, std::fi
     m_typeDefinitions["int64"] = VariableType::getInteger(64);
     m_typeDefinitions["string"] = StringType::getString();
     m_typeDefinitions["boolean"] = VariableType::getBoolean();
+    m_typeDefinitions["pointer"] = PointerType::getUnqual();
 }
 bool Parser::hasError() const { return !m_errors.empty(); }
 void Parser::printErrors(std::ostream &outputStream)

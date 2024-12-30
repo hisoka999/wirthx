@@ -100,6 +100,8 @@ public:
     std::shared_ptr<VariableType> pointerBase;
 
     static std::shared_ptr<PointerType> getPointerTo(const std::shared_ptr<VariableType> &baseType);
+    static std::shared_ptr<PointerType> getUnqual();
+
 
     llvm::Type *generateLlvmType(std::unique_ptr<Context> &context) override;
 

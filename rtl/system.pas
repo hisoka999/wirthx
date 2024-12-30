@@ -2,9 +2,9 @@ unit system;
 
 type
     PChar = ^char;
-    CFile = ^char;
+    CFile = pointer;
     File = record
-               pointer: CFile;
+               ptr: pointer;
                isOpen: boolean;
             end;
 
@@ -24,8 +24,8 @@ type
 
     procedure Assign(var F: File;FileName: String);
     begin
-        F.pointer := fopen(pchar(Filename),pchar('rw'));
-        if F.pointer != 0 then
+        F.ptr := fopen(pchar(Filename),pchar('rw'));
+        if F.ptr != 0 then
             F.isOpen := true;
         else
             writeln('File not found: ',FileName);
@@ -35,7 +35,7 @@ type
     procedure CloseFile(var F: File);
     begin
         if F.isOpen then
-            fclose(F.pointer);
+            fclose(F.ptr);
     end;
 
     Procedure inc(var value: integer); inline;
@@ -68,7 +68,7 @@ type
 
             repeat
             begin
-                c := fgetc(F.pointer);
+                c := fgetc(F.ptr);
 
                 if c >= 32 and c <= 125 then
                 begin

@@ -10,7 +10,7 @@ bool pascal_link_modules(std::ostream &errStream, const std::filesystem::path &b
     args.emplace_back("-o");
     args.emplace_back((baseDir / program_name).string());
     for (auto &obj: object_files)
-        args.emplace_back((baseDir / obj).string());
+        args.emplace_back(obj);
 
     for (auto &flag: flags)
         args.emplace_back(flag);

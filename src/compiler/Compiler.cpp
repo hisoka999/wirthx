@@ -228,7 +228,7 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
     }
     std::string executableName = context->ProgramUnit->getUnitName();
 #ifdef _WIN32
-    executableName+=".exe";
+    executableName += ".exe";
     flags.erase(std::ranges::find(flags, "-lc"));
 #endif
     if (!pascal_link_modules(errorStream, basePath, executableName, flags, objectFiles))
@@ -239,7 +239,7 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
     if (context->compilerOptions.runProgram)
     {
 
-        if (!execute_command(errorStream, (basePath / executableName).string()))
+        if (!execute_command(outputStream, (basePath / executableName).string()))
         {
             errorStream << "program could not be executed!\n";
         }

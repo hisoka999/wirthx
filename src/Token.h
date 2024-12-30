@@ -29,7 +29,8 @@ enum class TokenType : uint16_t
     DOT,
     COLON,
     CARET,
-    BANG
+    BANG,
+    AT
 };
 
 

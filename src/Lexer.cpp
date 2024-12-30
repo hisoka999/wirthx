@@ -170,6 +170,9 @@ std::vector<Token> Lexer::tokenize(const std::string &filename, const std::strin
             case '!':
                 tokens.emplace_back(source_location, row, column, TokenType::BANG);
                 break;
+            case '@':
+                tokens.emplace_back(source_location, row, column, TokenType::AT);
+                break;
             default:
                 break;
         }

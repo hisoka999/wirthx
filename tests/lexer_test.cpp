@@ -261,3 +261,24 @@ TEST(LexerTest, LexEscapedString)
     ASSERT_EQ(result[4].tokenType, TokenType::SEMICOLON);
     ASSERT_EQ(result[5].tokenType, TokenType::T_EOF);
 }
+
+TEST(LexerTest, LexPointer)
+{
+    Lexer lexer;
+
+    auto result = lexer.tokenize("filename.pas", R"(ptr := @myvar; )");
+
+    EXPECT_EQ(result.size(), 7);
+    ASSERT_EQ(result[0].tokenType, TokenType::NAMEDTOKEN);
+    ASSERT_EQ(result[0].lexical(), "ptr"sv);
+    ASSERT_EQ(result[1].tokenType, TokenType::COLON);
+    ASSERT_EQ(result[2].tokenType, TokenType::EQUAL);
+    ASSERT_EQ(result[3].tokenType, TokenType::AT);
+    ASSERT_EQ(result[3].col, 8);
+    ASSERT_EQ(result[3].lexical(), "@"sv);
+    ASSERT_EQ(result[4].tokenType, TokenType::NAMEDTOKEN);
+    ASSERT_EQ(result[4].col, 9);
+    ASSERT_EQ(result[4].lexical(), "myvar"sv);
+    ASSERT_EQ(result[5].tokenType, TokenType::SEMICOLON);
+    ASSERT_EQ(result[6].tokenType, TokenType::T_EOF);
+}

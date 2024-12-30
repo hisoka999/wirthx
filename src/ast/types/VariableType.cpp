@@ -191,8 +191,20 @@ std::shared_ptr<PointerType> PointerType::getPointerTo(const std::shared_ptr<Var
     ptrType->typeName = baseType->typeName + "_ptr";
     return ptrType;
 }
+std::shared_ptr<PointerType> PointerType::getUnqual()
+{
+    auto ptrType = std::make_shared<PointerType>();
+    ptrType->pointerBase = nullptr;
+    ptrType->baseType = VariableBaseType::Pointer;
+    ptrType->typeName = "pointer";
+    return ptrType;
+}
 llvm::Type *PointerType::generateLlvmType(std::unique_ptr<Context> &context)
 {
-    const auto llvmBaseType = pointerBase->generateLlvmType(context);
-    return llvm::PointerType::getUnqual(llvmBaseType);
+    if (pointerBase)
+    {
+        const auto llvmBaseType = pointerBase->generateLlvmType(context);
+        return llvm::PointerType::getUnqual(llvmBaseType);
+    }
+    return llvm::PointerType::getUnqual(*context->TheContext);
 }
