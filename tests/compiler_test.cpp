@@ -51,16 +51,20 @@ TEST_P(CompilerTest, TestNoError)
         std::cerr << std::filesystem::absolute(input_path);
         FAIL();
     }
-    file.seekg(0, std::ios::end);
-    size_t size = file.tellg();
-    std::string expected(size, ' ');
-    file.seekg(0);
-    file.read(&expected[0], size);
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    auto expected = buffer.str();
+    std::string result = ostream.str();
+
+    result.erase( std::ranges::remove(result, '\r').begin(), result.end() );
+
     std::cout << "expected: " << expected;
-    std::cout << ostream.str() << "\n";
+    std::cout << result << "\n";
+
+
     ASSERT_EQ(erstream.str(), "");
-    ASSERT_EQ(ostream.str(), expected);
-    ASSERT_GT(ostream.str().size(), 0);
+    ASSERT_EQ(result, expected);
+    ASSERT_GT(result.size(), 0);
 }
 
 TEST_P(ProjectEulerTest, TestNoError)
@@ -97,16 +101,16 @@ TEST_P(ProjectEulerTest, TestNoError)
         std::cerr << std::filesystem::absolute(input_path);
         FAIL();
     }
-    file.seekg(0, std::ios::end);
-    size_t size = file.tellg();
-    std::string expected(size, ' ');
-    file.seekg(0);
-    file.read(&expected[0], size);
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    auto expected = buffer.str();
+    std::string result = ostream.str();
+    result.erase( std::ranges::remove(result, '\r').begin(), result.end() );
     std::cout << "current path" << std::filesystem::current_path();
     std::cout << "expected: " << expected;
     std::cout << ostream.str() << "\n";
     ASSERT_EQ(erstream.str(), "");
-    ASSERT_EQ(ostream.str(), expected);
+    ASSERT_EQ(result,expected );
     ASSERT_GT(ostream.str().size(), 0);
 }
 
@@ -138,11 +142,9 @@ TEST_P(CompilerTestError, CompilerTestWithError)
         std::cerr << std::filesystem::absolute(input_path);
         FAIL();
     }
-    file.seekg(0, std::ios::end);
-    size_t size = file.tellg();
-    std::string expected(size, ' ');
-    file.seekg(0);
-    file.read(&expected[0], size);
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    auto expected = buffer.str();
     std::string placeholder = "FILENAME";
     expected = expected.replace(expected.find(placeholder), placeholder.size(), input_path.string());
     std::cout << "expected: " << expected;

@@ -220,13 +220,15 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
         flags.push_back("-l" + lib);
     }
 
-
+#ifndef _WIN32
     if (context->compilerOptions.buildMode == BuildMode::Debug)
     {
         flags.emplace_back("-fsanitize=address");
         flags.emplace_back("-fno-omit-frame-pointer");
     }
+#endif
     std::string executableName = context->ProgramUnit->getUnitName();
+
 #ifdef _WIN32
     executableName += ".exe";
     flags.erase(std::ranges::find(flags, "-lc"));
