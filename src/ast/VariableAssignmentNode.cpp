@@ -4,12 +4,14 @@
 #include <llvm/IR/Intrinsics.h>
 #include "FunctionCallNode.h"
 #include "UnitNode.h"
+#include "VariableAccessNode.h"
 #include "compiler/Context.h"
 #include "exceptions/CompilerException.h"
 
-VariableAssignmentNode::VariableAssignmentNode(const Token &variableName, const std::shared_ptr<ASTNode> &expression) :
+VariableAssignmentNode::VariableAssignmentNode(const Token &variableName, const std::shared_ptr<ASTNode> &expression,
+                                               bool dereference) :
     ASTNode(variableName), m_variable(variableName), m_variableName(std::string(m_variable.lexical())),
-    m_expression(expression)
+    m_expression(expression), m_dereference(dereference)
 {
 }
 
@@ -131,7 +133,18 @@ llvm::Value *VariableAssignmentNode::codegen(std::unique_ptr<Context> &context)
 
         return expressionResult;
     }
+    if (expressionResult->getType()->isPointerTy())
+    {
+        if (llvm::isa<llvm::AllocaInst>(expressionResult))
+        {
+            context->NamedAllocations[m_variableName] = llvm::cast<llvm::AllocaInst>(expressionResult);
+            return expressionResult;
+        }
 
+        // auto resultType = m_expression->resolveType(context->ProgramUnit, resolveParent(context));
+
+        // expressionResult = context->Builder->CreateLoad(resultType->generateLlvmType(context), expressionResult);
+    }
 
     context->Builder->CreateStore(expressionResult, allocatedValue);
     return expressionResult;

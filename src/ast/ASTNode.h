@@ -29,4 +29,5 @@ public:
     virtual void typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode) {};
 
     virtual Token expressionToken() { return m_token; }
+    static ASTNode *resolveParent(const std::unique_ptr<Context> &context);
 };

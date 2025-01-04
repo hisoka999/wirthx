@@ -46,7 +46,7 @@ llvm::AllocaInst *VariableDefinition::generateCode(std::unique_ptr<Context> &con
                                                   this->variableName);
         case VariableBaseType::Struct:
         {
-            auto structType = std::dynamic_pointer_cast<RecordType>(this->variableType);
+            const auto structType = std::dynamic_pointer_cast<RecordType>(this->variableType);
             if (structType != nullptr)
             {
                 return context->Builder->CreateAlloca(structType->generateLlvmType(context), nullptr,
@@ -55,12 +55,18 @@ llvm::AllocaInst *VariableDefinition::generateCode(std::unique_ptr<Context> &con
         }
         case VariableBaseType::String:
         {
-            auto stringType = std::dynamic_pointer_cast<StringType>(this->variableType);
+            const auto stringType = std::dynamic_pointer_cast<StringType>(this->variableType);
             if (stringType != nullptr)
             {
                 return context->Builder->CreateAlloca(stringType->generateLlvmType(context), nullptr,
                                                       this->variableName);
             }
+        }
+        case VariableBaseType::Pointer:
+        {
+            const auto type = std::dynamic_pointer_cast<PointerType>(this->variableType);
+            return context->Builder->CreateAlloca(type->pointerBase->generateLlvmType(context), nullptr,
+                                                  this->variableName);
         }
         default:
             assert(false && "unsupported variable base type to generate variable definition");

@@ -6,9 +6,9 @@ class VariableAccessNode : public ASTNode
 {
 private:
     std::string m_variableName;
-
+    bool m_dereference;
 public:
-    VariableAccessNode(const Token &token);
+    explicit VariableAccessNode(const Token &token,bool dereference);
     ~VariableAccessNode() override = default;
     void print() override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;

@@ -7,7 +7,10 @@
 #include "compiler/Context.h"
 
 
-VariableAccessNode::VariableAccessNode(const Token &token) : ASTNode(token), m_variableName(token.lexical()) {}
+VariableAccessNode::VariableAccessNode(const Token &token, bool dereference) :
+    ASTNode(token), m_variableName(token.lexical()), m_dereference(dereference)
+{
+}
 
 void VariableAccessNode::print() { std::cout << m_variableName; }
 
@@ -53,6 +56,12 @@ llvm::Value *VariableAccessNode::codegen(std::unique_ptr<Context> &context)
 
         return LogErrorV("Unknown variable name: " + m_variableName);
     }
+
+    // if (m_dereference)
+    // {
+    //     return A;
+    // }
+
     // Load the value.
     if (A->getAllocatedType()->isStructTy() || !context->loadValue)
         return A;
@@ -63,37 +72,52 @@ llvm::Value *VariableAccessNode::codegen(std::unique_ptr<Context> &context)
 
 std::shared_ptr<VariableType> VariableAccessNode::resolveType(const std::unique_ptr<UnitNode> &unit, ASTNode *parent)
 {
+    std::shared_ptr<VariableType> type;
     if (auto *functionDefinition = dynamic_cast<FunctionDefinitionNode *>(parent))
     {
         if (auto param = functionDefinition->getParam(m_variableName))
         {
-            return param.value().type;
+            type = param.value().type;
         }
         if (auto var = functionDefinition->body()->getVariableDefinition(m_variableName))
         {
-            return var.value().variableType;
+            type = var.value().variableType;
         }
     }
+    else
 
-    if (auto *functionCall = dynamic_cast<FunctionCallNode *>(parent))
+            if (auto *functionCall = dynamic_cast<FunctionCallNode *>(parent))
     {
         if (auto functionDefinition = unit->getFunctionDefinition(functionCall->name()))
         {
             if (auto param = functionDefinition.value()->getParam(m_variableName))
             {
-                return param.value().type;
+                type = param.value().type;
             }
             auto var = functionDefinition.value()->body()->getVariableDefinition(m_variableName);
             if (var)
             {
-                return var.value().variableType;
+                type = var.value().variableType;
             }
         }
     }
 
     if (auto definition = unit->getVariableDefinition(m_variableName))
     {
-        return definition.value().variableType;
+        type = definition.value().variableType;
     }
+    if (m_dereference)
+    {
+        if (auto ptrType = std::dynamic_pointer_cast<PointerType>(type))
+        {
+            return ptrType->pointerBase;
+        }
+    }
+    else if (type)
+    {
+        return type;
+    }
+
+
     return std::make_shared<VariableType>();
 }

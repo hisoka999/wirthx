@@ -9,8 +9,8 @@
 #include "types/StringType.h"
 
 
-static std::vector<std::string> knownSystemCalls = {"writeln", "write",     "printf", "exit", "low",
-                                                    "high",    "setlength", "length", "pchar"};
+static std::vector<std::string> knownSystemCalls = {"writeln", "write",     "printf", "exit",  "low",
+                                                    "high",    "setlength", "length", "pchar", "new"};
 
 bool isKnownSystemCall(const std::string &name)
 {
@@ -196,6 +196,15 @@ llvm::Value *SystemFunctionCallNode::codegen_writeln(std::unique_ptr<Context> &c
     context->Builder->CreateCall(CalleeF, ArgsV);
     return nullptr;
 }
+llvm::Value *SystemFunctionCallNode::codegen_new(std::unique_ptr<Context> &context, ASTNode *parent) const
+{
+    m_args[0]->codegen(context);
+    const auto type = m_args[0]->resolveType(context->ProgramUnit, parent);
+    if (const auto ptrType = std::dynamic_pointer_cast<PointerType>(type))
+        return context->Builder->CreateAlloca(ptrType->pointerBase->generateLlvmType(context));
+
+    return LogErrorV("argument is not a pointer type");
+}
 llvm::Value *SystemFunctionCallNode::codegen(std::unique_ptr<Context> &context)
 {
     ASTNode *parent = context->ProgramUnit.get();
@@ -266,6 +275,10 @@ llvm::Value *SystemFunctionCallNode::codegen(std::unique_ptr<Context> &context)
         const auto arrayPointerOffset = context->Builder->CreateStructGEP(type->generateLlvmType(context),
                                                                           stringStructPtr, 2, "string.ptr.offset");
         return context->Builder->CreateLoad(llvm::PointerType::getUnqual(*context->TheContext), arrayPointerOffset);
+    }
+    else if (iequals(m_name, "new"))
+    {
+        return codegen_new(context, parent);
     }
     return FunctionCallNode::codegen(context);
 }

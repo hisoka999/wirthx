@@ -67,6 +67,7 @@ file(GLOB SRC
         src/ast/BlockNode.cpp
         src/ast/UnitNode.cpp
         src/ast/SystemFunctionCallNode.cpp
+        src/ast/AddressNode.cpp
         src/ast/types/VariableType.cpp
         src/ast/types/RecordType.cpp
         src/ast/types/StringType.cpp

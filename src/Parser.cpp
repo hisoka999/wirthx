@@ -1,5 +1,6 @@
 #include "Parser.h"
 
+#include <ast/AddressNode.h>
 #include <cmath>
 #include <fstream>
 #include <iostream>
@@ -45,6 +46,7 @@ Parser::Parser(const std::vector<std::filesystem::path> &rtlDirectories, std::fi
     m_typeDefinitions["string"] = StringType::getString();
     m_typeDefinitions["boolean"] = VariableType::getBoolean();
     m_typeDefinitions["pointer"] = PointerType::getUnqual();
+    m_typeDefinitions["pinteger"] = PointerType::getPointerTo(VariableType::getInteger());
 }
 bool Parser::hasError() const { return !m_errors.empty(); }
 void Parser::printErrors(std::ostream &outputStream)
@@ -350,6 +352,8 @@ std::vector<VariableDefinition> Parser::parseVariableDefinitions(const size_t sc
 
     if (tryConsume(TokenType::COLON))
     {
+        auto isPointerType = tryConsume(TokenType::CARET);
+
         if (tryConsume(TokenType::NAMEDTOKEN))
         {
             _currentToken = current();
@@ -360,6 +364,10 @@ std::vector<VariableDefinition> Parser::parseVariableDefinitions(const size_t sc
         {
             varType = "array";
             type = parseArray(scope);
+        }
+        if (isPointerType && type)
+        {
+            type = PointerType::getPointerTo(type.value());
         }
     }
     std::shared_ptr<ASTNode> value;
@@ -545,9 +553,9 @@ std::shared_ptr<ASTNode> Parser::parseVariableAssignment(size_t scope)
 {
     consume(TokenType::NAMEDTOKEN);
     auto currentToken = current();
-    auto variableNameToken = current();
-
-    auto variableName = std::string(current().lexical());
+    auto variableNameToken = currentToken;
+    auto variableName = std::string(currentToken.lexical());
+    auto dereference = tryConsume(TokenType::CARET);
 
     if (canConsume(TokenType::COLON))
     {
@@ -571,7 +579,7 @@ std::shared_ptr<ASTNode> Parser::parseVariableAssignment(size_t scope)
 
         // parse expression
         auto expression = parseExpression(scope);
-        return std::make_shared<VariableAssignmentNode>(variableNameToken, expression);
+        return std::make_shared<VariableAssignmentNode>(variableNameToken, expression, dereference);
     }
     else if (canConsume(TokenType::DOT))
     {
@@ -628,7 +636,7 @@ std::shared_ptr<ASTNode> Parser::parseVariableAssignment(size_t scope)
         return std::make_shared<ArrayAssignmentNode>(variableNameToken, index, expression);
     }
 }
-std::shared_ptr<ASTNode> Parser::parseVariableAccess(size_t scope)
+std::shared_ptr<ASTNode> Parser::parseVariableAccess(const size_t scope)
 {
     consume(TokenType::NAMEDTOKEN);
     auto token = current();
@@ -669,9 +677,11 @@ std::shared_ptr<ASTNode> Parser::parseVariableAccess(size_t scope)
                 .token = token, .message = "A variable with the name '" + token.lexical() + "' is not yet defined!"});
         return nullptr;
     }
-    return std::make_shared<VariableAccessNode>(token);
+    auto dereference = tryConsume(TokenType::CARET);
+
+    return std::make_shared<VariableAccessNode>(token, dereference);
 }
-std::shared_ptr<ASTNode> Parser::parseToken(size_t scope)
+std::shared_ptr<ASTNode> Parser::parseToken(const size_t scope)
 {
     if (canConsume(TokenType::NUMBER))
     {
@@ -692,6 +702,13 @@ std::shared_ptr<ASTNode> Parser::parseToken(size_t scope)
     {
         consume(TokenType::ESCAPED_STRING);
         return parseEscapedString(current());
+    }
+    if (canConsume(TokenType::AT))
+    {
+        consume(TokenType::AT);
+        consume(TokenType::NAMEDTOKEN);
+        Token field = current();
+        return std::make_shared<AddressNode>(field);
     }
     if (canConsume(TokenType::NAMEDTOKEN))
     {
@@ -1078,7 +1095,7 @@ std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope)
 
     return nullptr;
 }
-std::shared_ptr<ASTNode> Parser::parseFunctionCall(size_t scope)
+std::shared_ptr<ASTNode> Parser::parseFunctionCall(const size_t scope)
 {
     consume(TokenType::NAMEDTOKEN);
     auto nameToken = current();
@@ -1086,8 +1103,6 @@ std::shared_ptr<ASTNode> Parser::parseFunctionCall(size_t scope)
     const bool isSysCall = isKnownSystemCall(functionName);
     if (!isSysCall && std::ranges::find(m_known_function_names, functionName) == std::end(m_known_function_names))
     {
-        for (auto &fun: m_known_function_names)
-            std::cerr << "func: " << fun << "\n";
         m_errors.push_back(ParserError{
                 .token = current(), .message = "a function with the name '" + functionName + "' is not yet defined!"});
     }

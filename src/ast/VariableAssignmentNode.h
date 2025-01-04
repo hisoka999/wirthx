@@ -8,9 +8,10 @@ private:
     Token m_variable;
     std::string m_variableName;
     std::shared_ptr<ASTNode> m_expression;
+    bool m_dereference;
 
 public:
-    VariableAssignmentNode(const Token &variableName, const std::shared_ptr<ASTNode> &expression);
+    VariableAssignmentNode(const Token &variableName, const std::shared_ptr<ASTNode> &expression, bool dereference);
     ~VariableAssignmentNode() override = default;
     void print() override;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
