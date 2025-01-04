@@ -1,9 +1,11 @@
 #include "compiler/Compiler.h"
+#include <algorithm>
 #include <fstream>
 #include <gtest/gtest.h>
 #include <iostream>
 #include <string>
 #include <utility>
+
 #include "os/command.h"
 
 using namespace std::literals;
@@ -56,7 +58,7 @@ TEST_P(CompilerTest, TestNoError)
     auto expected = buffer.str();
     std::string result = ostream.str();
 
-    result.erase( std::ranges::remove(result, '\r').begin(), result.end() );
+    result.erase(std::ranges::remove(result, '\r').begin(), result.end());
 
     std::cout << "expected: " << expected;
     std::cout << result << "\n";
@@ -105,12 +107,12 @@ TEST_P(ProjectEulerTest, TestNoError)
     buffer << file.rdbuf();
     auto expected = buffer.str();
     std::string result = ostream.str();
-    result.erase( std::ranges::remove(result, '\r').begin(), result.end() );
+    result.erase(std::ranges::remove(result, '\r').begin(), result.end());
     std::cout << "current path" << std::filesystem::current_path();
     std::cout << "expected: " << expected;
     std::cout << ostream.str() << "\n";
     ASSERT_EQ(erstream.str(), "");
-    ASSERT_EQ(result,expected );
+    ASSERT_EQ(result, expected);
     ASSERT_GT(ostream.str().size(), 0);
 }
 
