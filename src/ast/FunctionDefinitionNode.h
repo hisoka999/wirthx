@@ -29,6 +29,7 @@ private:
     bool m_isProcedure;
     std::shared_ptr<VariableType> m_returnType;
     std::vector<FunctionAttribute> m_attributes;
+    std::string m_functionSignature;
 
 public:
     FunctionDefinitionNode(const Token &token, std::string name, std::vector<FunctionArgument> params,

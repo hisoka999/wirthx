@@ -6,6 +6,8 @@
 
 #include "CompilerOptions.h"
 
+#include <unordered_map>
+
 namespace llvm
 {
     class LLVMContext;
@@ -53,10 +55,10 @@ struct Context
     std::unique_ptr<llvm::LLVMContext> TheContext;
     std::unique_ptr<llvm::Module> TheModule;
     std::unique_ptr<llvm::IRBuilder<llvm::ConstantFolder, llvm::IRBuilderDefaultInserter>> Builder;
-    std::map<std::string, llvm::AllocaInst *> NamedAllocations;
-    std::map<std::string, llvm::Value *> NamedValues;
+    std::unordered_map<std::string, llvm::AllocaInst *> NamedAllocations;
+    std::unordered_map<std::string, llvm::Value *> NamedValues;
     llvm::Function *TopLevelFunction;
-    std::map<std::string, llvm::Function *> FunctionDefinitions;
+    std::unordered_map<std::string, llvm::Function *> FunctionDefinitions;
     BreakBasicBlock BreakBlock;
 
     std::unique_ptr<llvm::FunctionPassManager> TheFPM;

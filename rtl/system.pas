@@ -1,12 +1,23 @@
 unit system;
 
-type
-    PChar = ^char;
-    CFile = pointer;
-    File = record
-               ptr: pointer;
-               isOpen: boolean;
-            end;
+interface
+    type
+        PChar = ^char;
+        CFile = pointer;
+        File = record
+                   ptr: pointer;
+                   isOpen: boolean;
+                end;
+
+    procedure freemem(var F: PChar);
+    procedure Assign(var F: File;FileName: String);
+    procedure CloseFile(var F: File);
+    Procedure inc(var value: integer);
+    Procedure dec(var value: integer);
+    procedure Readln(var F: File; var value: string);
+    function CompareStr( S1,S2 : string) : integer;
+
+implementation
 
     function fgetc(var F : CFile) : char; external 'c';
     function fopen(fileName: PChar;mode : PChar) : CFile; external 'c';
@@ -124,8 +135,4 @@ type
                 end;
             end;
     end;
-
-
-begin
-
 end.

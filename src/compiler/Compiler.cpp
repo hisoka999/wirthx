@@ -108,7 +108,7 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
     auto tokens = lexer.tokenize(inputPath.string(), buffer);
 
     Parser parser(options.rtlDirectories, inputPath, tokens);
-    auto unit = parser.parseUnit();
+    auto unit = parser.parseFile();
     if (parser.hasError())
     {
         parser.printErrors(errorStream);

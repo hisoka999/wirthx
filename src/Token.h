@@ -43,16 +43,13 @@ struct Token
 
     Token() : sourceLocation(), tokenType(TokenType::T_EOF) {}
 
-    Token(SourceLocation sourceLocation, const size_t row, const size_t col, const TokenType tokenType) :
-        sourceLocation(std::move(sourceLocation)), row(row), col(col), tokenType(tokenType)
+    Token(const SourceLocation &sourceLocation, const size_t row, const size_t col, const TokenType tokenType) :
+        sourceLocation(sourceLocation), row(row), col(col), tokenType(tokenType)
     {
     }
 
     Token(const Token &other) = default;
-    Token(Token &&other) noexcept :
-        sourceLocation(other.sourceLocation), row(other.row), col(other.col), tokenType(other.tokenType)
-    {
-    }
+    Token(Token &&other) = default;
 
     Token &operator=(const Token &other) = default;
 

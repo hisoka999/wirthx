@@ -729,6 +729,130 @@ std::shared_ptr<ASTNode> Parser::parseToken(const size_t scope)
     }
     return nullptr;
 }
+std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDeclaration(size_t scope, bool isFunction)
+{
+    consume(TokenType::NAMEDTOKEN);
+    auto functionNameToken = current();
+    auto functionName = current().lexical();
+    m_known_function_names.push_back(functionName);
+    std::string libName;
+    std::string externalName = functionName;
+
+    std::shared_ptr<FunctionDefinitionNode> functionDefinition = nullptr;
+
+    consume(TokenType::LEFT_CURLY);
+    auto token = next();
+    std::vector<FunctionArgument> functionParams;
+    std::vector<FunctionAttribute> functionAttributes;
+    while (token.tokenType != TokenType::RIGHT_CURLY)
+    {
+
+        bool isReference = false;
+        if (token.tokenType == TokenType::KEYWORD && iequals(token.lexical(), "var"))
+        {
+            next();
+            isReference = true;
+        }
+        token = current();
+        const std::string funcParamName = token.lexical();
+        std::vector<std::string> paramNames;
+        paramNames.push_back(funcParamName);
+        while (canConsume(TokenType::COMMA))
+        {
+            consume(TokenType::COMMA);
+            consume(TokenType::NAMEDTOKEN);
+            paramNames.emplace_back(current().lexical());
+        }
+
+        consume(TokenType::COLON);
+        if (canConsume(TokenType::NAMEDTOKEN))
+        {
+            token = next();
+            auto type = determinVariableTypeByName(token.lexical());
+
+            for (const auto &param: paramNames)
+            {
+
+                if (isVariableDefined(param, scope))
+                {
+                    m_errors.push_back(ParserError{
+                            .token = token, .message = "A variable with the name " + param + " was allready defined!"});
+                }
+                else if (!type.has_value())
+                {
+                    m_errors.push_back(ParserError{.token = token,
+                                                   .message = "A type " + token.lexical() + " of the variable " +
+                                                              param + " could not be determined!"});
+                }
+                else
+                {
+
+
+                    functionParams.push_back(
+                            FunctionArgument{.type = type.value(), .argumentName = param, .isReference = isReference});
+                }
+            }
+            tryConsume(TokenType::SEMICOLON);
+        }
+        else
+        {
+            // TODO: type def missing
+            m_errors.push_back(ParserError{.token = token,
+                                           .message = "For the parameter definition " + funcParamName +
+                                                      " there is a type missing"});
+        }
+
+        token = next();
+    }
+    if (isFunction)
+        if (!tryConsume(TokenType::COLON))
+        {
+            m_errors.push_back(
+                    ParserError{.token = current(),
+                                .message = "the return type for the function \"" + functionName + "\" is missing."});
+            throw ParserException(m_errors);
+        }
+    std::shared_ptr<VariableType> returnType;
+
+    if (isFunction && consume(TokenType::NAMEDTOKEN))
+    {
+        const auto typeName = current().lexical();
+        const auto type = determinVariableTypeByName(typeName);
+        if (!type)
+        {
+            m_errors.push_back(
+                    ParserError{.token = current(),
+                                .message = "A return type " + typeName + " of function could not be determined!"});
+        }
+        else
+        {
+            returnType = type.value();
+        }
+    }
+    consume(TokenType::SEMICOLON);
+
+    if (tryConsumeKeyWord("external"))
+    {
+        tryConsume(TokenType::STRING) || tryConsume(TokenType::CHAR);
+        libName = std::string(current().lexical());
+
+        if (tryConsumeKeyWord("name"))
+        {
+            consume(TokenType::STRING);
+            externalName = std::string(current().lexical());
+        }
+        tryConsume(TokenType::SEMICOLON);
+    }
+    else if (tryConsumeKeyWord("inline"))
+    {
+        functionAttributes.emplace_back(FunctionAttribute::Inline);
+        consume(TokenType::SEMICOLON);
+    }
+
+
+    return std::make_shared<FunctionDefinitionNode>(functionNameToken, functionName, externalName, libName,
+                                                    functionParams, !isFunction, returnType);
+}
 std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDefinition(size_t scope, bool isFunction)
 {
     consume(TokenType::NAMEDTOKEN);
@@ -1099,7 +1223,7 @@ std::shared_ptr<ASTNode> Parser::parseFunctionCall(const size_t scope)
 {
     consume(TokenType::NAMEDTOKEN);
     auto nameToken = current();
-    auto functionName = std::string(current().lexical());
+    auto functionName = current().lexical();
     const bool isSysCall = isKnownSystemCall(functionName);
     if (!isSysCall && std::ranges::find(m_known_function_names, functionName) == std::end(m_known_function_names))
     {
@@ -1154,13 +1278,10 @@ bool Parser::importUnit(const std::string &filename)
 
         return true;
     }
-    file.seekg(0, std::ios::end);
-    std::streamsize size = file.tellg();
-    std::string buffer(size, ' ');
-    file.seekg(0);
-    file.read(&buffer[0], size);
+    std::stringstream buffer;
+    buffer << file.rdbuf();
     Lexer lexer;
-    auto tokens = lexer.tokenize(filename, buffer);
+    auto tokens = lexer.tokenize(filename, buffer.str());
     Parser parser(m_rtlDirectories, path, tokens);
     auto unit = parser.parseUnit();
 
@@ -1207,97 +1328,242 @@ bool Parser::importUnit(const std::string &filename)
     return false;
 }
 
+void Parser::parseInterfaceSection()
+{
+    if (tryConsumeKeyWord("uses"))
+    {
+        while (consume(TokenType::NAMEDTOKEN))
+        {
+            auto filename = std::string(current().lexical()) + ".pas";
+            importUnit(filename);
+
+
+            if (!tryConsume(TokenType::COMMA))
+                break;
+        }
+        consume(TokenType::SEMICOLON);
+    }
+
+    while (!canConsumeKeyWord("implementation"))
+    {
+        if (tryConsumeKeyWord("type"))
+        {
+            parseTypeDefinitions(0);
+        }
+        else if (tryConsumeKeyWord("procedure"))
+        {
+            m_functionDeclarations.emplace_back(parseFunctionDeclaration(0, false));
+        }
+        else if (tryConsumeKeyWord("function"))
+        {
+            m_functionDeclarations.emplace_back(parseFunctionDeclaration(0, true));
+        }
+    }
+}
+
+void Parser::parseImplementationSection()
+{
+    if (tryConsumeKeyWord("uses"))
+    {
+        while (consume(TokenType::NAMEDTOKEN))
+        {
+            auto filename = std::string(current().lexical()) + ".pas";
+            importUnit(filename);
+
+
+            if (!tryConsume(TokenType::COMMA))
+                break;
+        }
+        consume(TokenType::SEMICOLON);
+    }
+
+    while (!canConsumeKeyWord("end") && !canConsumeKeyWord("initialization"))
+    {
+        if (tryConsumeKeyWord("type"))
+        {
+            parseTypeDefinitions(0);
+        }
+        else if (tryConsumeKeyWord("procedure"))
+        {
+            m_functionDefinitions.emplace_back(parseFunctionDefinition(0, false));
+        }
+        else if (tryConsumeKeyWord("function"))
+        {
+            m_functionDefinitions.emplace_back(parseFunctionDefinition(0, true));
+        }
+        else
+        {
+            break;
+        }
+    }
+}
+
+
 std::unique_ptr<UnitNode> Parser::parseUnit()
 {
     try
     {
-        bool isProgram = current().tokenType == TokenType::KEYWORD && iequals(current().lexical(), "program");
-        bool isUnit = current().tokenType == TokenType::KEYWORD && iequals(current().lexical(), "unit");
-        UnitType unitType = UnitType::UNIT;
-        if (isProgram || isUnit)
+
+        auto unitType = UnitType::UNIT;
+
+
+        consume(TokenType::NAMEDTOKEN);
+        auto unitName = std::string(current().lexical());
+        auto unitNameToken = current();
+
+        consume(TokenType::SEMICOLON);
+
+        if (unitName != "system")
         {
-            if (isProgram)
-                unitType = UnitType::PROGRAM;
-
-            consume(TokenType::NAMEDTOKEN);
-            auto unitName = std::string(current().lexical());
-            auto unitNameToken = current();
-
-            consume(TokenType::SEMICOLON);
-
-            if (unitName != "system")
-            {
-                importUnit("system.pas");
-            }
-
-            std::shared_ptr<BlockNode> blockNode = nullptr;
-            while (hasNext())
-            {
-                const int scope = 0;
-                if (tryConsumeKeyWord("type"))
-                {
-                    parseTypeDefinitions(scope);
-                }
-                else if (tryConsumeKeyWord("uses"))
-                {
-                    while (consume(TokenType::NAMEDTOKEN))
-                    {
-                        auto filename = std::string(current().lexical()) + ".pas";
-                        importUnit(filename);
-
-
-                        if (!tryConsume(TokenType::COMMA))
-                            break;
-                    }
-                    consume(TokenType::SEMICOLON);
-                }
-                else if (tryConsumeKeyWord("procedure"))
-                {
-                    m_functionDefinitions.emplace_back(parseFunctionDefinition(scope, false));
-                }
-                else if (tryConsumeKeyWord("function"))
-                {
-                    m_functionDefinitions.emplace_back(parseFunctionDefinition(scope, true));
-                }
-                else if (canConsumeKeyWord("const") || canConsumeKeyWord("var") || canConsumeKeyWord("begin"))
-                {
-                    blockNode = parseBlock(scope);
-                    consume(TokenType::DOT);
-                }
-                else if (tryConsume(TokenType::T_EOF))
-                {
-                    break;
-                }
-                else
-                {
-                    m_errors.push_back(ParserError{
-
-                            .token = m_tokens[m_current + 1],
-                            .message = "unexpected token found " +
-                                       std::string(magic_enum::enum_name(m_tokens[m_current + 1].tokenType)) + "!"});
-                    break;
-                }
-            }
-
-            if (hasError())
-            {
-                throw ParserException(m_errors);
-            }
-
-
-            return std::make_unique<UnitNode>(unitNameToken, unitType, unitName, m_functionDefinitions,
-                                              m_typeDefinitions, blockNode);
+            importUnit("system.pas");
         }
 
-        m_errors.push_back(
-                ParserError{.token = m_tokens[m_current + 1],
-                            .message = "unexpected expected token found " +
-                                       std::string(magic_enum::enum_name(m_tokens[m_current + 1].tokenType)) + "!"});
-        throw ParserException(m_errors);
+        std::shared_ptr<BlockNode> blockNode = nullptr;
+        while (hasNext())
+        {
+            if (tryConsumeKeyWord("interface"))
+            {
+                parseInterfaceSection();
+            }
+            else if (tryConsumeKeyWord("implementation"))
+            {
+                parseImplementationSection();
+            }
+            else if (tryConsumeKeyWord("end"))
+            {
+                consume(TokenType::DOT);
+                consume(TokenType::T_EOF);
+                break;
+            }
+            else if (tryConsume(TokenType::T_EOF))
+            {
+                break;
+            }
+            else
+            {
+                m_errors.push_back(ParserError{
+
+                        .token = m_tokens[m_current + 1],
+                        .message = "unexpected token found " +
+                                   std::string(magic_enum::enum_name(m_tokens[m_current + 1].tokenType)) + "!"});
+                break;
+            }
+        }
+
+        if (hasError())
+        {
+            throw ParserException(m_errors);
+        }
+
+
+        return std::make_unique<UnitNode>(unitNameToken, unitType, unitName, m_functionDefinitions, m_typeDefinitions,
+                                          blockNode);
     }
     catch (ParserException &e)
     {
         std::cerr << e.what();
     }
     return nullptr;
+}
+
+
+std::unique_ptr<UnitNode> Parser::parseProgram()
+{
+    try
+    {
+        UnitType unitType = UnitType::PROGRAM;
+
+
+        consume(TokenType::NAMEDTOKEN);
+        auto unitName = std::string(current().lexical());
+        auto unitNameToken = current();
+
+        consume(TokenType::SEMICOLON);
+
+        if (unitName != "system")
+        {
+            importUnit("system.pas");
+        }
+
+        std::shared_ptr<BlockNode> blockNode = nullptr;
+        while (hasNext())
+        {
+            constexpr int scope = 0;
+            if (tryConsumeKeyWord("type"))
+            {
+                parseTypeDefinitions(scope);
+            }
+            else if (tryConsumeKeyWord("uses"))
+            {
+                while (consume(TokenType::NAMEDTOKEN))
+                {
+                    auto filename = std::string(current().lexical()) + ".pas";
+                    importUnit(filename);
+
+
+                    if (!tryConsume(TokenType::COMMA))
+                        break;
+                }
+                consume(TokenType::SEMICOLON);
+            }
+            else if (tryConsumeKeyWord("procedure"))
+            {
+                m_functionDefinitions.emplace_back(parseFunctionDefinition(scope, false));
+            }
+            else if (tryConsumeKeyWord("function"))
+            {
+                m_functionDefinitions.emplace_back(parseFunctionDefinition(scope, true));
+            }
+            else if (canConsumeKeyWord("const") || canConsumeKeyWord("var") || canConsumeKeyWord("begin"))
+            {
+                blockNode = parseBlock(scope);
+                consume(TokenType::DOT);
+            }
+            else if (tryConsume(TokenType::T_EOF))
+            {
+                break;
+            }
+            else
+            {
+                m_errors.push_back(ParserError{
+
+                        .token = m_tokens[m_current + 1],
+                        .message = "unexpected token found " +
+                                   std::string(magic_enum::enum_name(m_tokens[m_current + 1].tokenType)) + "!"});
+                break;
+            }
+        }
+
+        if (hasError())
+        {
+            throw ParserException(m_errors);
+        }
+
+
+        return std::make_unique<UnitNode>(unitNameToken, unitType, unitName, m_functionDefinitions, m_typeDefinitions,
+                                          blockNode);
+    }
+    catch (ParserException &e)
+    {
+        std::cerr << e.what();
+    }
+    return nullptr;
+}
+
+
+std::unique_ptr<UnitNode> Parser::parseFile()
+{
+    bool isProgram = current().tokenType == TokenType::KEYWORD && iequals(current().lexical(), "program");
+    bool isUnit = current().tokenType == TokenType::KEYWORD && iequals(current().lexical(), "unit");
+
+    if (isProgram)
+        return parseProgram();
+    if (isUnit)
+        return parseUnit();
+
+    m_errors.push_back(ParserError{.token = m_tokens[m_current + 1],
+                                   .message = "unexpected expected token found " +
+                                              std::string(magic_enum::enum_name(m_tokens[m_current + 1].tokenType)) +
+                                              "!"});
+    throw ParserException(m_errors);
 }

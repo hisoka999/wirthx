@@ -16,7 +16,7 @@ void VariableAccessNode::print() { std::cout << m_variableName; }
 
 llvm::Value *VariableAccessNode::codegen(std::unique_ptr<Context> &context)
 {
-    auto variableName = to_lower(m_variableName);
+    const auto variableName = to_lower(m_variableName);
     llvm::Value *V = context->NamedValues[m_variableName];
     if (V)
     {

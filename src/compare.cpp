@@ -10,6 +10,7 @@ bool ichar_equals(const char a, const char b)
 }
 bool iequals(const std::string_view &a, const std::string_view &b) { return std::ranges::equal(a, b, ichar_equals); }
 
+bool iequals(const std::string &a, const std::string &b) { return std::ranges::equal(a, b, ichar_equals); }
 
 std::string to_lower(const std::string &a)
 {

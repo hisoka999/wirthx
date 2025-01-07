@@ -22,6 +22,7 @@ class Parser
     std::map<std::string, std::shared_ptr<VariableType>> m_typeDefinitions;
     std::vector<VariableDefinition> m_known_variable_definitions;
     std::vector<std::string> m_known_function_names;
+    std::vector<std::shared_ptr<FunctionDefinitionNode>> m_functionDeclarations;
     std::vector<std::shared_ptr<FunctionDefinitionNode>> m_functionDefinitions;
     std::vector<std::shared_ptr<ASTNode>> m_nodes;
 
@@ -57,9 +58,16 @@ class Parser
     std::shared_ptr<ASTNode> parseVariableAssignment(size_t scope);
     std::shared_ptr<ASTNode> parseVariableAccess(size_t scope);
     std::shared_ptr<ASTNode> parseToken(size_t scope);
+    std::shared_ptr<FunctionDefinitionNode> parseFunctionDeclaration(size_t scope, bool isFunction);
     std::shared_ptr<FunctionDefinitionNode> parseFunctionDefinition(size_t scope, bool isFunction);
 
     bool importUnit(const std::string &filename);
+
+    [[nodiscard]] std::unique_ptr<UnitNode> parseUnit();
+    [[nodiscard]] std::unique_ptr<UnitNode> parseProgram();
+
+    void parseInterfaceSection();
+    void parseImplementationSection();
 
 public:
     Parser(const std::vector<std::filesystem::path> &rtlDirectories, std::filesystem::path path,
@@ -68,5 +76,5 @@ public:
     [[nodiscard]] bool hasError() const;
     void printErrors(std::ostream &outputStream);
 
-    [[nodiscard]] std::unique_ptr<UnitNode> parseUnit();
+    [[nodiscard]] std::unique_ptr<UnitNode> parseFile();
 };

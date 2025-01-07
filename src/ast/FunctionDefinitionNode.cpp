@@ -204,14 +204,18 @@ std::string FunctionDefinitionNode::functionSignature()
     if (!m_libName.empty())
         return m_externalName;
 
-    std::stringstream stream;
-    stream << m_name << "(";
-    for (size_t i = 0; i < m_params.size(); ++i)
+    if (m_functionSignature.empty())
     {
-        stream << m_params[i].type->typeName << ((i < m_params.size() - 1) ? "," : "");
+        std::stringstream stream;
+        stream << m_name << "(";
+        for (size_t i = 0; i < m_params.size(); ++i)
+        {
+            stream << m_params[i].type->typeName << ((i < m_params.size() - 1) ? "," : "");
+        }
+        stream << ")";
+        m_functionSignature = stream.str();
     }
-    stream << ")";
-    return stream.str();
+    return m_functionSignature;
 }
 
 std::string &FunctionDefinitionNode::externalName() { return m_externalName; }

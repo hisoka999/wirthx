@@ -119,11 +119,11 @@ llvm::Value *SystemFunctionCallNode::codegen_length(std::unique_ptr<Context> &co
     {
 
         // const llvm::DataLayout &DL = context->TheModule->getDataLayout();
-        auto value = m_args[0]->codegen(context);
-        auto llvmRecordType = stringType->generateLlvmType(context);
+        const auto value = m_args[0]->codegen(context);
+        const auto llvmRecordType = stringType->generateLlvmType(context);
 
-        auto arraySizeOffset = context->Builder->CreateStructGEP(llvmRecordType, value, 1, "length");
-        auto indexType = VariableType::getInteger(64)->generateLlvmType(context);
+        const auto arraySizeOffset = context->Builder->CreateStructGEP(llvmRecordType, value, 1, "length");
+        const auto indexType = VariableType::getInteger(64)->generateLlvmType(context);
 
         return context->Builder->CreateLoad(indexType, arraySizeOffset, "loaded.length");
     }

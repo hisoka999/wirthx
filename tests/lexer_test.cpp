@@ -282,3 +282,62 @@ TEST(LexerTest, LexPointer)
     ASSERT_EQ(result[5].tokenType, TokenType::SEMICOLON);
     ASSERT_EQ(result[6].tokenType, TokenType::T_EOF);
 }
+
+TEST(LexerTest, LexUnit)
+{
+    Lexer lexer;
+
+    auto result = lexer.tokenize("filename.pas", R"( unit unitname;      // Name of the unit
+
+ interface      // Everything declared here may be used by this and other units (public)
+
+ uses myimport;
+
+
+ implementation // The implementation of the requirements for this unit only (private)
+
+ uses import2;
+
+
+ initialization // Optional section: variables, data etc initialised here
+
+ finalization   // Optional section: code executed when the program ends
+
+ end.)");
+
+    EXPECT_EQ(result.size(), 16);
+    ASSERT_EQ(result[0].tokenType, TokenType::KEYWORD);
+    ASSERT_EQ(result[0].lexical(), "unit"sv);
+    ASSERT_EQ(result[1].tokenType, TokenType::NAMEDTOKEN);
+    ASSERT_EQ(result[1].lexical(), "unitname"sv);
+    ASSERT_EQ(result[2].tokenType, TokenType::SEMICOLON);
+    ASSERT_EQ(result[2].lexical(), ";"sv);
+    ASSERT_EQ(result[3].tokenType, TokenType::KEYWORD);
+    ASSERT_EQ(result[3].lexical(), "interface"sv);
+    ASSERT_EQ(result[4].tokenType, TokenType::KEYWORD);
+    ASSERT_EQ(result[4].lexical(), "uses"sv);
+    ASSERT_EQ(result[5].tokenType, TokenType::NAMEDTOKEN);
+    ASSERT_EQ(result[5].lexical(), "myimport"sv);
+    ASSERT_EQ(result[6].tokenType, TokenType::SEMICOLON);
+    ASSERT_EQ(result[6].lexical(), ";"sv);
+
+    ASSERT_EQ(result[7].tokenType, TokenType::KEYWORD);
+    ASSERT_EQ(result[7].lexical(), "implementation"sv);
+    ASSERT_EQ(result[8].tokenType, TokenType::KEYWORD);
+    ASSERT_EQ(result[8].lexical(), "uses"sv);
+    ASSERT_EQ(result[9].tokenType, TokenType::NAMEDTOKEN);
+    ASSERT_EQ(result[9].lexical(), "import2"sv);
+    ASSERT_EQ(result[10].tokenType, TokenType::SEMICOLON);
+    ASSERT_EQ(result[10].lexical(), ";"sv);
+    ASSERT_EQ(result[11].tokenType, TokenType::KEYWORD);
+    ASSERT_EQ(result[11].lexical(), "initialization"sv);
+    ASSERT_EQ(result[12].tokenType, TokenType::KEYWORD);
+    ASSERT_EQ(result[12].lexical(), "finalization"sv);
+
+    ASSERT_EQ(result[13].tokenType, TokenType::KEYWORD);
+    ASSERT_EQ(result[13].lexical(), "end"sv);
+    ASSERT_EQ(result[14].tokenType, TokenType::DOT);
+    ASSERT_EQ(result[14].lexical(), "."sv);
+
+    ASSERT_EQ(result[15].tokenType, TokenType::T_EOF);
+}

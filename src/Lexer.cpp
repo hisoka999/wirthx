@@ -6,12 +6,12 @@ Lexer::Lexer() {}
 
 Lexer::~Lexer() {}
 
-bool validStartNameChar(char value)
+constexpr bool validStartNameChar(const char value)
 {
     return (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z') || value == '_';
 }
 
-bool validNameChar(char value) { return validStartNameChar(value) || (value >= '0' && value <= '9'); }
+constexpr bool validNameChar(const char value) { return validStartNameChar(value) || (value >= '0' && value <= '9'); }
 
 std::vector<Token> Lexer::tokenize(const std::string &filename, const std::string &content)
 {
@@ -90,9 +90,9 @@ std::vector<Token> Lexer::tokenize(const std::string &filename, const std::strin
             SourceLocation source_location = {
                     .filename = filename, .source = contentPtr, .byte_offset = i, .num_bytes = string_length};
             if (string_length != 1)
-                tokens.push_back(Token(source_location, row, column, TokenType::ESCAPED_STRING));
+                tokens.emplace_back(source_location, row, column, TokenType::ESCAPED_STRING);
             else
-                tokens.push_back(Token(source_location, row, column, TokenType::CHAR));
+                tokens.emplace_back(source_location, row, column, TokenType::CHAR);
             i = endPosition - 1;
             column += offset;
             continue;
@@ -105,7 +105,7 @@ std::vector<Token> Lexer::tokenize(const std::string &filename, const std::strin
             const size_t offset = endPosition - i + 1;
             SourceLocation source_location = {
                     .filename = filename, .source = contentPtr, .byte_offset = i, .num_bytes = offset};
-            tokens.push_back(Token(source_location, row, column, TokenType::NUMBER));
+            tokens.emplace_back(source_location, row, column, TokenType::NUMBER);
             i = endPosition;
             column += offset;
             continue;
@@ -180,7 +180,7 @@ std::vector<Token> Lexer::tokenize(const std::string &filename, const std::strin
     }
     SourceLocation source_location = {
             .filename = filename, .source = contentPtr, .byte_offset = content.size(), .num_bytes = 0};
-    tokens.push_back(Token(source_location, row, column, TokenType::T_EOF));
+    tokens.emplace_back(source_location, row, column, TokenType::T_EOF);
     return tokens;
 }
 
@@ -298,8 +298,8 @@ bool Lexer::find_fixed_token(const std::string &content, size_t start, size_t *e
         current = content[*endPosition];
     }
 
-    auto tmp = content.substr(start, *endPosition - start);
-    for (auto token: possible_tokens)
+    const auto tmp = content.substr(start, *endPosition - start);
+    for (const auto &token: possible_tokens)
     {
         if (iequals(tmp, token))
         {
