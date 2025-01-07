@@ -14,7 +14,8 @@ inline std::vector<std::string> possible_tokens = {"program",   "unit",         
                                                    "and",       "or",           "not",
                                                    "record",    "external",     "name",
                                                    "mod",       "inline",       "implementation",
-                                                   "interface", "finalization", "initialization"};
+                                                   "interface", "finalization", "initialization",
+                                                   "downto"};
 
 class Lexer
 {

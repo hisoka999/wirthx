@@ -1,12 +1,10 @@
 #include <cassert>
-#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include "Lexer.h"
 #include "Parser.h"
-#include "ast/FunctionDefinitionNode.h"
 #include "compiler/Compiler.h"
 #include "config.h"
 

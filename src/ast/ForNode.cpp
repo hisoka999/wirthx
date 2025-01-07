@@ -10,9 +10,10 @@
 #include "exceptions/CompilerException.h"
 
 ForNode::ForNode(const Token &token, std::string loopVariable, const std::shared_ptr<ASTNode> &startExpression,
-                 const std::shared_ptr<ASTNode> &endExpression, const std::vector<std::shared_ptr<ASTNode>> &body) :
+                 const std::shared_ptr<ASTNode> &endExpression, const std::vector<std::shared_ptr<ASTNode>> &body,
+                 int increment) :
     ASTNode(token), m_loopVariable(std::move(loopVariable)), m_startExpression(startExpression),
-    m_endExpression(endExpression), m_body(body)
+    m_endExpression(endExpression), m_body(body), m_increment(increment)
 {
 }
 
@@ -77,7 +78,7 @@ llvm::Value *ForNode::codegen(std::unique_ptr<Context> &context)
     }
     context->BreakBlock.Block = nullptr;
     // Emit the step value.
-    llvm::Value *stepValue = builder->getIntN(bitLength, 1);
+    llvm::Value *stepValue = builder->getIntN(bitLength, m_increment);
 
     llvm::Value *nextVar = builder->CreateAdd(Variable, stepValue, "nextvar");
     // builder->CreateStore(nextVar, context->NamedAllocations[m_loopVariable]);
@@ -91,7 +92,10 @@ llvm::Value *ForNode::codegen(std::unique_ptr<Context> &context)
     }
 
     // Convert condition to a bool by comparing non-equal to 0.0.
-    EndCond = context->Builder->CreateCmp(llvm::CmpInst::ICMP_SLE, nextVar, EndCond, "for.loopcond");
+    if (m_increment > 0)
+        EndCond = context->Builder->CreateCmp(llvm::CmpInst::ICMP_SLE, nextVar, EndCond, "for.loopcond");
+    else
+        EndCond = context->Builder->CreateCmp(llvm::CmpInst::ICMP_SGE, nextVar, EndCond, "for.loopcond");
 
     // Create the "after loop" block and insert it.
     llvm::BasicBlock *loopEndBB = builder->GetInsertBlock();

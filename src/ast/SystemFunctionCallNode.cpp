@@ -125,7 +125,8 @@ llvm::Value *SystemFunctionCallNode::codegen_length(std::unique_ptr<Context> &co
         const auto arraySizeOffset = context->Builder->CreateStructGEP(llvmRecordType, value, 1, "length");
         const auto indexType = VariableType::getInteger(64)->generateLlvmType(context);
 
-        return context->Builder->CreateLoad(indexType, arraySizeOffset, "loaded.length");
+        return context->Builder->CreateSub(context->Builder->CreateLoad(indexType, arraySizeOffset, "loaded.length"),
+                                           context->Builder->getInt64(1));
     }
     if (const auto arrayType = std::dynamic_pointer_cast<ArrayType>(paramType))
     {
@@ -170,8 +171,8 @@ llvm::Value *SystemFunctionCallNode::codegen_write(std::unique_ptr<Context> &con
             ArgsV.push_back(context->Builder->CreateGlobalString("%s", "format_string"));
 
             const auto stringStructPtr = argValue;
-            const auto arrayPointerOffset = context->Builder->CreateStructGEP(type->generateLlvmType(context),
-                                                                              stringStructPtr, 2, "string.ptr.offset");
+            const auto arrayPointerOffset = context->Builder->CreateStructGEP(
+                    type->generateLlvmType(context), stringStructPtr, 2, "write.string.offset");
             const auto value = context->Builder->CreateLoad(llvm::PointerType::getUnqual(*context->TheContext),
                                                             arrayPointerOffset);
 

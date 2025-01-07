@@ -441,6 +441,19 @@ std::shared_ptr<ASTNode> Parser::parseLogicalExpression(const size_t scope, std:
     return lhs;
 }
 
+std::shared_ptr<ASTNode> fixPrecedence(const std::shared_ptr<BinaryOperationNode> &opNode)
+{
+    if (auto rhsOperator = std::dynamic_pointer_cast<BinaryOperationNode>(opNode->rhs()))
+    {
+        auto lhs = std::make_shared<BinaryOperationNode>(opNode->expressionToken(), opNode->binoperator(),
+                                                         opNode->lhs(), rhsOperator->lhs());
+        auto rhs = rhsOperator->rhs();
+        return std::make_shared<BinaryOperationNode>(rhsOperator->expressionToken(), rhsOperator->binoperator(), lhs,
+                                                     rhs);
+    }
+
+    return opNode;
+}
 
 std::shared_ptr<ASTNode> Parser::parseBaseExpression(const size_t scope, const std::shared_ptr<ASTNode> &origLhs,
                                                      bool includeCompare)
@@ -451,13 +464,15 @@ std::shared_ptr<ASTNode> Parser::parseBaseExpression(const size_t scope, const s
     {
         Token operatorToken = current();
         auto rhs = parseBaseExpression(scope, nullptr, false);
-        return parseExpression(scope, std::make_shared<BinaryOperationNode>(operatorToken, Operator::PLUS, lhs, rhs));
+        return parseExpression(
+                scope, fixPrecedence(std::make_shared<BinaryOperationNode>(operatorToken, Operator::PLUS, lhs, rhs)));
     }
     if (tryConsume(TokenType::MINUS))
     {
         Token operatorToken = current();
         auto rhs = parseBaseExpression(scope, nullptr, false);
-        return parseExpression(scope, std::make_shared<BinaryOperationNode>(operatorToken, Operator::MINUS, lhs, rhs));
+        return parseExpression(
+                scope, fixPrecedence(std::make_shared<BinaryOperationNode>(operatorToken, Operator::MINUS, lhs, rhs)));
     }
     if (tryConsume(TokenType::MUL))
     {
@@ -652,7 +667,7 @@ std::shared_ptr<ASTNode> Parser::parseVariableAccess(const size_t scope)
             return nullptr;
         }
         consume(TokenType::LEFT_SQUAR);
-        auto indexNode = parseToken(scope);
+        auto indexNode = parseExpression(scope);
         consume(TokenType::RIGHT_SQUAR);
         return std::make_shared<ArrayAccessNode>(arrayName, indexNode);
     }
@@ -1003,6 +1018,14 @@ std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDefinition(size_t s
                                                                       functionBody, !isFunction, returnType);
         for (auto attribute: functionAttributes)
             functionDefinition->addAttribute(attribute);
+
+        for (auto &def: functionBody->getVariableDefinitions())
+        {
+            m_known_variable_definitions.erase(
+                    std::ranges::remove_if(m_known_variable_definitions, [def](const VariableDefinition &value)
+                                           { return def.variableName == value.variableName; })
+                            .begin());
+        }
     }
 
 
@@ -1142,8 +1165,22 @@ std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope)
         consume(TokenType::COLON);
         consume(TokenType::EQUAL);
         auto loopStart = parseBaseExpression(scope + 1);
-
-        consumeKeyWord("to");
+        int increment;
+        if (tryConsumeKeyWord("to"))
+        {
+            increment = 1;
+        }
+        else if (tryConsumeKeyWord("downto"))
+        {
+            increment = -1;
+        }
+        else
+        {
+            m_errors.push_back(ParserError{.token = m_tokens[m_current + 1],
+                                           .message = "expected keyword  'to' or 'downto' but found " +
+                                                      std::string(m_tokens[m_current + 1].lexical()) + "!"});
+            throw ParserException(m_errors);
+        }
         auto loopEnd = parseBaseExpression(scope + 1);
 
         std::vector<std::shared_ptr<ASTNode>> forNodes;
@@ -1161,7 +1198,7 @@ std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope)
         }
 
 
-        return std::make_shared<ForNode>(forToken, loopVariable, loopStart, loopEnd, forNodes);
+        return std::make_shared<ForNode>(forToken, loopVariable, loopStart, loopEnd, forNodes, increment);
     }
     if (tryConsumeKeyWord("while"))
     {

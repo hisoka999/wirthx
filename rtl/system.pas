@@ -13,7 +13,9 @@ interface
     procedure Assign(var F: File;FileName: String);
     procedure CloseFile(var F: File);
     Procedure inc(var value: integer);
+    Procedure inc(var value: int64);
     Procedure dec(var value: integer);
+    Procedure dec(var value: int64);
     procedure Readln(var F: File; var value: string);
     function CompareStr( S1,S2 : string) : integer;
 
@@ -63,7 +65,10 @@ implementation
     begin
         value := value - 1;
     end;
-
+    Procedure dec(var value: int64); inline;
+    begin
+        value := value - 1;
+    end;
     procedure Readln(var F: File; var value: string);
     var
         c : char  ;

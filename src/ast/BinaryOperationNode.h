@@ -31,4 +31,8 @@ public:
     std::shared_ptr<VariableType> resolveType(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode) override;
 
     void typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode) override;
+
+    [[nodiscard]] std::shared_ptr<ASTNode> lhs() const { return m_lhs; }
+    [[nodiscard]] std::shared_ptr<ASTNode> rhs() const { return m_rhs; }
+    [[nodiscard]] Operator binoperator() const { return m_operator; }
 };

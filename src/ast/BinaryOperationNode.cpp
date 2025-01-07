@@ -158,7 +158,8 @@ llvm::Value *BinaryOperationNode::generateForString(llvm::Value *lhs, llvm::Valu
     const auto lhsIndex = context->Builder->CreateLoad(indexType, lhsIndexPtr, "lhs.size");
     const auto rhsIndex = context->Builder->CreateLoad(indexType, rhsIndexPtr, "rhs.size");
 
-    const auto newSize = context->Builder->CreateAdd(lhsIndex, rhsIndex, "new_size");
+    const auto newSize = context->Builder->CreateAdd(
+            lhsIndex, context->Builder->CreateAdd(rhsIndex, context->Builder->getInt64(1)), "new_size");
     ;
 
 

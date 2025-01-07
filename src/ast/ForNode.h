@@ -10,10 +10,12 @@ private:
     std::shared_ptr<ASTNode> m_startExpression;
     std::shared_ptr<ASTNode> m_endExpression;
     std::vector<std::shared_ptr<ASTNode>> m_body;
+    int m_increment;
 
 public:
     ForNode(const Token &token, std::string loopVariable, const std::shared_ptr<ASTNode> &startExpression,
-            const std::shared_ptr<ASTNode> &endExpression, const std::vector<std::shared_ptr<ASTNode>> &body);
+            const std::shared_ptr<ASTNode> &endExpression, const std::vector<std::shared_ptr<ASTNode>> &body,
+            int increment);
     ~ForNode() override = default;
 
     void print() override;

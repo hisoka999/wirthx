@@ -162,6 +162,7 @@ void BlockNode::typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parent
         exp->typeCheck(unit, parentNode);
     }
 }
+std::vector<VariableDefinition> BlockNode::getVariableDefinitions() { return m_variableDefinitions; }
 
 void BlockNode::preappendExpression(std::shared_ptr<ASTNode> node)
 {

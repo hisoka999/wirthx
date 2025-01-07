@@ -84,28 +84,28 @@ std::shared_ptr<VariableType> VariableAccessNode::resolveType(const std::unique_
             type = var.value().variableType;
         }
     }
-    else
-
-            if (auto *functionCall = dynamic_cast<FunctionCallNode *>(parent))
+    else if (auto *functionCall = dynamic_cast<FunctionCallNode *>(parent))
     {
-        if (auto functionDefinition = unit->getFunctionDefinition(functionCall->name()))
+        if (auto unitFunctionDefinition = unit->getFunctionDefinition(functionCall->name()))
         {
-            if (auto param = functionDefinition.value()->getParam(m_variableName))
+            if (auto param = unitFunctionDefinition.value()->getParam(m_variableName))
             {
                 type = param.value().type;
             }
-            auto var = functionDefinition.value()->body()->getVariableDefinition(m_variableName);
-            if (var)
+            if (auto var = unitFunctionDefinition.value()->body()->getVariableDefinition(m_variableName))
             {
                 type = var.value().variableType;
             }
         }
     }
-
-    if (auto definition = unit->getVariableDefinition(m_variableName))
+    if (type == nullptr)
     {
-        type = definition.value().variableType;
+        if (auto definition = unit->getVariableDefinition(m_variableName))
+        {
+            type = definition.value().variableType;
+        }
     }
+
     if (m_dereference)
     {
         if (auto ptrType = std::dynamic_pointer_cast<PointerType>(type))
