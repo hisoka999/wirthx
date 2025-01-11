@@ -68,7 +68,7 @@ int main(int args, char **argv)
         std::cerr << "the first argument is not a valid input file\n";
         return 1;
     }
-
+    init_compiler();
     switch (options.option)
     {
         case CompileOption::COMPILE:

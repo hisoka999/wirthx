@@ -216,14 +216,7 @@ llvm::Value *BinaryOperationNode::codegen(std::unique_ptr<Context> &context)
     if (!lhs || !rhs)
         return nullptr;
 
-    ASTNode *parent = context->ProgramUnit.get();
-    if (context->TopLevelFunction)
-    {
-        if (const auto def = context->ProgramUnit->getFunctionDefinition(context->TopLevelFunction->getName().str()))
-        {
-            parent = def.value().get();
-        }
-    }
+    const auto parent = resolveParent(context);
 
     if (lhs->getType()->isIntegerTy())
     {

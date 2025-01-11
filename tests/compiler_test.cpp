@@ -12,14 +12,20 @@ using namespace std::literals;
 
 class CompilerTest : public testing::TestWithParam<std::string>
 {
+public:
+    static void SetUpTestSuite() { init_compiler(); }
 };
 
 class ProjectEulerTest : public testing::TestWithParam<std::string>
 {
+public:
+    static void SetUpTestSuite() { init_compiler(); }
 };
 
 class CompilerTestError : public testing::TestWithParam<std::string>
 {
+public:
+    static void SetUpTestSuite() { init_compiler(); }
 };
 
 TEST_P(CompilerTest, TestNoError)
@@ -37,6 +43,7 @@ TEST_P(CompilerTest, TestNoError)
     options.rtlDirectories.emplace_back("rtl");
 
     options.runProgram = true;
+    options.buildMode = BuildMode::Release;
     options.outputDirectory = std::filesystem::current_path();
     compile_file(options, input_path, erstream, ostream);
 
@@ -59,9 +66,11 @@ TEST_P(CompilerTest, TestNoError)
     std::string result = ostream.str();
 
     result.erase(std::ranges::remove(result, '\r').begin(), result.end());
-
-    std::cout << "expected: " << expected;
-    std::cout << result << "\n";
+    if (result != expected)
+    {
+        std::cout << "expected: " << expected;
+        std::cout << result << "\n";
+    }
 
 
     ASSERT_EQ(erstream.str(), "");
@@ -159,7 +168,7 @@ INSTANTIATE_TEST_SUITE_P(CompilerTestNoError, CompilerTest,
                          testing::Values("helloworld", "functions", "math", "includetest", "whileloop", "conditions",
                                          "forloop", "arraytest", "constantstest", "customint", "logicalcondition",
                                          "basicvec2", "dynarray", "externalfunction", "stringtest", "readfile",
-                                         "repeatuntil", "stringcompare", "pointer_test"));
+                                         "repeatuntil", "stringcompare", "pointer_test", "rule110"));
 
 INSTANTIATE_TEST_SUITE_P(CompilerTestWithError, CompilerTestError,
                          testing::Values("arrayaccess", "missing_return_type", "wrong_return_type"));

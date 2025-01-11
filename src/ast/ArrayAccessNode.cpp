@@ -17,11 +17,11 @@ void ArrayAccessNode::print() {}
 
 std::shared_ptr<VariableType> ArrayAccessNode::resolveType(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
 {
-    auto definition = unit->getVariableDefinition(m_arrayNameToken.lexical());
+    const auto definition = unit->getVariableDefinition(m_arrayNameToken.lexical());
     std::shared_ptr<VariableType> varType = nullptr;
     if (!definition)
     {
-        if (auto functionDefinition = dynamic_cast<FunctionDefinitionNode *>(parentNode))
+        if (const auto functionDefinition = dynamic_cast<FunctionDefinitionNode *>(parentNode))
         {
             if (const auto param = functionDefinition->getParam(m_arrayNameToken.lexical()))
             {
@@ -69,14 +69,7 @@ llvm::Value *ArrayAccessNode::codegen(std::unique_ptr<Context> &context)
     if (!V)
         return LogErrorV("Unknown variable for array access: " + m_arrayNameToken.lexical());
 
-    ASTNode *parent = context->ProgramUnit.get();
-    if (context->TopLevelFunction)
-    {
-        if (const auto def = context->ProgramUnit->getFunctionDefinition(context->TopLevelFunction->getName().str()))
-        {
-            parent = def.value().get();
-        }
-    }
+    const auto parent = resolveParent(context);
 
     const auto arrayDef = context->ProgramUnit->getVariableDefinition(m_arrayNameToken.lexical());
     std::shared_ptr<VariableType> arrayDefType = nullptr;

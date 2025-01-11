@@ -10,7 +10,7 @@ begin
     
     mybool:= false;
     if not mybool then
-        writeln('not mybool');
+        writeln('not mybool')
     else
         writeln('mybool');
     

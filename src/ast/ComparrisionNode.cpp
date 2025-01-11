@@ -7,8 +7,8 @@
 #include "compiler/Context.h"
 #include "exceptions/CompilerException.h"
 
-ComparrisionNode::ComparrisionNode(const Token &operatorToken, CMPOperator op, const std::shared_ptr<ASTNode> &lhs,
-                                   const std::shared_ptr<ASTNode> &rhs) :
+ComparrisionNode::ComparrisionNode(const Token &operatorToken, const CMPOperator op,
+                                   const std::shared_ptr<ASTNode> &lhs, const std::shared_ptr<ASTNode> &rhs) :
     ASTNode(operatorToken), m_operatorToken(operatorToken), m_lhs(lhs), m_rhs(rhs), m_operator(op)
 {
 }

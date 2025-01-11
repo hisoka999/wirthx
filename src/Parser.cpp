@@ -31,6 +31,8 @@
 #include "magic_enum/magic_enum.hpp"
 
 
+static std::unordered_map<std::string, std::unique_ptr<UnitNode>> unitCache;
+
 Parser::Parser(const std::vector<std::filesystem::path> &rtlDirectories, std::filesystem::path path,
                const std::vector<Token> &tokens) :
     m_rtlDirectories(std::move(rtlDirectories)), m_file_path(std::move(path)), m_tokens(tokens)
@@ -70,14 +72,14 @@ bool Parser::consume(const TokenType tokenType)
 {
     if (canConsume(tokenType))
     {
-        next();
+        ++m_current;
         return true;
     }
 
     m_errors.push_back(ParserError{
 
             .token = m_tokens[m_current + 1],
-            .message = "expected token  '" + std::string(magic_enum::enum_name(tokenType)) + "' but found " +
+            .message = "expected token '" + std::string(magic_enum::enum_name(tokenType)) + "' but found " +
                        std::string(magic_enum::enum_name(m_tokens[m_current + 1].tokenType)) + "!"});
     throw ParserException(m_errors);
 
@@ -253,6 +255,23 @@ std::shared_ptr<ArrayType> Parser::parseArray(size_t scope)
         if (auto node = std::dynamic_pointer_cast<NumberNode>(arrayEndNode))
         {
             arrayEnd = node->getValue();
+        }
+        else if (auto node = std::dynamic_pointer_cast<VariableAccessNode>(arrayEndNode))
+        {
+            const auto varName = node->expressionToken().lexical();
+            for (auto &var: m_known_variable_definitions)
+            {
+                if (iequals(var.variableName, varName))
+                {
+                    if (var.constant)
+                    {
+                        if (const auto valueNode = std::dynamic_pointer_cast<NumberNode>(var.value))
+                        {
+                            arrayEnd = valueNode->getValue();
+                        }
+                    }
+                }
+            }
         }
         consume(TokenType::RIGHT_SQUAR);
     }
@@ -493,7 +512,13 @@ std::shared_ptr<ASTNode> Parser::parseBaseExpression(const size_t scope, const s
         auto rhs = parseToken(scope);
         return parseExpression(scope, std::make_shared<BinaryOperationNode>(operatorToken, Operator::MOD, lhs, rhs));
     }
-
+    if (canConsumeKeyWord("div"))
+    {
+        Token operatorToken = current();
+        consumeKeyWord("div");
+        auto rhs = parseToken(scope);
+        return parseExpression(scope, std::make_shared<BinaryOperationNode>(operatorToken, Operator::DIV, lhs, rhs));
+    }
     if (includeCompare)
     {
         if (canConsume(TokenType::GREATER))
@@ -1039,7 +1064,7 @@ std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDefinition(size_t s
     return functionDefinition;
 }
 
-std::shared_ptr<ASTNode> Parser::parseStatement(size_t scope)
+std::shared_ptr<ASTNode> Parser::parseStatement(size_t scope, bool withSemicolon)
 {
     std::shared_ptr<ASTNode> result = nullptr;
     if (canConsume(TokenType::NAMEDTOKEN))
@@ -1052,11 +1077,12 @@ std::shared_ptr<ASTNode> Parser::parseStatement(size_t scope)
         {
             result = parseVariableAssignment(scope);
         }
-        consume(TokenType::SEMICOLON);
+        if (withSemicolon)
+            consume(TokenType::SEMICOLON);
     }
     else if (canConsume(TokenType::KEYWORD))
     {
-        result = parseKeyword(scope);
+        result = parseKeyword(scope, withSemicolon);
     }
     if (!result)
     {
@@ -1070,15 +1096,13 @@ std::shared_ptr<ASTNode> Parser::parseStatement(size_t scope)
 }
 
 
-std::shared_ptr<BlockNode> Parser::parseBlock(size_t scope)
+void Parser::parseConstantDefinitions(size_t scope, std::vector<VariableDefinition> &variable_definitions)
 {
-    std::vector<VariableDefinition> variable_definitions;
-
     if (tryConsumeKeyWord("const"))
     {
-        while (!canConsumeKeyWord("begin") && !canConsumeKeyWord("var"))
+        while (!canConsume(TokenType::KEYWORD))
         {
-            auto definition = parseConstantDefinition(scope);
+            const auto definition = parseConstantDefinition(scope);
             if (definition.has_value())
             {
                 variable_definitions.push_back(definition.value());
@@ -1086,6 +1110,12 @@ std::shared_ptr<BlockNode> Parser::parseBlock(size_t scope)
             }
         }
     }
+}
+std::shared_ptr<BlockNode> Parser::parseBlock(const size_t scope)
+{
+    std::vector<VariableDefinition> variable_definitions;
+
+    parseConstantDefinitions(scope, variable_definitions);
 
     if (tryConsumeKeyWord("var"))
     {
@@ -1120,7 +1150,7 @@ std::shared_ptr<BlockNode> Parser::parseBlock(size_t scope)
 
     return std::make_shared<BlockNode>(beginToken, variable_definitions, expressions);
 }
-std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope)
+std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope, bool withSemicolon)
 {
     if (tryConsumeKeyWord("if"))
     {
@@ -1130,14 +1160,15 @@ std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope)
         std::vector<std::shared_ptr<ASTNode>> ifStatements;
         std::vector<std::shared_ptr<ASTNode>> elseStatements;
         consumeKeyWord("then");
-        if (canConsumeKeyWord("begin"))
+        auto blockIf = canConsumeKeyWord("begin");
+        if (blockIf)
         {
             ifStatements.emplace_back(parseBlock(scope + 1));
             tryConsume(TokenType::SEMICOLON);
         }
         else
         {
-            ifStatements.emplace_back(parseStatement(scope));
+            ifStatements.emplace_back(parseStatement(scope, false));
         }
         if (tryConsumeKeyWord("else"))
         {
@@ -1150,6 +1181,10 @@ std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope)
             {
                 elseStatements.emplace_back(parseStatement(scope));
             }
+        }
+        else if (!blockIf && withSemicolon)
+        {
+            consume(TokenType::SEMICOLON);
         }
 
         return std::make_shared<IfConditionNode>(ifToken, condition, ifStatements, elseStatements);
@@ -1190,7 +1225,8 @@ std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope)
         if (canConsumeKeyWord("begin"))
         {
             forNodes.emplace_back(parseBlock(scope + 1));
-            tryConsume(TokenType::SEMICOLON);
+            if (withSemicolon)
+                tryConsume(TokenType::SEMICOLON);
         }
         else
         {
@@ -1216,7 +1252,8 @@ std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope)
         else
         {
             whileNodes.push_back(parseBlock(scope + 1));
-            consume(TokenType::SEMICOLON);
+            if (withSemicolon)
+                consume(TokenType::SEMICOLON);
         }
 
         return std::make_shared<WhileNode>(whileToken, expression, whileNodes);
@@ -1239,14 +1276,16 @@ std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope)
 
         consumeKeyWord("until");
         auto expression = parseExpression(scope + 1);
-        tryConsume(TokenType::SEMICOLON);
+        if (withSemicolon)
+            tryConsume(TokenType::SEMICOLON);
 
         return std::make_shared<RepeatUntilNode>(repeatToken, expression, whileNodes);
     }
 
     if (tryConsumeKeyWord("break"))
     {
-        tryConsume(TokenType::SEMICOLON);
+        if (withSemicolon)
+            tryConsume(TokenType::SEMICOLON);
         return std::make_shared<BreakNode>(current());
     }
 
@@ -1302,36 +1341,48 @@ bool Parser::importUnit(const std::string &filename)
         path = *it / filename;
         ++it;
     }
-
-    std::ifstream file;
-    std::istringstream is;
-    file.open(path, std::ios::in);
-    if (!file.is_open())
+    if (!unitCache.contains(path.string()))
     {
-        m_errors.push_back(
-                ParserError{.token = current(), .message = std::string(current().lexical()) + " is not a valid unit"});
-        m_errors.push_back(ParserError{.token = current(), .message = path.string() + " is not a valid pascal file"});
+        std::ifstream file;
+        std::istringstream is;
+        file.open(path, std::ios::in);
+        if (!file.is_open())
+        {
+            m_errors.push_back(ParserError{.token = current(),
+                                           .message = std::string(current().lexical()) + " is not a valid unit"});
+            m_errors.push_back(
+                    ParserError{.token = current(), .message = path.string() + " is not a valid pascal file"});
 
 
-        return true;
+            return true;
+        }
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        Lexer lexer;
+        auto tokens = lexer.tokenize(filename, buffer.str());
+        Parser parser(m_rtlDirectories, path, tokens);
+        auto unit = parser.parseUnit();
+        unitCache[path.string()] = std::move(unit);
+        for (auto &error: parser.m_errors)
+        {
+            m_errors.push_back(error);
+        }
+        if (!m_errors.empty())
+        {
+            return true;
+        }
+
+        for (auto &[typeName, newType]: parser.m_typeDefinitions)
+        {
+            if (!m_typeDefinitions.contains(typeName))
+            {
+                m_typeDefinitions[typeName] = newType;
+            }
+        }
     }
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    Lexer lexer;
-    auto tokens = lexer.tokenize(filename, buffer.str());
-    Parser parser(m_rtlDirectories, path, tokens);
-    auto unit = parser.parseUnit();
 
-    for (auto &error: parser.m_errors)
-    {
-        m_errors.push_back(error);
-    }
-    if (!m_errors.empty())
-    {
-        return true;
-    }
 
-    for (auto &definition: unit->getFunctionDefinitions())
+    for (auto &definition: unitCache[path.string()]->getFunctionDefinitions())
     {
         bool functionExists = false;
         for (auto &function: m_functionDefinitions)
@@ -1350,18 +1401,7 @@ bool Parser::importUnit(const std::string &filename)
         }
     }
 
-    for (auto &[typeName, newType]: parser.m_typeDefinitions)
-    {
-        if (!m_typeDefinitions.contains(typeName))
-        {
-            m_typeDefinitions[typeName] = newType;
-        }
-    }
 
-    for (auto &error: parser.m_errors)
-    {
-        m_errors.push_back(error);
-    }
     return false;
 }
 
@@ -1523,12 +1563,31 @@ std::unique_ptr<UnitNode> Parser::parseProgram()
         }
 
         std::shared_ptr<BlockNode> blockNode = nullptr;
+        std::vector<VariableDefinition> variable_definitions;
         while (hasNext())
         {
             constexpr int scope = 0;
             if (tryConsumeKeyWord("type"))
             {
                 parseTypeDefinitions(scope);
+            }
+            else if (canConsumeKeyWord("const"))
+            {
+                parseConstantDefinitions(scope, variable_definitions);
+            }
+            else if (tryConsumeKeyWord("var"))
+            {
+                while (!canConsume(TokenType::KEYWORD))
+                {
+                    auto def = parseVariableDefinitions(scope);
+                    if (def.empty())
+                        break;
+                    for (auto &definition: def)
+                    {
+                        variable_definitions.push_back(definition);
+                        m_known_variable_definitions.push_back(definition);
+                    }
+                }
             }
             else if (tryConsumeKeyWord("uses"))
             {
@@ -1575,7 +1634,10 @@ std::unique_ptr<UnitNode> Parser::parseProgram()
         {
             throw ParserException(m_errors);
         }
-
+        for (const auto &var: variable_definitions)
+        {
+            blockNode->addVariableDefinition(var);
+        }
 
         return std::make_unique<UnitNode>(unitNameToken, unitType, unitName, m_functionDefinitions, m_typeDefinitions,
                                           blockNode);

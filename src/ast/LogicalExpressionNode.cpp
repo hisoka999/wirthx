@@ -59,7 +59,7 @@ llvm::Value *LogicalExpressionNode::codegen(std::unique_ptr<Context> &context)
         case LogicalOperator::NOT:
             return context->Builder->CreateNot(m_rhs->codegen(context));
         default:
-            break;
+            assert(false && "unknown logical operator");
     }
     return nullptr;
 }

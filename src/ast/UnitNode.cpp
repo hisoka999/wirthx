@@ -65,6 +65,8 @@ llvm::Value *UnitNode::codegen(std::unique_ptr<Context> &context)
 {
     std::vector<llvm::Type *> params;
 
+    m_blockNode->codegenConstantDefinitions(context);
+
     for (auto &fdef: m_functionDefinitions)
     {
         fdef->codegen(context);

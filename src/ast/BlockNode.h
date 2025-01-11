@@ -19,6 +19,7 @@ public:
 
     void print() override;
     void setBlockName(const std::string &name);
+    void codegenConstantDefinitions(std::unique_ptr<Context> &context);
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
     std::optional<VariableDefinition> getVariableDefinition(const std::string &name);
     void addVariableDefinition(VariableDefinition definition);

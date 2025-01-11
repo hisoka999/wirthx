@@ -137,7 +137,7 @@ void ForNode::typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNo
     {
         throw CompilerException(ParserError{
                 .token = m_startExpression->expressionToken(),
-                .message = "The type if the start expression does not match the type of the end expression."});
+                .message = "The type of the start expression does not match the type of the end expression."});
     }
 
     for (const auto &exp: m_body)

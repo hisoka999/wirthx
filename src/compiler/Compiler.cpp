@@ -34,6 +34,7 @@
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "os/command.h"
 
+static auto TargetTriple = llvm::sys::getDefaultTargetTriple();
 
 std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit, const CompilerOptions &options)
 {
@@ -86,6 +87,20 @@ std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit, const
 }
 
 
+void init_compiler()
+{
+    using namespace llvm;
+    using namespace llvm::sys;
+    // Initialize the target registry etc.InitializeAllTargetInfos();
+    // InitializeAllTargets();
+    // InitializeAllTargetMCs();
+    // InitializeAllAsmParsers();
+    // InitializeAllAsmPrinters();
+
+    InitializeNativeTarget();
+    InitializeNativeTargetAsmParser();
+    InitializeNativeTargetAsmPrinter();
+}
 void compile_file(const CompilerOptions &options, const std::filesystem::path &inputPath, std::ostream &errorStream,
                   std::ostream &outputStream)
 {
@@ -126,17 +141,8 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
 
     using namespace llvm;
     using namespace llvm::sys;
-    // Initialize the target registry etc.InitializeAllTargetInfos();
-    // InitializeAllTargets();
-    // InitializeAllTargetMCs();
-    // InitializeAllAsmParsers();
-    // InitializeAllAsmPrinters();
 
-    InitializeNativeTarget();
-    InitializeNativeTargetAsmParser();
-    InitializeNativeTargetAsmPrinter();
 
-    auto TargetTriple = llvm::sys::getDefaultTargetTriple();
     context->TheModule->setTargetTriple(TargetTriple);
 
     std::string Error;

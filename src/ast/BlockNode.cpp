@@ -30,6 +30,16 @@ void BlockNode::print()
 
 
 void BlockNode::setBlockName(const std::string &name) { m_blockname = name; }
+void BlockNode::codegenConstantDefinitions(std::unique_ptr<Context> &context)
+{
+    for (auto &def: m_variableDefinitions)
+    {
+        if (def.constant)
+        {
+            context->NamedValues[def.variableName] = def.generateCodeForConstant(context);
+        }
+    }
+}
 
 llvm::Value *BlockNode::codegen(std::unique_ptr<Context> &context)
 {
@@ -40,13 +50,12 @@ llvm::Value *BlockNode::codegen(std::unique_ptr<Context> &context)
         llvm::BasicBlock *BB = llvm::BasicBlock::Create(*context->TheContext, m_blockname, context->TopLevelFunction);
         context->Builder->SetInsertPoint(BB);
     }
+    codegenConstantDefinitions(context);
+
     for (auto &def: m_variableDefinitions)
     {
-        if (def.constant)
-        {
-            context->NamedValues[def.variableName] = def.generateCodeForConstant(context);
-        }
-        else
+        if (!def.constant)
+
         {
             context->NamedAllocations[def.variableName] = def.generateCode(context);
             if (def.value)

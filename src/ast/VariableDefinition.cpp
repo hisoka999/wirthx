@@ -78,9 +78,10 @@ llvm::AllocaInst *VariableDefinition::generateCode(std::unique_ptr<Context> &con
 llvm::Value *VariableDefinition::generateCodeForConstant(std::unique_ptr<Context> &context) const
 {
     llvm::Function *TheFunction = context->TopLevelFunction;
-    llvm::IRBuilder<> TmpB(&TheFunction->getEntryBlock(), TheFunction->getEntryBlock().begin());
+    if (TheFunction)
+        llvm::IRBuilder<> TmpB(&TheFunction->getEntryBlock(), TheFunction->getEntryBlock().begin());
 
-    auto array = std::dynamic_pointer_cast<ArrayType>(this->variableType);
+    // auto array = std::dynamic_pointer_cast<ArrayType>(this->variableType);
 
     return this->value->codegen(context);
 }

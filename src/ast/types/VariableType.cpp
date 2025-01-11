@@ -136,35 +136,48 @@ llvm::Type *ArrayType::generateLlvmType(std::unique_ptr<Context> &context)
 
 llvm::Value *ArrayType::generateFieldAccess(Token &token, llvm::Value *indexValue, std::unique_ptr<Context> &context)
 {
-    auto arrayName = std::string(token.lexical());
-    llvm::AllocaInst *V = context->NamedAllocations[arrayName];
+    const auto arrayName = std::string(token.lexical());
+    llvm::Value *V = context->NamedAllocations[arrayName];
+
+    if (!V)
+    {
+        for (auto &arg: context->TopLevelFunction->args())
+        {
+            if (arg.getName() == arrayName)
+            {
+                V = context->TopLevelFunction->getArg(arg.getArgNo());
+                break;
+            }
+        }
+    }
+
 
     if (!V)
         return LogErrorV("Unknown variable for array access: " + arrayName);
 
     if (this->isDynArray)
     {
-        auto llvmRecordType = this->generateLlvmType(context);
-        auto arrayBaseType = this->arrayBase->generateLlvmType(context);
+        const auto llvmRecordType = this->generateLlvmType(context);
+        const auto arrayBaseType = this->arrayBase->generateLlvmType(context);
 
-        auto arrayPointerOffset = context->Builder->CreateStructGEP(llvmRecordType, V, 1, "array.ptr.offset");
+        const auto arrayPointerOffset = context->Builder->CreateStructGEP(llvmRecordType, V, 1, "array.ptr.offset");
         // const llvm::DataLayout &DL = context->TheModule->getDataLayout();
         // auto alignment = DL.getPrefTypeAlign(ptrType);
-        auto loadResult =
+        const auto loadResult =
                 context->Builder->CreateLoad(llvm::PointerType::getUnqual(*context->TheContext), arrayPointerOffset);
 
 
-        auto bounds = context->Builder->CreateGEP(arrayBaseType, loadResult, llvm::ArrayRef<llvm::Value *>{indexValue},
-                                                  "", true);
+        const auto bounds = context->Builder->CreateGEP(arrayBaseType, loadResult,
+                                                        llvm::ArrayRef<llvm::Value *>{indexValue}, "", true);
 
         return context->Builder->CreateLoad(arrayBaseType, bounds);
     }
 
     if (llvm::isa<llvm::ConstantInt>(indexValue))
     {
-        llvm::ConstantInt *value = reinterpret_cast<llvm::ConstantInt *>(indexValue);
 
-        if (value->getSExtValue() < static_cast<int64_t>(this->low) ||
+        if (const auto *value = reinterpret_cast<llvm::ConstantInt *>(indexValue);
+            value->getSExtValue() < static_cast<int64_t>(this->low) ||
             value->getSExtValue() > static_cast<int64_t>(this->high))
         {
             throw CompilerException(
@@ -176,10 +189,10 @@ llvm::Value *ArrayType::generateFieldAccess(Token &token, llvm::Value *indexValu
         index = context->Builder->CreateSub(
                 index, context->Builder->getIntN(index->getType()->getIntegerBitWidth(), this->low), "array.index.sub");
 
-
-    auto arrayValue = context->Builder->CreateGEP(V->getAllocatedType(), V, {context->Builder->getInt64(0), index},
-                                                  "arrayindex", false);
-    return context->Builder->CreateLoad(V->getAllocatedType()->getArrayElementType(), arrayValue);
+    const auto arrayType = this->generateLlvmType(context);
+    const auto arrayValue =
+            context->Builder->CreateGEP(arrayType, V, {context->Builder->getInt64(0), index}, "arrayindex", false);
+    return context->Builder->CreateLoad(arrayType->getArrayElementType(), arrayValue);
 }
 
 std::shared_ptr<PointerType> PointerType::getPointerTo(const std::shared_ptr<VariableType> &baseType)

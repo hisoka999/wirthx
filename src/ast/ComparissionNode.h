@@ -11,7 +11,7 @@ enum class CMPOperator : char
     LESS_EQUAL
 };
 
-class ComparrisionNode : public ASTNode
+class ComparrisionNode final : public ASTNode
 {
 private:
     Token m_operatorToken;

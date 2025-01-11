@@ -39,7 +39,7 @@ implementation
     begin
         F.ptr := fopen(pchar(Filename),pchar('rw'));
         if F.ptr != 0 then
-            F.isOpen := true;
+            F.isOpen := true
         else
             writeln('File not found: ',FileName);
 

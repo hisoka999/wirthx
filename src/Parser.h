@@ -46,14 +46,15 @@ class Parser
     std::optional<VariableDefinition> parseConstantDefinition(size_t scope);
     std::vector<VariableDefinition> parseVariableDefinitions(size_t scope);
     std::shared_ptr<ArrayType> parseArray(size_t scope);
-    std::shared_ptr<ASTNode> parseStatement(size_t scope);
+    std::shared_ptr<ASTNode> parseStatement(size_t scope, bool withSemicolon = true);
+    void parseConstantDefinitions(size_t scope, std::vector<VariableDefinition> &variable_definitions);
     std::shared_ptr<ASTNode> parseBaseExpression(size_t scope, const std::shared_ptr<ASTNode> &origLhs = nullptr,
                                                  bool includeCompare = true);
     std::shared_ptr<ASTNode> parseExpression(size_t scope, const std::shared_ptr<ASTNode> &origLhs = nullptr);
     std::shared_ptr<ASTNode> parseLogicalExpression(size_t scope, std::shared_ptr<ASTNode> lhs);
 
     std::shared_ptr<BlockNode> parseBlock(size_t scope);
-    std::shared_ptr<ASTNode> parseKeyword(size_t scope);
+    std::shared_ptr<ASTNode> parseKeyword(size_t scope, bool withSemicolon);
     std::shared_ptr<ASTNode> parseFunctionCall(size_t scope);
     std::shared_ptr<ASTNode> parseVariableAssignment(size_t scope);
     std::shared_ptr<ASTNode> parseVariableAccess(size_t scope);

@@ -3,7 +3,7 @@ program problem2;
 function fibonacci(n : int64) : int64;
 begin
     if n <= 1 then
-        fibonacci := n;
+        fibonacci := n
     else
         fibonacci := fibonacci(n - 1) + fibonacci(n - 2);
 end;
