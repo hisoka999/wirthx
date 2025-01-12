@@ -89,9 +89,10 @@ llvm::Value *BinaryOperationNode::generateForStringPlusInteger(llvm::Value *lhs,
     // change array size
     context->Builder->CreateStore(context->Builder->getInt64(1), arrayRefCountOffset);
     context->Builder->CreateStore(newSize, arraySizeOffset);
-    const auto allocCall =
-            context->Builder->CreateCall(context->TheModule->getFunction("malloc"),
-                                         context->Builder->CreateAdd(newSize, context->Builder->getInt64(1)));
+
+    const auto allocCall = context->Builder->CreateMalloc(
+            indexType, context->Builder->getPtrTy(),
+            context->Builder->CreateAdd(newSize, context->Builder->getInt64(1)), newSize);
 
     {
         const auto memcpyCall = llvm::Intrinsic::getDeclaration(
@@ -166,9 +167,11 @@ llvm::Value *BinaryOperationNode::generateForString(llvm::Value *lhs, llvm::Valu
     // change array size
     context->Builder->CreateStore(context->Builder->getInt64(1), arrayRefCountOffset);
     context->Builder->CreateStore(newSize, arraySizeOffset);
-    const auto allocCall =
-            context->Builder->CreateCall(context->TheModule->getFunction("malloc"),
-                                         context->Builder->CreateAdd(newSize, context->Builder->getInt64(1)));
+
+    const auto allocCall = context->Builder->CreateMalloc(
+            indexType, context->Builder->getPtrTy(),
+            context->Builder->CreateAdd(newSize, context->Builder->getInt64(1)), nullptr);
+
 
     const auto memcpyCall = llvm::Intrinsic::getDeclaration(
             context->TheModule.get(), llvm::Intrinsic::memcpy,

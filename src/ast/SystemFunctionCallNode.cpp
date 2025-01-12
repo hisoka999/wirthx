@@ -70,7 +70,13 @@ llvm::Value *SystemFunctionCallNode::codegen_setlength(std::unique_ptr<Context> 
 
         auto allocSize = context->Builder->CreateMul(
                 newSize, context->Builder->getInt64(arrayBaseType->getPrimitiveSizeInBits()));
-        auto allocCall = context->Builder->CreateCall(context->TheModule->getFunction("malloc"), allocSize);
+        llvm::Value *allocCall =
+                context->Builder->CreateMalloc(indexType, //
+                                               arrayBaseType, // Type of elements
+                                               allocSize, // Number of elements
+                                               nullptr // Optional array size multiplier (nullptr for scalar allocation)
+                );
+
 
         return context->Builder->CreateStore(allocCall, arrayPointerOffset);
     }
@@ -105,7 +111,13 @@ llvm::Value *SystemFunctionCallNode::codegen_setlength(std::unique_ptr<Context> 
 
         auto allocSize = context->Builder->CreateMul(
                 newSize, context->Builder->getInt64(arrayBaseType->getPrimitiveSizeInBits()));
-        auto allocCall = context->Builder->CreateCall(context->TheModule->getFunction("malloc"), allocSize);
+        // auto allocCall = context->Builder->CreateCall(context->TheModule->getFunction("malloc"), allocSize);
+        llvm::Value *allocCall =
+                context->Builder->CreateMalloc(indexType, //
+                                               arrayBaseType, // Type of elements
+                                               allocSize, // Number of elements
+                                               nullptr // Optional array size multiplier (nullptr for scalar allocation)
+                );
 
         return context->Builder->CreateStore(allocCall, arrayPointerOffset);
     }

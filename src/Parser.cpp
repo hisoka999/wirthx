@@ -1,6 +1,7 @@
 #include "Parser.h"
 
 #include <ast/AddressNode.h>
+#include <ast/ArrayInitialisationNode.h>
 #include <cmath>
 #include <fstream>
 #include <iostream>
@@ -344,6 +345,20 @@ std::optional<VariableDefinition> Parser::parseConstantDefinition(size_t scope)
     return VariableDefinition{
             .variableType = type.value(), .variableName = varName, .scopeId = scope, .value = value, .constant = true};
 }
+std::shared_ptr<ASTNode> Parser::parseArrayConstructor(size_t size)
+{
+    std::vector<std::shared_ptr<ASTNode>> arguments;
+    consume(TokenType::LEFT_SQUAR);
+    Token startToken = current();
+
+    while (!canConsume(TokenType::RIGHT_SQUAR))
+    {
+        arguments.push_back(parseToken(size));
+        tryConsume(TokenType::COMMA);
+    }
+    consume(TokenType::RIGHT_SQUAR);
+    return std::make_shared<ArrayInitialisationNode>(startToken, arguments);
+}
 std::vector<VariableDefinition> Parser::parseVariableDefinitions(const size_t scope)
 {
     std::vector<VariableDefinition> result;
@@ -390,7 +405,14 @@ std::vector<VariableDefinition> Parser::parseVariableDefinitions(const size_t sc
         }
     }
     std::shared_ptr<ASTNode> value;
-    if (tryConsume(TokenType::EQUAL))
+    if (type && type.value()->baseType == VariableBaseType::Array)
+    {
+        if (tryConsume(TokenType::EQUAL))
+        {
+            value = parseArrayConstructor(scope);
+        }
+    }
+    else if (tryConsume(TokenType::EQUAL))
     {
         value = parseToken(scope);
 

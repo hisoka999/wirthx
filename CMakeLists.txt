@@ -60,6 +60,7 @@ file(GLOB SRC
         src/ast/WhileNode.cpp
         src/ast/VariableAssignmentNode.cpp
         src/ast/ArrayAssignmentNode.cpp
+        src/ast/ArrayInitialisationNode.cpp
         src/ast/FieldAssignmentNode.cpp
         src/ast/FunctionDefinitionNode.cpp
         src/ast/ReturnNode.cpp

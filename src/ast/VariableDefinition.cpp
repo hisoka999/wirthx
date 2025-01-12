@@ -14,10 +14,6 @@ llvm::AllocaInst *VariableDefinition::generateCode(std::unique_ptr<Context> &con
     {
         const auto arrayType = array->generateLlvmType(context);
 
-        if (array->isDynArray)
-        {
-            return context->Builder->CreateAlloca(arrayType, nullptr, this->variableName);
-        }
         return context->Builder->CreateAlloca(arrayType, nullptr, this->variableName);
     }
 

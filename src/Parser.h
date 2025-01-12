@@ -44,6 +44,7 @@ class Parser
     std::shared_ptr<ASTNode> parseNumber();
     void parseTypeDefinitions(size_t scope);
     std::optional<VariableDefinition> parseConstantDefinition(size_t scope);
+    std::shared_ptr<ASTNode> parseArrayConstructor(size_t size);
     std::vector<VariableDefinition> parseVariableDefinitions(size_t scope);
     std::shared_ptr<ArrayType> parseArray(size_t scope);
     std::shared_ptr<ASTNode> parseStatement(size_t scope, bool withSemicolon = true);

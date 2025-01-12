@@ -30,7 +30,9 @@
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Scalar/MemCpyOptimizer.h"
 #include "llvm/Transforms/Scalar/Reassociate.h"
+#include "llvm/Transforms/Scalar/SCCP.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "os/command.h"
 
@@ -71,9 +73,11 @@ std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit, const
         // Simplify the control flow graph (deleting unreachable blocks, etc).
         context->TheFPM->addPass(llvm::SimplifyCFGPass());
 
-        // context->TheFPM->addPass(llvm::InlinerPass());
+        context->TheFPM->addPass(llvm::SCCPPass());
 
         context->TheFPM->addPass(llvm::LoopSimplifyPass());
+
+        context->TheFPM->addPass(llvm::MemCpyOptPass());
     }
 
 
@@ -85,6 +89,7 @@ std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit, const
     PB.registerModuleAnalyses(*context->TheMAM);
     PB.registerFunctionAnalyses(*context->TheFAM);
     PB.crossRegisterProxies(*TheLAM, *context->TheFAM, *TheCGAM, *context->TheMAM);
+
 
     context->ProgramUnit = std::move(unit);
     return context;
@@ -138,10 +143,10 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
 
     createPrintfCall(context);
     createSystemCall(context, "exit", {FunctionArgument{.type = intType, .argumentName = "X", .isReference = false}});
-    createSystemCall(
-            context, "malloc",
-            {FunctionArgument{.type = VariableType::getInteger(64), .argumentName = "size", .isReference = false}},
-            VariableType::getPointer());
+    // createSystemCall(
+    //         context, "malloc",
+    //         {FunctionArgument{.type = VariableType::getInteger(64), .argumentName = "size", .isReference = false}},
+    //         VariableType::getPointer());
 
     using namespace llvm;
     using namespace llvm::sys;
