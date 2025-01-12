@@ -341,3 +341,33 @@ TEST(LexerTest, LexUnit)
 
     ASSERT_EQ(result[15].tokenType, TokenType::T_EOF);
 }
+
+
+TEST(LexerTest, LexMacroSimple)
+{
+    Lexer lexer;
+
+    auto result = lexer.tokenize("filename.pas", R"(
+    {$ifdef UNIX}
+
+    {$endif}
+
+)");
+
+    EXPECT_EQ(result.size(), 8);
+    ASSERT_EQ(result[0].tokenType, TokenType::MACRO_START);
+    ASSERT_EQ(result[0].lexical(), "{$"sv);
+    ASSERT_EQ(result[1].tokenType, TokenType::MACROKEYWORD);
+    ASSERT_EQ(result[1].lexical(), "ifdef"sv);
+    ASSERT_EQ(result[2].tokenType, TokenType::NAMEDTOKEN);
+    ASSERT_EQ(result[2].lexical(), "UNIX"sv);
+    ASSERT_EQ(result[3].tokenType, TokenType::MACRO_END);
+    ASSERT_EQ(result[4].tokenType, TokenType::MACRO_START);
+    ASSERT_EQ(result[4].lexical(), "{$"sv);
+    ASSERT_EQ(result[5].tokenType, TokenType::MACROKEYWORD);
+    ASSERT_EQ(result[5].lexical(), "endif"sv);
+    ASSERT_EQ(result[6].tokenType, TokenType::MACRO_END);
+
+
+    ASSERT_EQ(result[7].tokenType, TokenType::T_EOF);
+}

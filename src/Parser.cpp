@@ -1,5 +1,6 @@
 #include "Parser.h"
 
+#include <MacroParser.h>
 #include <ast/AddressNode.h>
 #include <ast/ArrayInitialisationNode.h>
 #include <cmath>
@@ -35,8 +36,9 @@
 static std::unordered_map<std::string, std::unique_ptr<UnitNode>> unitCache;
 
 Parser::Parser(const std::vector<std::filesystem::path> &rtlDirectories, std::filesystem::path path,
-               const std::vector<Token> &tokens) :
-    m_rtlDirectories(std::move(rtlDirectories)), m_file_path(std::move(path)), m_tokens(tokens)
+               const std::unordered_map<std::string, bool> &definitions, const std::vector<Token> &tokens) :
+    m_rtlDirectories(std::move(rtlDirectories)), m_file_path(std::move(path)), m_tokens(tokens),
+    m_definitions(definitions)
 {
     m_typeDefinitions["shortint"] = VariableType::getInteger(8);
     m_typeDefinitions["byte"] = VariableType::getInteger(8);
@@ -1362,7 +1364,7 @@ std::shared_ptr<ASTNode> Parser::parseFunctionCall(const size_t scope)
     return std::make_shared<FunctionCallNode>(nameToken, functionName, callArgs);
 }
 
-bool Parser::importUnit(const std::string &filename)
+bool Parser::importUnit(const std::string &filename, bool includeSystem)
 {
     auto path = this->m_file_path.parent_path() / filename;
     auto it = m_rtlDirectories.begin();
@@ -1392,8 +1394,9 @@ bool Parser::importUnit(const std::string &filename)
         buffer << file.rdbuf();
         Lexer lexer;
         auto tokens = lexer.tokenize(filename, buffer.str());
-        Parser parser(m_rtlDirectories, path, tokens);
-        auto unit = parser.parseUnit();
+        MacroParser macroParser(m_definitions);
+        Parser parser(m_rtlDirectories, path, m_definitions, macroParser.parseFile(tokens));
+        auto unit = parser.parseUnit(includeSystem);
         unitCache[path.string()] = std::move(unit);
         for (auto &error: parser.m_errors)
         {
@@ -1467,17 +1470,26 @@ void Parser::parseInterfaceSection()
         {
             m_functionDeclarations.emplace_back(parseFunctionDeclaration(0, true));
         }
+        else if (!canConsumeKeyWord("implementation"))
+        {
+            m_errors.push_back(ParserError{
+
+                    .token = m_tokens[m_current + 1],
+                    .message = "unexpected token found " +
+                               std::string(magic_enum::enum_name(m_tokens[m_current + 1].tokenType)) + "!"});
+            break;
+        }
     }
 }
 
-void Parser::parseImplementationSection()
+void Parser::parseImplementationSection(bool includeSystem)
 {
     if (tryConsumeKeyWord("uses"))
     {
         while (consume(TokenType::NAMEDTOKEN))
         {
             auto filename = std::string(current().lexical()) + ".pas";
-            importUnit(filename);
+            importUnit(filename, includeSystem);
 
 
             if (!tryConsume(TokenType::COMMA))
@@ -1500,15 +1512,20 @@ void Parser::parseImplementationSection()
         {
             m_functionDefinitions.emplace_back(parseFunctionDefinition(0, true));
         }
-        else
+        else if (!canConsumeKeyWord("end") && !canConsumeKeyWord("initialization"))
         {
+            m_errors.push_back(ParserError{
+
+                    .token = m_tokens[m_current + 1],
+                    .message = "unexpected token found " +
+                               std::string(magic_enum::enum_name(m_tokens[m_current + 1].tokenType)) + "!"});
             break;
         }
     }
 }
 
 
-std::unique_ptr<UnitNode> Parser::parseUnit()
+std::unique_ptr<UnitNode> Parser::parseUnit(bool includeSystem)
 {
     try
     {
@@ -1522,9 +1539,9 @@ std::unique_ptr<UnitNode> Parser::parseUnit()
 
         consume(TokenType::SEMICOLON);
 
-        if (unitName != "system")
+        if (unitName != "system" && includeSystem)
         {
-            importUnit("system.pas");
+            importUnit("system.pas", false);
         }
 
         std::shared_ptr<BlockNode> blockNode = nullptr;
@@ -1536,7 +1553,7 @@ std::unique_ptr<UnitNode> Parser::parseUnit()
             }
             else if (tryConsumeKeyWord("implementation"))
             {
-                parseImplementationSection();
+                parseImplementationSection(includeSystem);
             }
             else if (tryConsumeKeyWord("end"))
             {
@@ -1591,7 +1608,7 @@ std::unique_ptr<UnitNode> Parser::parseProgram()
 
         if (unitName != "system")
         {
-            importUnit("system.pas");
+            importUnit("system.pas", false);
         }
 
         std::shared_ptr<BlockNode> blockNode = nullptr;
@@ -1684,13 +1701,13 @@ std::unique_ptr<UnitNode> Parser::parseProgram()
 
 std::unique_ptr<UnitNode> Parser::parseFile()
 {
-    bool isProgram = current().tokenType == TokenType::KEYWORD && iequals(current().lexical(), "program");
-    bool isUnit = current().tokenType == TokenType::KEYWORD && iequals(current().lexical(), "unit");
+    const bool isProgram = current().tokenType == TokenType::KEYWORD && iequals(current().lexical(), "program");
+    const bool isUnit = current().tokenType == TokenType::KEYWORD && iequals(current().lexical(), "unit");
 
     if (isProgram)
         return parseProgram();
     if (isUnit)
-        return parseUnit();
+        return parseUnit(true);
 
     m_errors.push_back(ParserError{.token = m_tokens[m_current + 1],
                                    .message = "unexpected expected token found " +

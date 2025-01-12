@@ -2,6 +2,22 @@
 #include <iostream>
 #include "compare.h"
 
+inline std::vector<std::string> possible_tokens = {"program",   "unit",         "uses",
+                                                   "begin",     "end",          "procedure",
+                                                   "function",  "var",          "if",
+                                                   "then",      "else",         "while",
+                                                   "do",        "for",          "to",
+                                                   "break",     "repeat",       "until",
+                                                   "type",      "array",        "of",
+                                                   "const",     "true",         "false",
+                                                   "and",       "or",           "not",
+                                                   "record",    "external",     "name",
+                                                   "mod",       "inline",       "implementation",
+                                                   "interface", "finalization", "initialization",
+                                                   "div",       "downto"};
+
+inline std::vector<std::string> macro_token{"ifdef", "else", "endif"};
+
 Lexer::Lexer() {}
 
 Lexer::~Lexer() {}
@@ -20,12 +36,28 @@ std::vector<Token> Lexer::tokenize(const std::string &filename, const std::strin
     size_t row = 1;
     size_t column = 1;
     auto contentPtr = std::make_shared<std::string>(content);
+    bool parseMacros = false;
     for (size_t i = 0; i < content.size(); ++i)
     {
 
         auto ch = content[i];
         size_t endPosition = i;
-        bool found = find_comment(content, i, &endPosition);
+
+        bool found = (content[i] == '{' && content[i + 1] == '$');
+        if (found)
+        {
+            constexpr size_t offset = 2;
+            endPosition = i + 2;
+            SourceLocation source_location = {
+                    .filename = filename, .source = contentPtr, .byte_offset = i, .num_bytes = offset};
+            tokens.emplace_back(source_location, row, column, TokenType::MACRO_START);
+            i = endPosition - 1;
+            column += offset;
+            parseMacros = true;
+            continue;
+        }
+
+        found = find_comment(content, i, &endPosition);
         if (found)
         {
             // count lines
@@ -37,6 +69,18 @@ std::vector<Token> Lexer::tokenize(const std::string &filename, const std::strin
             int offset = endPosition - i;
             i = endPosition;
             column += offset + 1;
+            continue;
+        }
+
+        found = parseMacros && find_macro_keyword(content, i, &endPosition);
+        if (found)
+        {
+            const size_t offset = endPosition - i;
+            SourceLocation source_location = {
+                    .filename = filename, .source = contentPtr, .byte_offset = i, .num_bytes = offset};
+            tokens.emplace_back(source_location, row, column, TokenType::MACROKEYWORD);
+            i = endPosition - 1;
+            column += offset;
             continue;
         }
 
@@ -115,7 +159,6 @@ std::vector<Token> Lexer::tokenize(const std::string &filename, const std::strin
         switch (ch)
         {
             case '\n':
-                // tokens.push_back(Token(source_location, row, column, TokenType::ENDLINE));
                 column = 1;
                 row++;
                 continue;
@@ -173,6 +216,10 @@ std::vector<Token> Lexer::tokenize(const std::string &filename, const std::strin
             case '@':
                 tokens.emplace_back(source_location, row, column, TokenType::AT);
                 break;
+            case '}':
+                tokens.emplace_back(source_location, row, column, TokenType::MACRO_END);
+                parseMacros = false;
+                break;
             default:
                 break;
         }
@@ -211,6 +258,31 @@ bool Lexer::find_escape_sequence(const std::string &content, size_t start, size_
         }
     }
     return true;
+}
+bool Lexer::find_macro_keyword(const std::string &content, size_t start, size_t *endPosition)
+{
+    char current = content[start];
+    *endPosition = start + 1;
+    if (!validStartNameChar(current))
+        return false;
+
+    while (validNameChar(current))
+    {
+
+        *endPosition += 1;
+        current = content[*endPosition];
+    }
+
+    const auto tmp = content.substr(start, *endPosition - start);
+    for (const auto &token: macro_token)
+    {
+        if (iequals(tmp, token))
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool Lexer::find_string(const std::string &content, size_t start, size_t *endPosition)
@@ -322,7 +394,6 @@ bool Lexer::find_comment(const std::string &content, size_t start, size_t *endPo
             *endPosition += 1;
             current = content[*endPosition];
         }
-        *endPosition -= 1;
         return true;
     }
     if (content[start] == '/' && content[start + 1] == '/')

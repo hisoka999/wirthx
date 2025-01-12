@@ -127,32 +127,10 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
     file.seekg(0);
     file.read(&buffer[0], size);
 
-    Lexer lexer;
-
-    auto tokens = lexer.tokenize(inputPath.string(), buffer);
-
-    Parser parser(options.rtlDirectories, inputPath, tokens);
-    auto unit = parser.parseFile();
-    if (parser.hasError())
-    {
-        parser.printErrors(errorStream);
-        return;
-    }
-    auto context = InitializeModule(unit, options);
-    auto intType = VariableType::getInteger();
-
-    createPrintfCall(context);
-    createSystemCall(context, "exit", {FunctionArgument{.type = intType, .argumentName = "X", .isReference = false}});
-    // createSystemCall(
-    //         context, "malloc",
-    //         {FunctionArgument{.type = VariableType::getInteger(64), .argumentName = "size", .isReference = false}},
-    //         VariableType::getPointer());
 
     using namespace llvm;
     using namespace llvm::sys;
 
-
-    context->TheModule->setTargetTriple(TargetTriple);
 
     std::string Error;
     auto Target = llvm::TargetRegistry::lookupTarget(TargetTriple, Error);
@@ -171,6 +149,39 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
 
     TargetOptions opt;
     auto TheTargetMachine = Target->createTargetMachine(TargetTriple, CPU, Features, opt, Reloc::PIC_);
+    Triple target(TargetTriple);
+    Lexer lexer;
+    std::unordered_map<std::string, bool> defines;
+    switch (target.getOS())
+    {
+        case Triple::Darwin:
+        case Triple::Linux:
+        case Triple::OpenBSD:
+        case Triple::FreeBSD:
+            defines["UNIX"] = true;
+            break;
+        case Triple::Win32:
+            defines["WINDOWS"] = true;
+            break;
+        default:
+            break;
+    }
+
+
+    auto tokens = lexer.tokenize(inputPath.string(), buffer);
+
+    Parser parser(options.rtlDirectories, inputPath, defines, tokens);
+    auto unit = parser.parseFile();
+    if (parser.hasError())
+    {
+        parser.printErrors(errorStream);
+        return;
+    }
+    auto context = InitializeModule(unit, options);
+    auto intType = VariableType::getInteger();
+
+    createPrintfCall(context);
+    createSystemCall(context, "exit", {FunctionArgument{.type = intType, .argumentName = "X", .isReference = false}});
 
     context->TheModule->setDataLayout(TheTargetMachine->createDataLayout());
 
@@ -235,19 +246,21 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
         flags.push_back("-l" + lib);
     }
 
-#ifndef _WIN32
-    if (context->compilerOptions.buildMode == BuildMode::Debug)
+
+    if (context->compilerOptions.buildMode == BuildMode::Debug && target.getOS() != Triple::Win32)
     {
         flags.emplace_back("-fsanitize=address");
         flags.emplace_back("-fno-omit-frame-pointer");
     }
-#endif
+
     std::string executableName = context->ProgramUnit->getUnitName();
 
-#ifdef _WIN32
-    executableName += ".exe";
-    flags.erase(std::ranges::find(flags, "-lc"));
-#endif
+    if (target.getOS() == Triple::Win32)
+    {
+        executableName += ".exe";
+        flags.erase(std::ranges::find(flags, "-lc"));
+    }
+
     if (!pascal_link_modules(errorStream, basePath, executableName, flags, objectFiles))
     {
         return;

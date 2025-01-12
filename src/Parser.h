@@ -10,8 +10,9 @@
 #include "ast/types/VariableType.h"
 #include "exceptions/CompilerException.h"
 
+#include <unordered_map>
 
-using ParserException = CompilerException;
+
 class Parser
 {
     std::vector<std::filesystem::path> m_rtlDirectories;
@@ -25,7 +26,8 @@ class Parser
     std::vector<std::shared_ptr<FunctionDefinitionNode>> m_functionDeclarations;
     std::vector<std::shared_ptr<FunctionDefinitionNode>> m_functionDefinitions;
     std::vector<std::shared_ptr<ASTNode>> m_nodes;
-
+    std::unordered_map<std::string, bool> m_definitions;
+    bool m_includeSystem = false;
 
     Token next();
     Token current();
@@ -63,17 +65,18 @@ class Parser
     std::shared_ptr<FunctionDefinitionNode> parseFunctionDeclaration(size_t scope, bool isFunction);
     std::shared_ptr<FunctionDefinitionNode> parseFunctionDefinition(size_t scope, bool isFunction);
 
-    bool importUnit(const std::string &filename);
+    std::unique_ptr<UnitNode> parseUnit(bool includeSystem);
+    bool importUnit(const std::string &filename, bool includeSystem = true);
 
     [[nodiscard]] std::unique_ptr<UnitNode> parseUnit();
     [[nodiscard]] std::unique_ptr<UnitNode> parseProgram();
 
     void parseInterfaceSection();
-    void parseImplementationSection();
+    void parseImplementationSection(bool includeSystem);
 
 public:
     Parser(const std::vector<std::filesystem::path> &rtlDirectories, std::filesystem::path path,
-           const std::vector<Token> &tokens);
+           const std::unordered_map<std::string, bool> &definitions, const std::vector<Token> &tokens);
     ~Parser() = default;
     [[nodiscard]] bool hasError() const;
     void printErrors(std::ostream &outputStream);

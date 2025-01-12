@@ -20,10 +20,11 @@ interface
     function CompareStr( S1,S2 : string) : integer;
 
 implementation
+uses ctypes;
 
-    function fgetc(var F : CFile) : char; external 'c';
+    function fgetc(var F : CFile) : cint; external 'c';
     function fopen(fileName: PChar;mode : PChar) : CFile; external 'c';
-    function fclose(var F : CFile) : integer; external 'c';
+    function fclose(var F : CFile) : cint; external 'c';
     procedure cfree(F : PChar); external 'c' name 'free';
 
     procedure freemem(var F: PChar);inline;

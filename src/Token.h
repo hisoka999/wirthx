@@ -10,6 +10,7 @@ enum class TokenType : uint16_t
     ESCAPED_STRING,
     CHAR,
     KEYWORD,
+    MACROKEYWORD,
     NAMEDTOKEN,
     PLUS,
     MINUS,
@@ -30,7 +31,9 @@ enum class TokenType : uint16_t
     COLON,
     CARET,
     BANG,
-    AT
+    AT,
+    MACRO_START,
+    MACRO_END,
 };
 
 
