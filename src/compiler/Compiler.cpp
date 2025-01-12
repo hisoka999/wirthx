@@ -70,6 +70,10 @@ std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit, const
         context->TheFPM->addPass(llvm::GVNPass());
         // Simplify the control flow graph (deleting unreachable blocks, etc).
         context->TheFPM->addPass(llvm::SimplifyCFGPass());
+
+        // context->TheFPM->addPass(llvm::InlinerPass());
+
+        context->TheFPM->addPass(llvm::LoopSimplifyPass());
     }
 
 

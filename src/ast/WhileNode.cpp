@@ -43,12 +43,17 @@ llvm::Value *WhileNode::codegen(std::unique_ptr<Context> &context)
     // Emit the body of the loop.  This, like any other expr, can change the
     // current BB.  Note that we ignore the value computed by the body, but don't
     // allow an error.
+    context->BreakBlock.Block = AfterBB;
+    context->BreakBlock.BlockUsed = false;
+
     for (auto &node: m_nodes)
     {
         context->Builder->SetInsertPoint(LoopBB);
         node->codegen(context);
     }
     context->Builder->CreateBr(LoopCondBB);
+
+    context->BreakBlock.Block = nullptr;
 
     // Any new code will be inserted in AfterBB.
     context->Builder->SetInsertPoint(AfterBB);

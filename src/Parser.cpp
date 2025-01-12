@@ -497,13 +497,15 @@ std::shared_ptr<ASTNode> Parser::parseBaseExpression(const size_t scope, const s
     {
         Token operatorToken = current();
         auto rhs = parseBaseExpression(scope, nullptr, false);
-        return parseExpression(scope, std::make_shared<BinaryOperationNode>(operatorToken, Operator::MUL, lhs, rhs));
+        return parseExpression(
+                scope, fixPrecedence(std::make_shared<BinaryOperationNode>(operatorToken, Operator::MUL, lhs, rhs)));
     }
     if (tryConsume(TokenType::DIV))
     {
         Token operatorToken = current();
         auto rhs = parseBaseExpression(scope, nullptr, false);
-        return parseExpression(scope, std::make_shared<BinaryOperationNode>(operatorToken, Operator::DIV, lhs, rhs));
+        return parseExpression(
+                scope, fixPrecedence(std::make_shared<BinaryOperationNode>(operatorToken, Operator::DIV, lhs, rhs)));
     }
     if (canConsumeKeyWord("mod"))
     {
@@ -519,6 +521,14 @@ std::shared_ptr<ASTNode> Parser::parseBaseExpression(const size_t scope, const s
         auto rhs = parseToken(scope);
         return parseExpression(scope, std::make_shared<BinaryOperationNode>(operatorToken, Operator::DIV, lhs, rhs));
     }
+    if (canConsume(TokenType::LEFT_CURLY))
+    {
+        consume(TokenType::LEFT_CURLY);
+        auto result = parseExpression(scope, lhs);
+        consume(TokenType::RIGHT_CURLY);
+        return parseExpression(scope, result);
+    }
+
     if (includeCompare)
     {
         if (canConsume(TokenType::GREATER))

@@ -25,7 +25,7 @@ begin
     tmp := left * 4;
     tmp:= tmp + center * 2;
     tmp := tmp + right;
-    if tmp = 0 or tmp = 4 or tmp = 7 then
+    if (tmp = 0) or (tmp = 4) or (tmp = 7) then
         Rule := 0
     else
         Rule := 1;
