@@ -26,7 +26,7 @@ interface
         @param(F file to read)
         @param(value string to read the file into)
     }
-    procedure Readln(var F: TFile; var value: string);
+    procedure Readln(var F: File; var value: string);
     {
         returns 1 if the string S2 is greater then S1, -1 if the string is smaller and 0 if both are equal
         @param( S1 first string to compare)
