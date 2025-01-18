@@ -66,7 +66,7 @@ std::vector<Token> Lexer::tokenize(const std::string &filename, const std::strin
                 if (content[start] == '\n')
                     row++;
             }
-            int offset = endPosition - i;
+            size_t offset = endPosition - i;
             i = endPosition;
             column += offset + 1;
             continue;

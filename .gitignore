@@ -5,3 +5,6 @@ build/
 .cache/
 .idea/
 cmake-build-*
+
+# docs
+docs/*.xml

@@ -1,3 +1,6 @@
+{
+ Core System Unit
+}
 unit system;
 
 interface
@@ -9,6 +12,9 @@ interface
                    isOpen: boolean;
                 end;
 
+    {
+     Releases the given memory
+    }
     procedure freemem(var F: PChar);
     procedure Assign(var F: File;FileName: String);
     procedure CloseFile(var F: File);
@@ -16,7 +22,17 @@ interface
     Procedure inc(var value: int64);
     Procedure dec(var value: integer);
     Procedure dec(var value: int64);
-    procedure Readln(var F: File; var value: string);
+    {
+        @param(F file to read)
+        @param(value string to read the file into)
+    }
+    procedure Readln(var F: TFile; var value: string);
+    {
+        returns 1 if the string S2 is greater then S1, -1 if the string is smaller and 0 if both are equal
+        @param( S1 first string to compare)
+        @param( S2 second string to compare with)
+        @returns( 0 if equal)
+    }
     function CompareStr( S1,S2 : string) : integer;
 
 implementation
