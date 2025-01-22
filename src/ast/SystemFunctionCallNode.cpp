@@ -1,6 +1,7 @@
 #include "SystemFunctionCallNode.h"
 #include <iostream>
 #include <llvm/IR/IRBuilder.h>
+#include <utility>
 #include <vector>
 
 #include "../compare.h"
@@ -23,8 +24,8 @@ bool isKnownSystemCall(const std::string &name)
 }
 
 SystemFunctionCallNode::SystemFunctionCallNode(const Token &token, std::string name,
-                                               std::vector<std::shared_ptr<ASTNode>> args) :
-    FunctionCallNode(token, name, args)
+                                               const std::vector<std::shared_ptr<ASTNode>> &args) :
+    FunctionCallNode(token, std::move(name), args)
 {
 }
 
