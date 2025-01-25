@@ -1,5 +1,6 @@
 #include "compiler/Compiler.h"
 
+#include <MacroParser.h>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -151,7 +152,7 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
     auto TheTargetMachine = Target->createTargetMachine(TargetTriple, CPU, Features, opt, Reloc::PIC_);
     Triple target(TargetTriple);
     Lexer lexer;
-    std::unordered_map<std::string, bool> defines;
+    MacroMap defines;
     switch (target.getOS())
     {
         case Triple::Darwin:
@@ -166,11 +167,12 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
         default:
             break;
     }
+    defines.insert(std::make_pair(target.getArchName(), true));
 
 
     auto tokens = lexer.tokenize(inputPath.string(), buffer);
-
-    Parser parser(options.rtlDirectories, inputPath, defines, tokens);
+    MacroParser macroParser(defines);
+    Parser parser(options.rtlDirectories, inputPath, macroParser.macroDefinitions(), macroParser.parseFile(tokens));
     auto unit = parser.parseFile();
     if (parser.hasError())
     {

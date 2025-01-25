@@ -11,20 +11,18 @@ MacroParser::MacroParser(const std::unordered_map<std::string, bool> &definition
 {
 }
 
-bool MacroParser::tryParseMacroDefinition(std::vector<Token> &result)
+void MacroParser::parseIfDef(std::vector<Token> &result)
 {
-    if (!tryConsume(TokenType::MACRO_START))
-    {
-        return false;
-    }
     consumeKeyWord("ifdef");
     Token macroKeyword = current();
     consume(TokenType::NAMEDTOKEN);
     bool useMacro = isVariableDefined(macroKeyword.lexical());
 
     consume(TokenType::MACRO_END);
-    while (!canConsume(TokenType::MACRO_START))
+    while (!(canConsume(TokenType::MACRO_START) and (canConsumeKeyWord("else", 1) or canConsumeKeyWord("endif", 1))))
     {
+        if (tryParseMacroDefinition(result))
+            continue;
 
         if (useMacro && !canConsume(TokenType::MACRO_START) && !canConsume(TokenType::MACRO_END) &&
             !canConsume(TokenType::MACROKEYWORD))
@@ -37,8 +35,12 @@ bool MacroParser::tryParseMacroDefinition(std::vector<Token> &result)
     if (tryConsumeKeyWord("else"))
     {
         consume(TokenType::MACRO_END);
-        while (!canConsume(TokenType::MACRO_START))
+        tryParseMacroDefinition(result);
+
+        while (!(canConsume(TokenType::MACRO_START) and canConsumeKeyWord("endif", 1)))
         {
+            if (tryParseMacroDefinition(result))
+                continue;
 
             if (!useMacro && !canConsume(TokenType::MACRO_START) && !canConsume(TokenType::MACRO_END) &&
                 !canConsume(TokenType::MACROKEYWORD))
@@ -47,13 +49,37 @@ bool MacroParser::tryParseMacroDefinition(std::vector<Token> &result)
             }
             next();
         }
-        consume(TokenType::MACRO_END);
+        // consume(TokenType::MACRO_END);
         consume(TokenType::MACRO_START);
     }
 
     consumeKeyWord("endif");
     consume(TokenType::MACRO_END);
-
+}
+bool MacroParser::tryParseMacroDefinition(std::vector<Token> &result)
+{
+    if (!tryConsume(TokenType::MACRO_START))
+    {
+        return false;
+    }
+    if (canConsumeKeyWord("ifdef"))
+    {
+        parseIfDef(result);
+    }
+    else if (canConsume(TokenType::NAMEDTOKEN) && canConsume(TokenType::LEFT_CURLY, 1))
+    {
+        consume(TokenType::NAMEDTOKEN);
+        Token macroFunction = current();
+        consume(TokenType::LEFT_CURLY);
+        consume(TokenType::NAMEDTOKEN);
+        Token macroName = current();
+        consume(TokenType::RIGHT_CURLY);
+        consume(TokenType::MACRO_END);
+        if (iequals(macroFunction.lexical(), "define"))
+        {
+            m_definitions[macroFunction.lexical()] = true;
+        }
+    }
     return true;
 }
 
@@ -107,9 +133,9 @@ bool MacroParser::canConsume(TokenType tokenType, size_t next) const
 {
     return hasNext() && m_tokens[m_current + next].tokenType == tokenType;
 }
-bool MacroParser::canConsumeKeyWord(const std::string &keyword) const
+bool MacroParser::canConsumeKeyWord(const std::string &keyword, size_t next) const
 {
-    return canConsume(TokenType::MACROKEYWORD) && iequals(m_tokens[m_current].lexical(), keyword);
+    return canConsume(TokenType::MACROKEYWORD, next) && iequals(m_tokens[m_current + next].lexical(), keyword);
 }
 
 bool MacroParser::tryConsumeKeyWord(const std::string &keyword)
@@ -135,6 +161,7 @@ bool MacroParser::consumeKeyWord(const std::string &keyword)
 }
 
 
+MacroMap MacroParser::macroDefinitions() const { return m_definitions; }
 std::vector<Token> MacroParser::parseFile(const std::vector<Token> &tokens)
 {
     m_tokens = tokens;
