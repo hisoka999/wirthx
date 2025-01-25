@@ -10,8 +10,8 @@
 #include "types/StringType.h"
 
 
-static std::vector<std::string> knownSystemCalls = {"writeln", "write",     "printf", "exit",  "low",
-                                                    "high",    "setlength", "length", "pchar", "new"};
+static std::vector<std::string> knownSystemCalls = {"writeln",   "write",  "printf", "exit", "low", "high",
+                                                    "setlength", "length", "pchar",  "new",  "halt"};
 
 bool isKnownSystemCall(const std::string &name)
 {
@@ -293,6 +293,13 @@ llvm::Value *SystemFunctionCallNode::codegen(std::unique_ptr<Context> &context)
     else if (iequals(m_name, "new"))
     {
         return codegen_new(context, parent);
+    }
+    else if (iequals(m_name, "halt"))
+    {
+        auto argValue = m_args[0]->codegen(context);
+        llvm::Function *CalleeF = context->TheModule->getFunction("exit");
+
+        return context->Builder->CreateCall(CalleeF, argValue);
     }
     return FunctionCallNode::codegen(context);
 }

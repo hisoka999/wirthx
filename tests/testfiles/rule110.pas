@@ -1,8 +1,8 @@
 program rule110;
 
 const
-  MAX_GEN = 49; // Number of generations
-  SIZE = 100;   // Size of the cell array
+  MAX_GEN = 48; // Number of generations
+  SIZE = 50;   // Size of the cell array
 
 type
   TCells = array[1..SIZE] of Integer;
@@ -56,7 +56,7 @@ begin
   // Initialize cells to have a single active cell in the middle
   for i := 1 to SIZE do
     cells[i] := 0;
-  cells[SIZE div 2] := 1;
+  cells[SIZE] := 1;
 
   // Display initial state
   DisplayCells(cells);
