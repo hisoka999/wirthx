@@ -6,6 +6,7 @@
 #include <cmath>
 #include <fstream>
 #include <iostream>
+#include <llvm/IR/InstrTypes.h>
 
 #include "ast/ArrayAccessNode.h"
 #include "ast/ArrayAssignmentNode.h"
@@ -484,52 +485,55 @@ std::shared_ptr<ASTNode> Parser::parseLogicalExpression(const size_t scope, std:
     return lhs;
 }
 
-std::shared_ptr<ASTNode> fixPrecedence(const std::shared_ptr<BinaryOperationNode> &opNode)
-{
-    if (auto rhsOperator = std::dynamic_pointer_cast<BinaryOperationNode>(opNode->rhs()))
-    {
-        auto lhs = std::make_shared<BinaryOperationNode>(opNode->expressionToken(), opNode->binoperator(),
-                                                         opNode->lhs(), rhsOperator->lhs());
-        auto rhs = rhsOperator->rhs();
-        return std::make_shared<BinaryOperationNode>(rhsOperator->expressionToken(), rhsOperator->binoperator(), lhs,
-                                                     rhs);
-    }
-
-    return opNode;
-}
-
+/*
+ a1 * a2 + b1 * b2 ==> (a * a) + (b * b)
+ 1. lhs = a1
+ 2. parse *
+ 3. parse a2;
+*/
+static std::map<Operator, int> operatorPrecedence{
+        {Operator::MUL, 20}, {Operator::DIV, 10}, {Operator::PLUS, 5}, {Operator::MINUS, 2}};
 std::shared_ptr<ASTNode> Parser::parseBaseExpression(const size_t scope, const std::shared_ptr<ASTNode> &origLhs,
                                                      bool includeCompare)
 {
     auto lhs = (origLhs) ? origLhs : parseToken(scope);
 
+
     if (tryConsume(TokenType::PLUS))
     {
         Token operatorToken = current();
-        auto rhs = parseBaseExpression(scope, nullptr, false);
-        return parseExpression(
-                scope, fixPrecedence(std::make_shared<BinaryOperationNode>(operatorToken, Operator::PLUS, lhs, rhs)));
+        auto rhs = parseToken(scope);
+
+        if (canConsume(TokenType::MUL) or canConsume(TokenType::DIV) or canConsume(TokenType::LEFT_CURLY))
+        {
+            rhs = parseBaseExpression(scope, rhs, false);
+        }
+
+        return parseExpression(scope, std::make_shared<BinaryOperationNode>(operatorToken, Operator::PLUS, lhs, rhs));
     }
     if (tryConsume(TokenType::MINUS))
     {
         Token operatorToken = current();
-        auto rhs = parseBaseExpression(scope, nullptr, false);
-        return parseExpression(
-                scope, fixPrecedence(std::make_shared<BinaryOperationNode>(operatorToken, Operator::MINUS, lhs, rhs)));
+
+        auto rhs = parseToken(scope);
+        if (canConsume(TokenType::MUL) or canConsume(TokenType::DIV) or canConsume(TokenType::LEFT_CURLY))
+        {
+            rhs = parseBaseExpression(scope, rhs, false);
+        }
+
+        return parseExpression(scope, std::make_shared<BinaryOperationNode>(operatorToken, Operator::MINUS, lhs, rhs));
     }
     if (tryConsume(TokenType::MUL))
     {
         Token operatorToken = current();
-        auto rhs = parseBaseExpression(scope, nullptr, false);
-        return parseExpression(
-                scope, fixPrecedence(std::make_shared<BinaryOperationNode>(operatorToken, Operator::MUL, lhs, rhs)));
+        auto rhs = parseToken(scope);
+        return parseExpression(scope, std::make_shared<BinaryOperationNode>(operatorToken, Operator::MUL, lhs, rhs));
     }
     if (tryConsume(TokenType::DIV))
     {
         Token operatorToken = current();
-        auto rhs = parseBaseExpression(scope, nullptr, false);
-        return parseExpression(
-                scope, fixPrecedence(std::make_shared<BinaryOperationNode>(operatorToken, Operator::DIV, lhs, rhs)));
+        auto rhs = parseToken(scope);
+        return parseExpression(scope, std::make_shared<BinaryOperationNode>(operatorToken, Operator::DIV, lhs, rhs));
     }
     if (canConsumeKeyWord("mod"))
     {

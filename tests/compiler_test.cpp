@@ -174,4 +174,5 @@ INSTANTIATE_TEST_SUITE_P(CompilerTestWithError, CompilerTestError,
                          testing::Values("arrayaccess", "missing_return_type", "wrong_return_type"));
 
 INSTANTIATE_TEST_SUITE_P(ProjectEuler, ProjectEulerTest,
-                         testing::Values("problem1", "problem2", "problem3", "problem4", "problem5"));
+                         testing::Values("problem1", "problem2", "problem3", "problem4", "problem5", "problem6",
+                                         "problem7", "problem8", "problem9", "problem10"));

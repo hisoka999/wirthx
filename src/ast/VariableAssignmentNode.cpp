@@ -73,7 +73,8 @@ llvm::Value *VariableAssignmentNode::codegen(std::unique_ptr<Context> &context)
         }
 
         context->Builder->CreateStore(expressionResult, allocatedValue);
-        return expressionResult;
+        // context->NamedValues[m_variableName] = expressionResult;
+        return allocatedValue;
     }
 
 

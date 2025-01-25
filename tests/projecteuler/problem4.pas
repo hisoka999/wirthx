@@ -1,6 +1,6 @@
 program problem4;
 
-    function Str(value: integer):string;
+    function Str(value: integer):string;inline;
     var
         tmp : integer ;
         buffer: array [0..100] of char;
@@ -35,7 +35,7 @@ program problem4;
     end;
 
 
-    function is_palindrom(product : integer) : boolean;
+    function is_palindrom(product : integer) : boolean;inline;
     var
         tmp : string;
         h : int64;
