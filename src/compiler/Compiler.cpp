@@ -60,7 +60,7 @@ std::unique_ptr<Context> InitializeModule(std::unique_ptr<UnitNode> &unit, const
                                                                       /*DebugLogging*/ true);
 
     context->TheSI->registerCallbacks(*context->ThePIC, context->TheMAM.get());
-
+    context->TargetTriple = std::make_unique<llvm::Triple>(TargetTriple);
 
     // Add transform passes.
     // Do simple "peephole" optimizations and bit-twiddling optzns.
@@ -184,6 +184,8 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
 
     createPrintfCall(context);
     createSystemCall(context, "exit", {FunctionArgument{.type = intType, .argumentName = "X", .isReference = false}});
+    createSystemCall(context, "fflush",
+                     {FunctionArgument{.type = VariableType::getPointer(), .argumentName = "X", .isReference = false}});
 
     context->TheModule->setDataLayout(TheTargetMachine->createDataLayout());
 

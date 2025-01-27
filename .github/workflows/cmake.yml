@@ -1,5 +1,5 @@
 name: CI
-on: [ push,pull_request ]
+on: [ push ]
 jobs:
   job:
     name: ${{ matrix.name }}
@@ -9,11 +9,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # - name: Windows (x64)
-          #   os: windows-latest
-          #   triplet: x64-windows
-          #   arch: x64
-          #   experimental: false
+          - name: Windows (x64)
+            os: windows-latest
+            triplet: x64-windows
+            arch: x64
+            experimental: true
           # - name: Windows (x86)
           #   os: windows-latest
           #   triplet: x86-windows
@@ -29,8 +29,8 @@ jobs:
           - name: Ubuntu (Clang)
             os: ubuntu-24.04
             triplet: x64-linux
-            cc: clang-16
-            cxx: clang++-16
+            cc: clang-18
+            cxx: clang++-18
             arch: amd64
             experimental: false
 
@@ -50,9 +50,20 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y llvm-16 llvm-16-dev
+          sudo apt-get install -y llvm-18 llvm-18-dev
         if: matrix.triplet == 'x64-linux'
-
+      - name: 'Windows: Install clang v18.1.8 from GitHub'
+        shell: bash
+        run: |
+          set -eux
+          cd ..
+          curl -fL --retry 3 --max-time 300 -o clang.exe \
+          https://github.com/llvm/llvm-project/releases/download/llvmorg-18.1.8/LLVM-18.1.8-win64.exe
+          ./clang.exe //S # double-slash for bash
+          rm clang.exe
+          # C:\Program Files\LLVM\bin should already be in PATH
+          clang-cl --version
+        if: runner.os == 'Windows'
       - name: Show content of workspace after cache has been restored
         run: find $RUNNER_WORKSPACE
         shell: bash

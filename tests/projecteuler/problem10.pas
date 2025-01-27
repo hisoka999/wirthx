@@ -2,16 +2,20 @@ program problem10;
 
 
 var
-    count : integer = 2;
     prime : integer = 3;
 
-    arr : array [0..2500000] of boolean;
-    k : integer ;
+    arr : array of boolean;
+    k : int64  = 0 ;
+    i : integer  = 0 ;
     sum : int64 = 5;
 begin
+    SetLength(arr,2500000);
 
+    for i:= 2 to high(arr) do
+        arr[i] := false;
     arr[0] := true;
     arr[1] := true;
+
     while true do
     begin
         k := 2 * prime;
@@ -31,7 +35,6 @@ begin
         if k < length(arr) then
         begin
             prime := k;
-
             if prime >= 2000000 then
             begin
                 writeln(sum);
@@ -40,6 +43,9 @@ begin
             sum := sum + prime;
         end;
         else
+        begin
+            writeln('error');
             break;
+        end;
     end;
 end.

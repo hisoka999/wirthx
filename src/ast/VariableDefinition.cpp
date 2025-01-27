@@ -14,7 +14,43 @@ llvm::AllocaInst *VariableDefinition::generateCode(std::unique_ptr<Context> &con
     {
         const auto arrayType = array->generateLlvmType(context);
 
-        return context->Builder->CreateAlloca(arrayType, nullptr, this->variableName);
+        auto arrayAllocation = context->Builder->CreateAlloca(arrayType, nullptr, this->variableName);
+
+
+        if (array->isDynArray)
+        {
+            return arrayAllocation;
+        }
+
+        /*auto *gvar_array_a = new llvm::GlobalVariable(*context->TheModule, arrayType, true,
+                                                      /*Linkage=#1#llvm::GlobalValue::ExternalLinkage,
+                                                      /*Initializer=#1#0, // has initializer, specified below
+                                                      /*Name=#1#this->variableName);
+
+        // Constant Definitions
+        llvm::ConstantAggregateZero *const_array_2 = llvm::ConstantAggregateZero::get(arrayType);
+
+        // Global Variable Definitions
+        gvar_array_a->setInitializer(const_array_2);
+        {
+            auto memcpyCall = llvm::Intrinsic::getDeclaration(
+                    context->TheModule.get(), llvm::Intrinsic::memcpy,
+                    {context->Builder->getPtrTy(), context->Builder->getPtrTy(), context->Builder->getInt64Ty()});
+            std::vector<llvm::Value *> memcopyArgs;
+
+            const llvm::DataLayout &DL = context->TheModule->getDataLayout();
+            uint64_t structSize = DL.getTypeAllocSize(arrayType);
+
+
+            memcopyArgs.push_back(context->Builder->CreateBitCast(arrayAllocation, context->Builder->getPtrTy()));
+            memcopyArgs.push_back(context->Builder->CreateBitCast(gvar_array_a, context->Builder->getPtrTy()));
+            memcopyArgs.push_back(context->Builder->getInt64(structSize));
+            memcopyArgs.push_back(context->Builder->getFalse());
+
+            context->Builder->CreateCall(memcpyCall, memcopyArgs);
+        }*/
+        // context->Builder->CreateStore(gvar_array_a, arrayAllocation);
+        return arrayAllocation;
     }
 
 
