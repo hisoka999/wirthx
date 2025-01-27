@@ -25,6 +25,7 @@ llvm::Value *RepeatUntilNode::codegen(std::unique_ptr<Context> &context)
 
     // Start insertion in LoopBB.
     context->Builder->SetInsertPoint(LoopBB);
+    auto savedBreakBlock = context->BreakBlock.Block;
     context->BreakBlock.Block = AfterBB;
     context->BreakBlock.BlockUsed = false;
     // Emit the body of the loop.  This, like any other expr, can change the
@@ -36,7 +37,7 @@ llvm::Value *RepeatUntilNode::codegen(std::unique_ptr<Context> &context)
         node->codegen(context);
     }
 
-    context->BreakBlock.Block = nullptr;
+    context->BreakBlock.Block = savedBreakBlock;
 
     // // Convert condition to a bool by comparing non-equal to 0.0.
 

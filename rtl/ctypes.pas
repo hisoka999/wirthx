@@ -10,7 +10,7 @@ type
     {$else}
         {$ifdef WINDOWS}
         cint = integer;
-        clong = int64;
+        clong = integer;
         {$endif}
     {$endif}
 implementation

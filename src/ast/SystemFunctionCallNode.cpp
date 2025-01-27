@@ -1,9 +1,11 @@
 #include "SystemFunctionCallNode.h"
 #include <iostream>
 #include <llvm/IR/IRBuilder.h>
+#include <llvm/TargetParser/Triple.h>
 #include <utility>
 #include <vector>
 
+#include <cinttypes>
 #include "../compare.h"
 #include "UnitNode.h"
 #include "compiler/Context.h"
@@ -171,12 +173,25 @@ llvm::Value *SystemFunctionCallNode::codegen_write(std::unique_ptr<Context> &con
         std::vector<llvm::Value *> ArgsV;
         if (auto integerType = std::dynamic_pointer_cast<IntegerType>(type))
         {
-            if (integerType->length > 32)
-                ArgsV.push_back(context->Builder->CreateGlobalString("%ld", "format_int64"));
-            else if (integerType->length == 8)
-                ArgsV.push_back(context->Builder->CreateGlobalString("%c", "format_char"));
+            if (context->TargetTriple->getOS() == llvm::Triple::Win32)
+            {
+                if (integerType->length > 32)
+                    ArgsV.push_back(context->Builder->CreateGlobalString("%lli", "format_int64"));
+                else if (integerType->length == 8)
+                    ArgsV.push_back(context->Builder->CreateGlobalString("%c", "format_char"));
+                else
+                    ArgsV.push_back(context->Builder->CreateGlobalString("%i", "format_int"));
+            }
             else
-                ArgsV.push_back(context->Builder->CreateGlobalString("%d", "format_int"));
+            {
+                if (integerType->length > 32)
+                    ArgsV.push_back(context->Builder->CreateGlobalString("%ld", "format_int64"));
+                else if (integerType->length == 8)
+                    ArgsV.push_back(context->Builder->CreateGlobalString("%c", "format_char"));
+                else
+                    ArgsV.push_back(context->Builder->CreateGlobalString("%d", "format_int"));
+            }
+
             ArgsV.push_back(argValue);
         }
         else if (auto stringType = std::dynamic_pointer_cast<StringType>(type))
@@ -201,13 +216,22 @@ llvm::Value *SystemFunctionCallNode::codegen_write(std::unique_ptr<Context> &con
 llvm::Value *SystemFunctionCallNode::codegen_writeln(std::unique_ptr<Context> &context, ASTNode *parent)
 {
     codegen_write(context, parent);
+
     llvm::Function *CalleeF = context->TheModule->getFunction("printf");
     if (!CalleeF)
         LogErrorV("Unknown function referenced");
     std::vector<llvm::Value *> ArgsV;
 
-    ArgsV.push_back(context->Builder->CreateGlobalString("\n"));
+    if (context->TargetTriple->getOS() == llvm::Triple::Win32)
+    {
+        ArgsV.push_back(context->Builder->CreateGlobalString("\r\n"));
+    }
+    else
+    {
+        ArgsV.push_back(context->Builder->CreateGlobalString("\n"));
+    }
     context->Builder->CreateCall(CalleeF, ArgsV);
+
     return nullptr;
 }
 llvm::Value *SystemFunctionCallNode::codegen_new(std::unique_ptr<Context> &context, ASTNode *parent) const

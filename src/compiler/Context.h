@@ -23,6 +23,7 @@ namespace llvm
     class BasicBlock;
     class ConstantFolder;
     class IRBuilderDefaultInserter;
+    class Triple;
     // template<typename FolderTy = ConstantFolder, typename InserterTy = IRBuilderDefaultInserter>
     template<class FolderTy, class InserterTy>
     class IRBuilder;
@@ -66,6 +67,7 @@ struct Context
     std::unique_ptr<llvm::ModuleAnalysisManager> TheMAM;
     std::unique_ptr<llvm::PassInstrumentationCallbacks> ThePIC;
     std::unique_ptr<llvm::StandardInstrumentations> TheSI;
+    std::unique_ptr<llvm::Triple> TargetTriple;
 
     std::unique_ptr<UnitNode> ProgramUnit;
     CompilerOptions compilerOptions;

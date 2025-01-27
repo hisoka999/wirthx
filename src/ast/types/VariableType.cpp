@@ -126,7 +126,7 @@ llvm::Type *ArrayType::generateLlvmType(std::unique_ptr<Context> &context)
         else
         {
 
-            auto arraySize = high - low + 1;
+            const auto arraySize = high - low + 1;
 
             llvmType = llvm::ArrayType::get(arrayBaseType, arraySize);
         }
