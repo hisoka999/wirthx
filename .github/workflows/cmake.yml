@@ -41,7 +41,7 @@ jobs:
       CMAKE_BUILD_DIR: ${{ github.workspace }}/build/
       # Indicates the location of the vcpkg as a Git submodule of the project repository.
       #VCPKG_ROOT: ${{ github.workspace }}/vcpkg
-      LLVM_DIR: "${{ env.CMAKE_BUILD_DIR }}\..\llvm"
+      LLVM_DIR: "${{ github.workspace }}\llvm"
 
     steps:
       - uses: actions/checkout@v3
