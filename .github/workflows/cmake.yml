@@ -41,6 +41,7 @@ jobs:
       CMAKE_BUILD_DIR: ${{ github.workspace }}/build/
       # Indicates the location of the vcpkg as a Git submodule of the project repository.
       #VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+      LLVM_DIR: ${{ env.CMAKE_BUILD_DIR }}\..\llvm
 
     steps:
       - uses: actions/checkout@v3
@@ -68,7 +69,7 @@ jobs:
         shell: bash
         run: |
           set -eux
-          cd ..
+          cd ${{ env.CMAKE_BUILD_DIR }}\..\
           curl -fL --retry 3 --max-time 300 -o llvm.7z \
             https://github.com/vovkos/llvm-package-windows/releases/download/llvm-18.1.8/llvm-18.1.8-windows-amd64-msvc17-msvcrt-dbg.7z
           mkdir llvm
@@ -76,7 +77,7 @@ jobs:
           7z x ../llvm.7z >/dev/null
           rm ../llvm.7z
           cd ..
-          llvm/bin/llvm-config --version
+          llvm-config --version
         if: runner.os == 'Windows'
       - name: Show content of workspace after cache has been restored
         run: find $RUNNER_WORKSPACE
@@ -95,7 +96,7 @@ jobs:
         if: matrix.triplet == 'x64-linux'
       - name: Install dependencies and generate project files (Windows)
         run: |
-          cmake -B "${{ env.CMAKE_BUILD_DIR }}" "-DLLVM_ROOT_DIR=${{ env.CMAKE_BUILD_DIR }}\..\llvm"  -A ${{matrix.arch}}
+          cmake -B "${{ env.CMAKE_BUILD_DIR }}" "-DLLVM_ROOT_DIR=${{ env.LLVM_DIR }}"  -A ${{matrix.arch}}
         if: matrix.os == 'windows-latest'
       # Build the whole project with Ninja (which is spawn by CMake).
       - name: Build
