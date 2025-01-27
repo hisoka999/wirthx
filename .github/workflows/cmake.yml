@@ -67,10 +67,9 @@ jobs:
         if: matrix.triplet == 'x64-linux'
       - name: 'Windows: Install LLVM v18.1.8 from GitHub'
         shell: bash
-        working-directory: ${{github.workspace}}/build
+        working-directory: ${{github.workspace}}
         run: |
           set -eux
-          cd  ..
           curl -fL --retry 3 --max-time 300 -o llvm.7z \
             https://github.com/vovkos/llvm-package-windows/releases/download/llvm-18.1.8/llvm-18.1.8-windows-amd64-msvc17-msvcrt-dbg.7z
           mkdir llvm
