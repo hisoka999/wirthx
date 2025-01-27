@@ -52,17 +52,18 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y llvm-18 llvm-18-dev
         if: matrix.triplet == 'x64-linux'
-      - name: 'Windows: Install clang v18.1.8 from GitHub'
+      - name: 'Windows: Install LLVM v18.1.8 from GitHub'
         shell: bash
         run: |
           set -eux
           cd ..
-          curl -fL --retry 3 --max-time 300 -o clang.exe \
-          https://github.com/llvm/llvm-project/releases/download/llvmorg-18.1.8/LLVM-18.1.8-win64.exe
-          ./clang.exe //S # double-slash for bash
-          rm clang.exe
-          # C:\Program Files\LLVM\bin should already be in PATH
-          clang-cl --version
+          curl -fL --retry 3 --max-time 300 -o llvm.7z \
+            wget https://github.com/vovkos/llvm-package-windows/releases/download/llvm-18.1.8/llvm-18.1.8-windows-amd64-msvc17-msvcrt-dbg.7z
+          mkdir llvm
+          cd llvm
+          7z x ../llvm.7z >/dev/null
+          rm ../llvm.7z
+          cd ..
         if: runner.os == 'Windows'
       - name: Show content of workspace after cache has been restored
         run: find $RUNNER_WORKSPACE

@@ -22,10 +22,8 @@ llvm::AllocaInst *VariableDefinition::generateCode(std::unique_ptr<Context> &con
             return arrayAllocation;
         }
 
-        /*auto *gvar_array_a = new llvm::GlobalVariable(*context->TheModule, arrayType, true,
-                                                      /*Linkage=#1#llvm::GlobalValue::ExternalLinkage,
-                                                      /*Initializer=#1#0, // has initializer, specified below
-                                                      /*Name=#1#this->variableName);
+        auto *gvar_array_a = new llvm::GlobalVariable(*context->TheModule, arrayType, true,
+                                                      llvm::GlobalValue::ExternalLinkage, nullptr, this->variableName);
 
         // Constant Definitions
         llvm::ConstantAggregateZero *const_array_2 = llvm::ConstantAggregateZero::get(arrayType);
@@ -48,7 +46,7 @@ llvm::AllocaInst *VariableDefinition::generateCode(std::unique_ptr<Context> &con
             memcopyArgs.push_back(context->Builder->getFalse());
 
             context->Builder->CreateCall(memcpyCall, memcopyArgs);
-        }*/
+        }
         // context->Builder->CreateStore(gvar_array_a, arrayAllocation);
         return arrayAllocation;
     }
