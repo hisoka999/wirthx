@@ -69,7 +69,7 @@ jobs:
         shell: bash
         run: |
           set -eux
-          cd ${{ env.CMAKE_BUILD_DIR }}\..\
+          cd  ${{ github.workspace }}
           curl -fL --retry 3 --max-time 300 -o llvm.7z \
             https://github.com/vovkos/llvm-package-windows/releases/download/llvm-18.1.8/llvm-18.1.8-windows-amd64-msvc17-msvcrt-dbg.7z
           mkdir llvm
