@@ -76,6 +76,7 @@ jobs:
           7z x ../llvm.7z >/dev/null
           rm ../llvm.7z
           cd ..
+          llvm/bin/llvm-config --version
         if: runner.os == 'Windows'
       - name: Show content of workspace after cache has been restored
         run: find $RUNNER_WORKSPACE
@@ -94,7 +95,7 @@ jobs:
         if: matrix.triplet == 'x64-linux'
       - name: Install dependencies and generate project files (Windows)
         run: |
-          cmake -B "${{ env.CMAKE_BUILD_DIR }}"  -A ${{matrix.arch}}
+          cmake -B "${{ env.CMAKE_BUILD_DIR }}" "-DLLVM_ROOT_DIR=${{ env.CMAKE_BUILD_DIR }}\..\llvm"  -A ${{matrix.arch}}
         if: matrix.os == 'windows-latest'
       # Build the whole project with Ninja (which is spawn by CMake).
       - name: Build
