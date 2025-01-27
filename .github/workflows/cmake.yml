@@ -58,7 +58,7 @@ jobs:
           set -eux
           cd ..
           curl -fL --retry 3 --max-time 300 -o llvm.7z \
-            wget https://github.com/vovkos/llvm-package-windows/releases/download/llvm-18.1.8/llvm-18.1.8-windows-amd64-msvc17-msvcrt-dbg.7z
+            https://github.com/vovkos/llvm-package-windows/releases/download/llvm-18.1.8/llvm-18.1.8-windows-amd64-msvc17-msvcrt-dbg.7z
           mkdir llvm
           cd llvm
           7z x ../llvm.7z >/dev/null
