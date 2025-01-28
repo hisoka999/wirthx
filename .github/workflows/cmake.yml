@@ -77,7 +77,7 @@ jobs:
           7z x ../llvm.7z >/dev/null
           rm ../llvm.7z
           cd ..
-          llvm/bin/llvm-config --version
+          # llvm/bin/llvm-config --version
         if: runner.os == 'Windows'
       - name: Show content of workspace after cache has been restored
         run: find $RUNNER_WORKSPACE
