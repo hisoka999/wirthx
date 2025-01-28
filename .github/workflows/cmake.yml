@@ -59,7 +59,7 @@ jobs:
           rm clang.exe
           # C:\Program Files\LLVM\bin should already be in PATH
           clang-cl --version
-          echo "C:\\Program Files\\LLVM\\bin" >> $GITHUB_PATH
+          echo "C:\Program Files\LLVM\bin" >> $GITHUB_PATH
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
