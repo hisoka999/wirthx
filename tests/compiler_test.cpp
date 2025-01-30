@@ -32,9 +32,10 @@ TEST_P(CompilerTest, TestNoError)
 {
     // Inside a test, access the test parameter with the GetParam() method
     // of the TestWithParam<T> class:
+    std::filesystem::path base_path = "testfiles";
     auto name = GetParam();
-    std::filesystem::path input_path = "testfiles/" + name + ".pas";
-    std::filesystem::path output_path = "testfiles/" + name + ".txt";
+    std::filesystem::path input_path = base_path / (name + ".pas");
+    std::filesystem::path output_path = base_path / (name + ".txt");
     ASSERT_TRUE(std::filesystem::exists(input_path));
     ASSERT_TRUE(std::filesystem::exists(output_path));
     std::stringstream ostream;
@@ -82,9 +83,10 @@ TEST_P(ProjectEulerTest, TestNoError)
 {
     // Inside a test, access the test parameter with the GetParam() method
     // of the TestWithParam<T> class:
+    std::filesystem::path base_path = "projecteuler";
     auto name = GetParam();
-    std::filesystem::path input_path = "projecteuler/" + name + ".pas";
-    std::filesystem::path output_path = "projecteuler/" + name + ".txt";
+    std::filesystem::path input_path = base_path / (name + ".pas");
+    std::filesystem::path output_path = base_path / (name + ".txt");
     ASSERT_TRUE(std::filesystem::exists(input_path));
     ASSERT_TRUE(std::filesystem::exists(output_path));
     std::stringstream ostream;
@@ -129,9 +131,10 @@ TEST_P(CompilerTestError, CompilerTestWithError)
 {
     // Inside a test, access the test parameter with the GetParam() method
     // of the TestWithParam<T> class:
+    std::filesystem::path base_path = "errortests";
     auto name = GetParam();
-    std::filesystem::path input_path = "errortests/" + name + ".pas";
-    std::filesystem::path output_path = "errortests/" + name + ".txt";
+    std::filesystem::path input_path = base_path / (name + ".pas");
+    std::filesystem::path output_path = base_path / (name + ".txt");
     ASSERT_TRUE(std::filesystem::exists(input_path));
     ASSERT_TRUE(std::filesystem::exists(output_path));
     std::stringstream ostream;
