@@ -36,6 +36,12 @@ TEST_P(CompilerTest, TestNoError)
     auto name = GetParam();
     std::filesystem::path input_path = base_path / (name + ".pas");
     std::filesystem::path output_path = base_path / (name + ".txt");
+    std::cerr << "current path" << std::filesystem::current_path();
+
+    if (!std::filesystem::exists(input_path))
+        std::cerr << "absolute input path: " << std::filesystem::absolute(input_path);
+    if (!std::filesystem::exists(output_path))
+        std::cerr << "absolute input path: " << std::filesystem::absolute(output_path);
     ASSERT_TRUE(std::filesystem::exists(input_path));
     ASSERT_TRUE(std::filesystem::exists(output_path));
     std::stringstream ostream;
