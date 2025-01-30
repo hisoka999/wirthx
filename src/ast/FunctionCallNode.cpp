@@ -136,20 +136,21 @@ llvm::Value *FunctionCallNode::codegen(std::unique_ptr<Context> &context)
     }
 
     auto callInst = context->Builder->CreateCall(CalleeF, ArgsV);
-    for (unsigned i = 0, e = m_args.size(); i != e; ++i)
+    for (size_t i = 0, e = m_args.size(); i != e; ++i)
     {
         std::optional<FunctionArgument> argType = std::nullopt;
         if (functionDefinition.has_value())
         {
-            argType = functionDefinition.value()->getParam(i);
+            argType = functionDefinition.value()->getParam(static_cast<unsigned>(i));
         }
         if (argType.has_value() && argType.value().type->baseType == VariableBaseType::Struct &&
             !argType.value().isReference)
         {
             auto llvmArgType = argType->type->generateLlvmType(context);
 
-            callInst->addParamAttr(i, llvm::Attribute::NoUndef);
-            callInst->addParamAttr(i, llvm::Attribute::getWithByValType(*context->TheContext, llvmArgType));
+            callInst->addParamAttr(static_cast<unsigned>(i), llvm::Attribute::NoUndef);
+            callInst->addParamAttr(static_cast<unsigned>(i),
+                                   llvm::Attribute::getWithByValType(*context->TheContext, llvmArgType));
         }
     };
     return callInst;

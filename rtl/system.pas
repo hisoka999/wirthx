@@ -54,7 +54,7 @@ uses ctypes;
 
     procedure Assign(var F: File;FileName: String);
     begin
-        F.ptr := fopen(pchar(Filename),pchar('rw'));
+        F.ptr := fopen(pchar(Filename),pchar('r+'));
         if F.ptr != 0 then
             F.isOpen := true
         else

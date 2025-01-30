@@ -82,13 +82,13 @@ llvm::Value *ComparrisionNode::codegen(std::unique_ptr<Context> &context)
     }
 
     auto lhsType = m_lhs->resolveType(context->ProgramUnit, parent);
-    auto rhsType = m_lhs->resolveType(context->ProgramUnit, parent);
+    auto rhsType = m_rhs->resolveType(context->ProgramUnit, parent);
 
     if (*lhsType == *rhsType && lhsType->baseType == VariableBaseType::Integer)
     {
         if (lhs->getType()->isIntegerTy() && rhs->getType()->isIntegerTy())
         {
-            const size_t maxBitWith =
+            const unsigned maxBitWith =
                     std::max(lhs->getType()->getIntegerBitWidth(), rhs->getType()->getIntegerBitWidth());
             const auto targetType = llvm::IntegerType::get(*context->TheContext, maxBitWith);
             if (maxBitWith != lhs->getType()->getIntegerBitWidth())
@@ -104,6 +104,7 @@ llvm::Value *ComparrisionNode::codegen(std::unique_ptr<Context> &context)
     else if (lhsType->baseType == VariableBaseType::Pointer || rhsType->baseType == VariableBaseType::Pointer)
     {
         auto targetType = llvm::IntegerType::getInt64Ty(*context->TheContext);
+        const unsigned maxBitWith = targetType->getIntegerBitWidth();
         if (lhsType->baseType == VariableBaseType::Pointer)
         {
             lhs = context->Builder->CreateBitOrPointerCast(lhs, targetType);
@@ -117,6 +118,15 @@ llvm::Value *ComparrisionNode::codegen(std::unique_ptr<Context> &context)
             rhs = context->Builder->CreateBitOrPointerCast(rhs, targetType);
         }
         else if (lhsType->baseType == VariableBaseType::Integer)
+        {
+            rhs = context->Builder->CreateIntCast(rhs, targetType, true, "rhs_cast");
+        }
+
+        if (maxBitWith != lhs->getType()->getIntegerBitWidth())
+        {
+            lhs = context->Builder->CreateIntCast(lhs, targetType, true, "lhs_cast");
+        }
+        if (maxBitWith != rhs->getType()->getIntegerBitWidth())
         {
             rhs = context->Builder->CreateIntCast(rhs, targetType, true, "rhs_cast");
         }

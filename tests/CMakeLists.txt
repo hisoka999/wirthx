@@ -1,6 +1,7 @@
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(GoogleTest)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
 
 mark_as_advanced(
@@ -27,13 +28,14 @@ macro(package_add_test TESTNAME)
     # the test executable.  Remove g_test_main if writing your own main function.
     target_link_libraries(${TESTNAME} gtest gmock gtest_main)
     target_link_libraries(${TESTNAME} ${llvm_libs})
+    set(TEST_WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/tests")
 
     # gtest_discover_tests replaces gtest_add_tests,
     # see https://cmake.org/cmake/help/v3.10/module/GoogleTest.html for more options to pass to it
     gtest_discover_tests(${TESTNAME}
             # set a working directory so your project root so that you can find test data via paths relative to the project root
-            WORKING_DIRECTORY ${PROJECT_DIR}
-            PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_DIR}"
+            WORKING_DIRECTORY $<TARGET_FILE_DIR:wirthx_test>
+            PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:wirthx_test>"
     )
     set_target_properties(${TESTNAME} PROPERTIES FOLDER tests)
 endmacro()

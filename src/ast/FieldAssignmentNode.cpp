@@ -27,7 +27,7 @@ llvm::Value *FieldAssignmentNode::codegen(std::unique_ptr<Context> &context)
     {
         for (size_t i = 0; i < context->TopLevelFunction->arg_size(); ++i)
         {
-            auto arg = context->TopLevelFunction->getArg(i);
+            auto arg = context->TopLevelFunction->getArg(static_cast<unsigned>(i));
             if (arg->getName() == m_variableName)
             {
                 auto functionDefinition =

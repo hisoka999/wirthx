@@ -1,5 +1,5 @@
 name: CI
-on: [ push,pull_request ]
+on: [ push ]
 jobs:
   job:
     name: ${{ matrix.name }}
@@ -9,11 +9,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # - name: Windows (x64)
-          #   os: windows-latest
-          #   triplet: x64-windows
-          #   arch: x64
-          #   experimental: false
+          - name: Windows (x64)
+            os: windows-latest
+            triplet: x64-windows
+            arch: x64
+            experimental: true
           # - name: Windows (x86)
           #   os: windows-latest
           #   triplet: x86-windows
@@ -29,8 +29,8 @@ jobs:
           - name: Ubuntu (Clang)
             os: ubuntu-24.04
             triplet: x64-linux
-            cc: clang-16
-            cxx: clang++-16
+            cc: clang-18
+            cxx: clang++-18
             arch: amd64
             experimental: false
 
@@ -41,18 +41,44 @@ jobs:
       CMAKE_BUILD_DIR: ${{ github.workspace }}/build/
       # Indicates the location of the vcpkg as a Git submodule of the project repository.
       #VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+      LLVM_DIR: "${{ github.workspace }}/llvm"
 
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-
+      - name: 'Windows: Install clang v18.1.8 from GitHub'
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          set -eux
+          cd ..
+          curl -fL --retry 3 --max-time 300 -o clang.exe \
+          https://github.com/llvm/llvm-project/releases/download/llvmorg-18.1.8/LLVM-18.1.8-win64.exe
+          ./clang.exe //S # double-slash for bash
+          rm clang.exe
+          # C:\Program Files\LLVM\bin should already be in PATH
+          clang-cl --version
+          echo "C:\Program Files\LLVM\bin" >> $GITHUB_PATH
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y llvm-16 llvm-16-dev
+          sudo apt-get install -y llvm-18 llvm-18-dev
         if: matrix.triplet == 'x64-linux'
-
+      - name: 'Windows: Install LLVM v18.1.8 from GitHub'
+        shell: bash
+        working-directory: ${{github.workspace}}
+        run: |
+          set -eux
+          curl -fL --retry 3 --max-time 300 -o llvm.7z \
+            https://github.com/vovkos/llvm-package-windows/releases/download/llvm-18.1.8/llvm-18.1.8-windows-amd64-msvc17-msvcrt-dbg.7z
+          mkdir llvm
+          cd llvm
+          7z x ../llvm.7z >/dev/null
+          rm ../llvm.7z
+          cd ..
+          # llvm/bin/llvm-config --version
+        if: runner.os == 'Windows'
       - name: Show content of workspace after cache has been restored
         run: find $RUNNER_WORKSPACE
         shell: bash
@@ -70,7 +96,7 @@ jobs:
         if: matrix.triplet == 'x64-linux'
       - name: Install dependencies and generate project files (Windows)
         run: |
-          cmake -B "${{ env.CMAKE_BUILD_DIR }}"  -A ${{matrix.arch}}
+          cmake -B "${{ env.CMAKE_BUILD_DIR }}" "-DLLVM_ROOT_DIR=${{ env.LLVM_DIR }}"  -A ${{matrix.arch}}
         if: matrix.os == 'windows-latest'
       # Build the whole project with Ninja (which is spawn by CMake).
       - name: Build
@@ -80,8 +106,8 @@ jobs:
         run: find $RUNNER_WORKSPACE
         shell: bash
       - name: Test
-        working-directory: ${{github.workspace}}/build
+        working-directory: ${{github.workspace}}/build/tests
         # Execute tests defined by the CMake configuration.
         # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest -C ${{env.BUILD_TYPE}}
+        run: ctest -C ${{env.BUILD_TYPE}} --extra-verbose
   
