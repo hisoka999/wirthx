@@ -49,8 +49,8 @@ llvm::Value *ForNode::codegen(std::unique_ptr<Context> &context)
     builder->SetInsertPoint(loopBB);
 
     // Start the PHI node with an entry for Start.
-    unsigned int bitLength = 64;
-    auto targetType = llvm::Type::getIntNTy(*llvmContext, bitLength);
+    constexpr unsigned bitLength = 64;
+    const auto targetType = llvm::Type::getIntNTy(*llvmContext, bitLength);
     // if (auto integerType = std::dynamic_pointer_cast<IntegerType>(endExpressionType))
     // {
     //     bitLength = integerType->length;
@@ -71,7 +71,7 @@ llvm::Value *ForNode::codegen(std::unique_ptr<Context> &context)
     // Emit the body of the loop.  This, like any other expr, can change the
     // current BB.  Note that we ignore the value computed by the body, but don't
     // allow an error.
-    for (auto &exp: m_body)
+    for (const auto &exp: m_body)
     {
         builder->SetInsertPoint(loopBB);
         exp->codegen(context);

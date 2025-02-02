@@ -68,3 +68,12 @@ std::shared_ptr<VariableType> LogicalExpressionNode::resolveType(const std::uniq
 {
     return VariableType::getBoolean();
 }
+Token LogicalExpressionNode::expressionToken()
+{
+    auto start = m_lhs->expressionToken().sourceLocation.byte_offset;
+    auto end = m_rhs->expressionToken().sourceLocation.byte_offset;
+    Token token = ASTNode::expressionToken();
+    token.sourceLocation.num_bytes = end - start;
+    token.sourceLocation.byte_offset = start;
+    return token;
+}

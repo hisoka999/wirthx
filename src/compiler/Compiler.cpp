@@ -181,11 +181,26 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
     }
     auto context = InitializeModule(unit, options);
     auto intType = VariableType::getInteger();
+    auto pCharType = ::PointerType::getPointerTo(VariableType::getInteger(8));
 
     createPrintfCall(context);
     createSystemCall(context, "exit", {FunctionArgument{.type = intType, .argumentName = "X", .isReference = false}});
     createSystemCall(context, "fflush",
                      {FunctionArgument{.type = VariableType::getPointer(), .argumentName = "X", .isReference = false}});
+
+    if (target.getOS() == Triple::Linux)
+    {
+        createSystemCall(context, "__assert_fail",
+                         {FunctionArgument{.type = pCharType, .argumentName = "assertion", .isReference = false},
+                          FunctionArgument{.type = pCharType, .argumentName = "filename", .isReference = false},
+                          FunctionArgument{.type = intType, .argumentName = "line", .isReference = false},
+                          FunctionArgument{.type = pCharType, .argumentName = "function", .isReference = false}});
+    }
+    else if (target.getOS() == Triple::Win32)
+    {
+        createSystemCall(context, "DbgBreak",
+                         {FunctionArgument{.type = pCharType, .argumentName = "assertion", .isReference = false}});
+    }
 
     context->TheModule->setDataLayout(TheTargetMachine->createDataLayout());
 

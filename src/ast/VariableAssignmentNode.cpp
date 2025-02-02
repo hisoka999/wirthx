@@ -66,7 +66,7 @@ llvm::Value *VariableAssignmentNode::codegen(std::unique_ptr<Context> &context)
 
     if (type->isIntegerTy() && expressionResult->getType()->isIntegerTy())
     {
-        auto targetType = llvm::IntegerType::get(*context->TheContext, type->getIntegerBitWidth());
+        const auto targetType = llvm::IntegerType::get(*context->TheContext, type->getIntegerBitWidth());
         if (type->getIntegerBitWidth() != expressionResult->getType()->getIntegerBitWidth())
         {
             expressionResult = context->Builder->CreateIntCast(expressionResult, targetType, true, "lhs_cast");

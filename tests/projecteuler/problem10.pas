@@ -11,8 +11,6 @@ var
 begin
     SetLength(arr,2500000);
 
-    for i:= 2 to high(arr) do
-        arr[i] := false;
     arr[0] := true;
     arr[1] := true;
 
