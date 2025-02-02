@@ -6,14 +6,16 @@
 #include <vector>
 
 #include <cinttypes>
+#include <compiler/codegen.h>
+
 #include "../compare.h"
 #include "UnitNode.h"
 #include "compiler/Context.h"
 #include "types/StringType.h"
 
 
-static std::vector<std::string> knownSystemCalls = {"writeln",   "write",  "printf", "exit", "low", "high",
-                                                    "setlength", "length", "pchar",  "new",  "halt"};
+static std::vector<std::string> knownSystemCalls = {"writeln",   "write",  "printf", "exit", "low",  "high",
+                                                    "setlength", "length", "pchar",  "new",  "halt", "assert"};
 
 bool isKnownSystemCall(const std::string &name)
 {
@@ -47,8 +49,6 @@ llvm::Value *SystemFunctionCallNode::codegen_setlength(std::unique_ptr<Context> 
         auto realType = std::dynamic_pointer_cast<ArrayType>(arrayType);
         auto indexType = VariableType::getInteger(64)->generateLlvmType(context);
         auto value = array->codegen(context);
-        // const llvm::DataLayout &DL = context->TheModule->getDataLayout();
-        // auto alignment = DL.getPrefTypeAlign(indexType);
         auto arrayBaseType = realType->arrayBase->generateLlvmType(context);
         auto llvmRecordType = realType->generateLlvmType(context);
 
@@ -79,8 +79,15 @@ llvm::Value *SystemFunctionCallNode::codegen_setlength(std::unique_ptr<Context> 
                                                allocSize, // Number of elements
                                                nullptr // Optional array size multiplier (nullptr for scalar allocation)
                 );
+        const llvm::DataLayout &DL = context->TheModule->getDataLayout();
 
+        auto alignment = DL.getPrefTypeAlign(arrayBaseType);
 
+        context->Builder->CreateMemSet(allocCall, //
+                                       context->Builder->getInt8(0), // Number of elements
+                                       allocSize, // Optional array size multiplier (nullptr for scalar
+                                       alignment //
+        );
         return context->Builder->CreateStore(allocCall, arrayPointerOffset);
     }
     if (arrayType->baseType == VariableBaseType::String)
@@ -234,6 +241,46 @@ llvm::Value *SystemFunctionCallNode::codegen_writeln(std::unique_ptr<Context> &c
 
     return nullptr;
 }
+llvm::Value *SystemFunctionCallNode::codegen_assert(std::unique_ptr<Context> &context, ASTNode *parent)
+{
+    const auto callingFunctionName = parent->expressionToken().lexical().c_str();
+    const auto expression = m_args[0];
+    const auto condition = context->Builder->CreateNot(expression->codegen(context));
+
+    if (context->TargetTriple->getOS() == llvm::Triple::Linux)
+    {
+        codegen::codegen_ifexpr(
+                context, condition,
+                [expression, callingFunctionName](std::unique_ptr<Context> &ctx)
+                {
+                    const auto assertCall = ctx->TheModule->getFunction("__assert_fail");
+                    std::vector<llvm::Value *> ArgsV;
+                    ArgsV.push_back(ctx->Builder->CreateGlobalString(expression->expressionToken().lexical()));
+                    ArgsV.push_back(
+                            ctx->Builder->CreateGlobalString(expression->expressionToken().sourceLocation.filename));
+                    ArgsV.push_back(ctx->Builder->getInt32(expression->expressionToken().row));
+                    ArgsV.push_back(ctx->Builder->CreateGlobalString(callingFunctionName));
+                    ctx->Builder->CreateCall(assertCall, ArgsV);
+                });
+    }
+    else if (context->TargetTriple->getOS() == llvm::Triple::Win32)
+    {
+        codegen::codegen_ifexpr(context, condition,
+                                [expression](std::unique_ptr<Context> &ctx)
+                                {
+                                    const auto assertCall = ctx->TheModule->getFunction("DbgBreak");
+                                    std::vector<llvm::Value *> ArgsV;
+                                    ArgsV.push_back(
+                                            ctx->Builder->CreateGlobalString(expression->expressionToken().lexical()));
+                                    ctx->Builder->CreateCall(assertCall, ArgsV);
+                                });
+    }
+    else
+    {
+        assert(false && "assert is not supported");
+    }
+    return nullptr;
+}
 llvm::Value *SystemFunctionCallNode::codegen_new(std::unique_ptr<Context> &context, ASTNode *parent) const
 {
     m_args[0]->codegen(context);
@@ -324,6 +371,10 @@ llvm::Value *SystemFunctionCallNode::codegen(std::unique_ptr<Context> &context)
         llvm::Function *CalleeF = context->TheModule->getFunction("exit");
 
         return context->Builder->CreateCall(CalleeF, argValue);
+    }
+    else if (iequals(m_name, "assert"))
+    {
+        return codegen_assert(context, parent);
     }
     return FunctionCallNode::codegen(context);
 }

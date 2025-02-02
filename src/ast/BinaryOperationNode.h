@@ -35,4 +35,7 @@ public:
     [[nodiscard]] std::shared_ptr<ASTNode> lhs() const { return m_lhs; }
     [[nodiscard]] std::shared_ptr<ASTNode> rhs() const { return m_rhs; }
     [[nodiscard]] Operator binoperator() const { return m_operator; }
+
+    Token expressionToken() override;
+    ;
 };

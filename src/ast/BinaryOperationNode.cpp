@@ -24,7 +24,7 @@ void BinaryOperationNode::print()
 llvm::Value *BinaryOperationNode::generateForInteger(llvm::Value *lhs, llvm::Value *rhs,
                                                      std::unique_ptr<Context> &context)
 {
-    const size_t maxBitWith = std::max(lhs->getType()->getIntegerBitWidth(), rhs->getType()->getIntegerBitWidth());
+    const unsigned maxBitWith = std::max(lhs->getType()->getIntegerBitWidth(), rhs->getType()->getIntegerBitWidth());
     const auto targetType = llvm::IntegerType::get(*context->TheContext, maxBitWith);
     if (maxBitWith != lhs->getType()->getIntegerBitWidth())
     {
@@ -278,4 +278,13 @@ void BinaryOperationNode::typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNo
             }
         }
     }
+}
+Token BinaryOperationNode::expressionToken()
+{
+    auto start = m_lhs->expressionToken().sourceLocation.byte_offset;
+    auto end = m_rhs->expressionToken().sourceLocation.byte_offset;
+    Token token = ASTNode::expressionToken();
+    token.sourceLocation.num_bytes = end - start;
+    token.sourceLocation.byte_offset = start;
+    return token;
 }
