@@ -228,7 +228,7 @@ llvm::Value *SystemFunctionCallNode::codegen_assert(std::unique_ptr<Context> &co
     }
     else if (context->TargetTriple->getOS() == llvm::Triple::Win32)
     {
-        assertFunction = "__assert";
+        assertFunction = "_assert";
     }
     else
     {
