@@ -221,39 +221,34 @@ llvm::Value *SystemFunctionCallNode::codegen_assert(std::unique_ptr<Context> &co
 {
     const auto callingFunctionName = parent->expressionToken().lexical();
     const auto condition = context->Builder->CreateNot(expression);
-
+    std::string assertFunction;
     if (context->TargetTriple->getOS() == llvm::Triple::Linux)
     {
-        codegen::codegen_ifexpr(
-                context, condition,
-                [argument, callingFunctionName, assertation](const std::unique_ptr<Context> &ctx)
-                {
-                    const auto assertCall = ctx->TheModule->getFunction("__assert_fail");
-                    std::vector<llvm::Value *> ArgsV;
-                    auto token = argument->expressionToken();
-                    ArgsV.push_back(ctx->Builder->CreateGlobalString(assertation, "assertion"));
-                    ArgsV.push_back(
-                            ctx->Builder->CreateGlobalString(token.sourceLocation.filename, "assertion_source_file"));
-                    ArgsV.push_back(ctx->Builder->getInt32(token.row));
-                    ArgsV.push_back(ctx->Builder->CreateGlobalString(callingFunctionName, "assertion_function"));
-                    ctx->Builder->CreateCall(assertCall, ArgsV);
-                });
+        assertFunction = "__assert_fail";
     }
     else if (context->TargetTriple->getOS() == llvm::Triple::Win32)
     {
-        codegen::codegen_ifexpr(context, condition,
-                                [assertation](const std::unique_ptr<Context> &ctx)
-                                {
-                                    const auto assertCall = ctx->TheModule->getFunction("DbgBreak");
-                                    std::vector<llvm::Value *> ArgsV;
-                                    ArgsV.push_back(ctx->Builder->CreateGlobalString(assertation));
-                                    ctx->Builder->CreateCall(assertCall, ArgsV);
-                                });
+        assertFunction = "__assert";
     }
     else
     {
         assert(false && "assert is not supported");
     }
+
+    codegen::codegen_ifexpr(
+            context, condition,
+            [argument, callingFunctionName, assertation, assertFunction](const std::unique_ptr<Context> &ctx)
+            {
+                const auto assertCall = ctx->TheModule->getFunction(assertFunction);
+                std::vector<llvm::Value *> ArgsV;
+                auto token = argument->expressionToken();
+                ArgsV.push_back(ctx->Builder->CreateGlobalString(assertation, "assertion"));
+                ArgsV.push_back(
+                        ctx->Builder->CreateGlobalString(token.sourceLocation.filename, "assertion_source_file"));
+                ArgsV.push_back(ctx->Builder->getInt32(token.row));
+                ArgsV.push_back(ctx->Builder->CreateGlobalString(callingFunctionName, "assertion_function"));
+                ctx->Builder->CreateCall(assertCall, ArgsV);
+            });
     return nullptr;
 }
 llvm::Value *SystemFunctionCallNode::codegen_new(std::unique_ptr<Context> &context, ASTNode *parent) const
