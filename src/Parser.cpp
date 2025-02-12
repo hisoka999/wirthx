@@ -93,13 +93,13 @@ bool Parser::tryConsume(const TokenType tokenType)
 {
     if (canConsume(tokenType))
     {
-        next();
+        ++m_current;
         return true;
     }
     return false;
 }
-bool Parser::canConsume(TokenType tokenType) const { return canConsume(tokenType, 1); }
-bool Parser::canConsume(TokenType tokenType, size_t next) const
+bool Parser::canConsume(const TokenType tokenType) const { return canConsume(tokenType, 1); }
+bool Parser::canConsume(const TokenType tokenType, const size_t next) const
 {
     return hasNext() && m_tokens[m_current + next].tokenType == tokenType;
 }
@@ -169,27 +169,21 @@ std::shared_ptr<ASTNode> Parser::parseNumber()
 }
 
 
-bool Parser::isVariableDefined(const std::string_view name, size_t scope)
+bool Parser::isVariableDefined(const std::string_view &name, const size_t scope)
 {
-    for (const auto &def: m_known_variable_definitions)
-    {
-        if (iequals(def.variableName, name) && def.scopeId <= scope)
-            return true;
-    }
-    return false;
+    return std::ranges::any_of(m_known_variable_definitions, [name, scope](const VariableDefinition &def)
+                               { return iequals(def.variableName, name) && def.scopeId <= scope; });
 }
 
 void Parser::parseTypeDefinitions(const size_t scope)
 {
-
-
     // parse type definitions
     while (tryConsume(TokenType::NAMEDTOKEN))
     {
 
-        auto typeName = std::string(current().lexical());
+        const auto typeName = current().lexical();
         consume(TokenType::EQUAL);
-        auto isPointerType = tryConsume(TokenType::CARET);
+        const auto isPointerType = tryConsume(TokenType::CARET);
         // parse type
         if (tryConsumeKeyWord("array"))
         {
@@ -203,10 +197,8 @@ void Parser::parseTypeDefinitions(const size_t scope)
 
             while (!canConsumeKeyWord("end"))
             {
-                auto definitions = parseVariableDefinitions(scope);
-
-                for (auto &definition: definitions)
-                    fieldDefinitions.push_back(definition);
+                for (const auto &definition: parseVariableDefinitions(scope))
+                    fieldDefinitions.emplace_back(definition);
             }
 
             consumeKeyWord("end");
@@ -218,7 +210,7 @@ void Parser::parseTypeDefinitions(const size_t scope)
         else if (tryConsume(TokenType::NAMEDTOKEN))
         {
 
-            auto internalTypeName = std::string(current().lexical());
+            auto internalTypeName = current().lexical();
             auto internalType = determinVariableTypeByName(internalTypeName);
             if (!internalType.has_value())
             {

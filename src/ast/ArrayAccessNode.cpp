@@ -1,8 +1,12 @@
 #include "ArrayAccessNode.h"
 
+#include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Instructions.h>
 
+#include "ComparissionNode.h"
+#include "SystemFunctionCallNode.h"
 #include "UnitNode.h"
+#include "VariableAccessNode.h"
 #include "compiler/Context.h"
 #include "types/StringType.h"
 
@@ -47,6 +51,15 @@ std::shared_ptr<VariableType> ArrayAccessNode::resolveType(const std::unique_ptr
             return IntegerType::getInteger(8);
     }
     return std::make_shared<VariableType>();
+}
+Token ArrayAccessNode::expressionToken()
+{
+    auto start = m_arrayNameToken.sourceLocation.byte_offset;
+    auto end = m_indexNode->expressionToken().sourceLocation.byte_offset;
+    Token token = m_arrayNameToken;
+    token.sourceLocation.num_bytes = end - start + m_indexNode->expressionToken().sourceLocation.num_bytes + 1;
+    token.sourceLocation.byte_offset = start;
+    return token;
 }
 
 llvm::Value *ArrayAccessNode::codegen(std::unique_ptr<Context> &context)
@@ -96,8 +109,25 @@ llvm::Value *ArrayAccessNode::codegen(std::unique_ptr<Context> &context)
     }
     if (const auto fieldAccessType = std::dynamic_pointer_cast<FieldAccessableType>(arrayDefType))
     {
+        Token token = expressionToken();
+        std::vector<std::shared_ptr<ASTNode>> args = {std::make_shared<VariableAccessNode>(m_arrayNameToken, false)};
 
-        const auto index = m_indexNode->codegen(context);
+        auto index = m_indexNode->codegen(context);
+        constexpr unsigned maxBitWith = 64;
+        const auto targetType = llvm::IntegerType::get(*context->TheContext, maxBitWith);
+        if (maxBitWith != index->getType()->getIntegerBitWidth())
+        {
+            index = context->Builder->CreateIntCast(index, targetType, true, "lhs_cast");
+        }
+        const auto lowValue = fieldAccessType->getLowValue(context);
+        const auto highValue = fieldAccessType->generateHighValue(m_arrayNameToken, context);
+        const auto compareSmaller = context->Builder->CreateICmpSLE(index, highValue);
+        const auto compareGreater = context->Builder->CreateICmpSGE(index, lowValue);
+        const auto andNode = context->Builder->CreateAnd(compareGreater, compareSmaller);
+        const std::string message = "index out of range for expression: " + token.lexical();
+        SystemFunctionCallNode::codegen_assert(context, resolveParent(context), this, andNode, message);
+
+
         return fieldAccessType->generateFieldAccess(m_arrayNameToken, index, context);
     }
     return LogErrorV("variable can not access elements by [] operator: " + m_arrayNameToken.lexical());

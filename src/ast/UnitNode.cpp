@@ -10,7 +10,7 @@
 
 UnitNode::UnitNode(const Token &token, const UnitType unitType, const std::string &unitName,
                    const std::vector<std::shared_ptr<FunctionDefinitionNode>> &functionDefinitions,
-                   const std::map<std::string, std::shared_ptr<VariableType>> &typeDefinitions,
+                   const std::unordered_map<std::string, std::shared_ptr<VariableType>> &typeDefinitions,
                    const std::shared_ptr<BlockNode> &blockNode) :
     ASTNode(token), m_unitType(unitType), m_unitName(unitName), m_functionDefinitions(functionDefinitions),
     m_typeDefinitions(typeDefinitions), m_blockNode(blockNode)

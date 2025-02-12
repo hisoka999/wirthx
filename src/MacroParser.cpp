@@ -167,6 +167,7 @@ std::vector<Token> MacroParser::parseFile(const std::vector<Token> &tokens)
     m_tokens = tokens;
     m_current = 0;
     std::vector<Token> result;
+    result.reserve(tokens.size());
 
 
     while (m_current < tokens.size())

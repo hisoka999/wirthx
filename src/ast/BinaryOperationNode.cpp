@@ -282,7 +282,7 @@ void BinaryOperationNode::typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNo
 Token BinaryOperationNode::expressionToken()
 {
     auto start = m_lhs->expressionToken().sourceLocation.byte_offset;
-    auto end = m_rhs->expressionToken().sourceLocation.byte_offset;
+    auto end = m_rhs->expressionToken().sourceLocation.byte_offset + m_rhs->expressionToken().sourceLocation.num_bytes;
     Token token = ASTNode::expressionToken();
     token.sourceLocation.num_bytes = end - start;
     token.sourceLocation.byte_offset = start;

@@ -1,11 +1,9 @@
 #include "SystemFunctionCallNode.h"
-#include <iostream>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/TargetParser/Triple.h>
 #include <utility>
 #include <vector>
 
-#include <cinttypes>
 #include <compiler/codegen.h>
 
 #include "../compare.h"
@@ -137,33 +135,9 @@ llvm::Value *SystemFunctionCallNode::codegen_setlength(std::unique_ptr<Context> 
 llvm::Value *SystemFunctionCallNode::codegen_length(std::unique_ptr<Context> &context, ASTNode *parent) const
 {
     const auto paramType = m_args[0]->resolveType(context->ProgramUnit, parent);
-    if (const auto stringType = std::dynamic_pointer_cast<StringType>(paramType))
+    if (const auto type = std::dynamic_pointer_cast<FieldAccessableType>(paramType))
     {
-
-        // const llvm::DataLayout &DL = context->TheModule->getDataLayout();
-        const auto value = m_args[0]->codegen(context);
-        const auto llvmRecordType = stringType->generateLlvmType(context);
-
-        const auto arraySizeOffset = context->Builder->CreateStructGEP(llvmRecordType, value, 1, "length");
-        const auto indexType = VariableType::getInteger(64)->generateLlvmType(context);
-
-        return context->Builder->CreateSub(context->Builder->CreateLoad(indexType, arraySizeOffset, "loaded.length"),
-                                           context->Builder->getInt64(1));
-    }
-    if (const auto arrayType = std::dynamic_pointer_cast<ArrayType>(paramType))
-    {
-        if (arrayType->isDynArray)
-        {
-            const auto value = m_args[0]->codegen(context);
-            const auto llvmRecordType = arrayType->generateLlvmType(context);
-
-            const auto arraySizeOffset =
-                    context->Builder->CreateStructGEP(llvmRecordType, value, 0, "array.size.offset");
-            const auto indexType = VariableType::getInteger(64)->generateLlvmType(context);
-
-            return context->Builder->CreateLoad(indexType, arraySizeOffset);
-        }
-        return context->Builder->getInt64(arrayType->high - arrayType->low);
+        return type->generateLengthValue(m_args[0]->expressionToken(), context);
     }
     return nullptr;
 }
@@ -241,44 +215,40 @@ llvm::Value *SystemFunctionCallNode::codegen_writeln(std::unique_ptr<Context> &c
 
     return nullptr;
 }
-llvm::Value *SystemFunctionCallNode::codegen_assert(std::unique_ptr<Context> &context, ASTNode *parent)
+llvm::Value *SystemFunctionCallNode::codegen_assert(std::unique_ptr<Context> &context, ASTNode *parent,
+                                                    ASTNode *argument, llvm::Value *expression,
+                                                    const std::string &assertation)
 {
-    const auto callingFunctionName = parent->expressionToken().lexical().c_str();
-    const auto expression = m_args[0];
-    const auto condition = context->Builder->CreateNot(expression->codegen(context));
-
+    const auto callingFunctionName = parent->expressionToken().lexical();
+    const auto condition = context->Builder->CreateNot(expression);
+    std::string assertFunction;
     if (context->TargetTriple->getOS() == llvm::Triple::Linux)
     {
-        codegen::codegen_ifexpr(
-                context, condition,
-                [expression, callingFunctionName](std::unique_ptr<Context> &ctx)
-                {
-                    const auto assertCall = ctx->TheModule->getFunction("__assert_fail");
-                    std::vector<llvm::Value *> ArgsV;
-                    ArgsV.push_back(ctx->Builder->CreateGlobalString(expression->expressionToken().lexical()));
-                    ArgsV.push_back(
-                            ctx->Builder->CreateGlobalString(expression->expressionToken().sourceLocation.filename));
-                    ArgsV.push_back(ctx->Builder->getInt32(expression->expressionToken().row));
-                    ArgsV.push_back(ctx->Builder->CreateGlobalString(callingFunctionName));
-                    ctx->Builder->CreateCall(assertCall, ArgsV);
-                });
+        assertFunction = "__assert_fail";
     }
     else if (context->TargetTriple->getOS() == llvm::Triple::Win32)
     {
-        codegen::codegen_ifexpr(context, condition,
-                                [expression](std::unique_ptr<Context> &ctx)
-                                {
-                                    const auto assertCall = ctx->TheModule->getFunction("DbgBreak");
-                                    std::vector<llvm::Value *> ArgsV;
-                                    ArgsV.push_back(
-                                            ctx->Builder->CreateGlobalString(expression->expressionToken().lexical()));
-                                    ctx->Builder->CreateCall(assertCall, ArgsV);
-                                });
+        assertFunction = "_assert";
     }
     else
     {
         assert(false && "assert is not supported");
     }
+
+    codegen::codegen_ifexpr(
+            context, condition,
+            [argument, callingFunctionName, assertation, assertFunction](const std::unique_ptr<Context> &ctx)
+            {
+                const auto assertCall = ctx->TheModule->getFunction(assertFunction);
+                std::vector<llvm::Value *> ArgsV;
+                auto token = argument->expressionToken();
+                ArgsV.push_back(ctx->Builder->CreateGlobalString(assertation, "assertion"));
+                ArgsV.push_back(
+                        ctx->Builder->CreateGlobalString(token.sourceLocation.filename, "assertion_source_file"));
+                ArgsV.push_back(ctx->Builder->getInt32(token.row));
+                ArgsV.push_back(ctx->Builder->CreateGlobalString(callingFunctionName, "assertion_function"));
+                ctx->Builder->CreateCall(assertCall, ArgsV);
+            });
     return nullptr;
 }
 llvm::Value *SystemFunctionCallNode::codegen_new(std::unique_ptr<Context> &context, ASTNode *parent) const
@@ -314,6 +284,11 @@ llvm::Value *SystemFunctionCallNode::codegen(std::unique_ptr<Context> &context)
             }
             return context->Builder->getInt64(arrayType->low);
         }
+        if (const auto stringType = std::dynamic_pointer_cast<StringType>(paramType))
+
+        {
+            return context->Builder->getInt64(0);
+        }
     }
     else if (iequals(m_name, "high"))
     {
@@ -322,18 +297,13 @@ llvm::Value *SystemFunctionCallNode::codegen(std::unique_ptr<Context> &context)
         {
             if (arrayType->isDynArray)
             {
-                const auto value = m_args[0]->codegen(context);
-                const auto llvmRecordType = arrayType->generateLlvmType(context);
-
-                const auto arraySizeOffset =
-                        context->Builder->CreateStructGEP(llvmRecordType, value, 0, "array.size.offset");
-                const auto indexType = VariableType::getInteger(64)->generateLlvmType(context);
-
-                const auto length = context->Builder->CreateLoad(indexType, arraySizeOffset);
-
-                return context->Builder->CreateSub(length, context->Builder->getInt64(1));
+                return context->Builder->CreateSub(codegen_length(context, parent), context->Builder->getInt64(1));
             }
             return context->Builder->getInt64(arrayType->high);
+        }
+        if (const auto stringType = std::dynamic_pointer_cast<StringType>(paramType))
+        {
+            return context->Builder->CreateSub(codegen_length(context, parent), context->Builder->getInt64(1));
         }
     }
     else if (iequals(m_name, "length"))
@@ -374,7 +344,8 @@ llvm::Value *SystemFunctionCallNode::codegen(std::unique_ptr<Context> &context)
     }
     else if (iequals(m_name, "assert"))
     {
-        return codegen_assert(context, parent);
+        return codegen_assert(context, parent, m_args[0].get(), m_args[0]->codegen(context),
+                              m_args[0]->expressionToken().lexical());
     }
     return FunctionCallNode::codegen(context);
 }

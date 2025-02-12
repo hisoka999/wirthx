@@ -125,12 +125,13 @@ uses ctypes;
             end;
             until c = 10 or c = 13 or c = -1;
 
-            SetLength(value,offset + bufferIndex);
+            SetLength(value,offset + bufferIndex+2);// 0-terminator + 1 for the last index
             for j := 0 to bufferIndex - 1 do
             begin
-                value[j+offset] := buffer[j];
+                c := buffer[j];
+                value[j+offset] := c;
             end;
-            value[bufferIndex+offset] := 0;
+            value[bufferIndex+offset ] := 0;
         end;
     end;
 

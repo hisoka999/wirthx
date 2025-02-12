@@ -198,8 +198,11 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
     }
     else if (target.getOS() == Triple::Win32)
     {
-        createSystemCall(context, "DbgBreak",
-                         {FunctionArgument{.type = pCharType, .argumentName = "assertion", .isReference = false}});
+        createSystemCall(context, "_assert",
+                         {FunctionArgument{.type = pCharType, .argumentName = "assertion", .isReference = false},
+                          FunctionArgument{.type = pCharType, .argumentName = "filename", .isReference = false},
+                          FunctionArgument{.type = intType, .argumentName = "line", .isReference = false},
+                          FunctionArgument{.type = pCharType, .argumentName = "function", .isReference = false}});
     }
 
     context->TheModule->setDataLayout(TheTargetMachine->createDataLayout());

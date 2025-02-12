@@ -25,7 +25,7 @@ program problem4;
             inc(i);
         end;
         SetLength(Str,i+1);
-        Str[i] := 0;
+        Str[high(Str)] := 0;
 
         for j := i - 1 downto 0 do
         begin

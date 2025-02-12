@@ -13,4 +13,7 @@ public:
     static std::shared_ptr<StringType> getString();
 
     bool operator==(const StringType &) const { return true; }
+
+    llvm::Value *generateLengthValue(const Token &token, std::unique_ptr<Context> &context) override;
+    llvm::Value *generateHighValue(const Token &token, std::unique_ptr<Context> &context) override;
 };
