@@ -1,10 +1,9 @@
 #include "ArrayAccessNode.h"
 
-#include <llvm-18/llvm/IR/IRBuilder.h>
+#include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Instructions.h>
 
 #include "ComparissionNode.h"
-#include "LogicalExpressionNode.h"
 #include "SystemFunctionCallNode.h"
 #include "UnitNode.h"
 #include "VariableAccessNode.h"
