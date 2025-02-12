@@ -20,7 +20,7 @@ class Parser
     size_t m_current = 0;
     std::vector<Token> m_tokens;
     std::vector<ParserError> m_errors;
-    std::map<std::string, std::shared_ptr<VariableType>> m_typeDefinitions;
+    std::unordered_map<std::string, std::shared_ptr<VariableType>> m_typeDefinitions;
     std::vector<VariableDefinition> m_known_variable_definitions;
     std::vector<std::string> m_known_function_names;
     std::vector<std::shared_ptr<FunctionDefinitionNode>> m_functionDeclarations;
@@ -31,7 +31,7 @@ class Parser
 
     Token next();
     Token current();
-    [[nodiscard]] bool isVariableDefined(std::string_view name, size_t scope);
+    [[nodiscard]] bool isVariableDefined(const std::string_view &name, size_t scope);
     [[nodiscard]] bool hasNext() const;
     bool consume(TokenType tokenType);
     bool tryConsume(TokenType tokenType);

@@ -53,6 +53,9 @@ public:
     virtual ~FieldAccessableType() = default;
     virtual llvm::Value *generateFieldAccess(Token &token, llvm::Value *indexValue,
                                              std::unique_ptr<Context> &context) = 0;
+    virtual llvm::Value *generateLengthValue(const Token &token, std::unique_ptr<Context> &context) = 0;
+    virtual llvm::Value *generateHighValue(const Token &token, std::unique_ptr<Context> &context) = 0;
+    virtual llvm::Value *getLowValue(std::unique_ptr<Context> &context);
 };
 
 class ArrayType final : public VariableType, public FieldAccessableType
@@ -74,6 +77,10 @@ public:
 
     llvm::Type *generateLlvmType(std::unique_ptr<Context> &context) override;
     llvm::Value *generateFieldAccess(Token &token, llvm::Value *indexValue, std::unique_ptr<Context> &context) override;
+    llvm::Value *generateLengthValue(const Token &token, std::unique_ptr<Context> &context) override;
+    llvm::Value *getLowValue(std::unique_ptr<Context> &context) override;
+    llvm::Value *generateHighValue(const Token &token, std::unique_ptr<Context> &context) override;
+
 
     bool operator==(const ArrayType &other) const
     {

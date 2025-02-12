@@ -169,6 +169,8 @@ Token ComparrisionNode::expressionToken()
 {
     auto start = m_lhs->expressionToken().sourceLocation.byte_offset;
     auto end = m_rhs->expressionToken().sourceLocation.byte_offset;
+    if (start == end)
+        return m_operatorToken;
     Token token = ASTNode::expressionToken();
     token.sourceLocation.num_bytes = end - start + m_rhs->expressionToken().sourceLocation.num_bytes;
     token.sourceLocation.byte_offset = start;

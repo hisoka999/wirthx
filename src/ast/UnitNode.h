@@ -1,7 +1,7 @@
 #pragma once
 
-#include <map>
 #include <set>
+#include <unordered_map>
 #include "ASTNode.h"
 #include "ast/BlockNode.h"
 #include "ast/FunctionDefinitionNode.h"
@@ -18,13 +18,13 @@ private:
     UnitType m_unitType;
     std::string m_unitName;
     std::vector<std::shared_ptr<FunctionDefinitionNode>> m_functionDefinitions;
-    std::map<std::string, std::shared_ptr<VariableType>> m_typeDefinitions;
+    std::unordered_map<std::string, std::shared_ptr<VariableType>> m_typeDefinitions;
     std::shared_ptr<BlockNode> m_blockNode;
 
 public:
     UnitNode(const Token &token, UnitType unitType, const std::string &unitName,
              const std::vector<std::shared_ptr<FunctionDefinitionNode>> &functionDefinitions,
-             const std::map<std::string, std::shared_ptr<VariableType>> &typeDefinitions,
+             const std::unordered_map<std::string, std::shared_ptr<VariableType>> &typeDefinitions,
              const std::shared_ptr<BlockNode> &blockNode);
     ~UnitNode() override = default;
 

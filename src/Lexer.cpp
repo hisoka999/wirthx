@@ -371,15 +371,16 @@ bool Lexer::find_fixed_token(const std::string &content, size_t start, size_t *e
     }
 
     const auto tmp = content.substr(start, *endPosition - start);
-    for (const auto &token: possible_tokens)
-    {
-        if (iequals(tmp, token))
-        {
-            return true;
-        }
-    }
-
-    return false;
+    return std::ranges::any_of(possible_tokens, [tmp](const std::string &token) { return iequals(tmp, token); });
+    // for (const auto &token: possible_tokens)
+    // {
+    //     if (iequals(tmp, token))
+    //     {
+    //         return true;
+    //     }
+    // }
+    //
+    // return false;
 }
 
 bool Lexer::find_comment(const std::string &content, size_t start, size_t *endPosition)

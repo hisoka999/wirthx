@@ -71,6 +71,10 @@ std::shared_ptr<VariableType> VariableType::getPointer()
     return pointer;
 }
 bool VariableType::operator==(const VariableType &other) const { return this->baseType == other.baseType; }
+llvm::Value *FieldAccessableType::getLowValue(std::unique_ptr<Context> &context)
+{
+    return context->Builder->getInt64(0);
+}
 
 
 std::shared_ptr<ArrayType> ArrayType::getFixedArray(size_t low, size_t heigh,
@@ -193,6 +197,56 @@ llvm::Value *ArrayType::generateFieldAccess(Token &token, llvm::Value *indexValu
     const auto arrayValue =
             context->Builder->CreateGEP(arrayType, V, {context->Builder->getInt64(0), index}, "arrayindex", false);
     return context->Builder->CreateLoad(arrayType->getArrayElementType(), arrayValue);
+}
+llvm::Value *ArrayType::generateLengthValue(const Token &token, std::unique_ptr<Context> &context)
+{
+    const auto arrayName = std::string(token.lexical());
+    llvm::Value *value = context->NamedAllocations[arrayName];
+
+    if (!value)
+    {
+        for (auto &arg: context->TopLevelFunction->args())
+        {
+            if (arg.getName() == arrayName)
+            {
+                value = context->TopLevelFunction->getArg(arg.getArgNo());
+                break;
+            }
+        }
+    }
+
+
+    if (!value)
+        return LogErrorV("Unknown variable for array access: " + arrayName);
+
+
+    if (isDynArray)
+    {
+        const auto llvmRecordType = generateLlvmType(context);
+
+        const auto arraySizeOffset = context->Builder->CreateStructGEP(llvmRecordType, value, 0, "array.size.offset");
+        const auto indexType = VariableType::getInteger(64)->generateLlvmType(context);
+
+        return context->Builder->CreateLoad(indexType, arraySizeOffset);
+    }
+    return context->Builder->getInt64(high - low);
+}
+llvm::Value *ArrayType::getLowValue(std::unique_ptr<Context> &context)
+{
+    uint64_t value = 0;
+    if (isDynArray)
+    {
+        value = high;
+    }
+    return context->Builder->getInt64(value);
+}
+llvm::Value *ArrayType::generateHighValue(const Token &token, std::unique_ptr<Context> &context)
+{
+    if (isDynArray)
+    {
+        return context->Builder->CreateSub(generateLengthValue(token, context), context->Builder->getInt64(1));
+    }
+    return context->Builder->getInt64(high);
 }
 
 std::shared_ptr<PointerType> PointerType::getPointerTo(const std::shared_ptr<VariableType> &baseType)
