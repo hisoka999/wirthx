@@ -28,6 +28,7 @@
 #include "ast/VariableAccessNode.h"
 #include "ast/VariableAssignmentNode.h"
 #include "ast/WhileNode.h"
+#include "ast/types/FileType.h"
 #include "ast/types/RecordType.h"
 #include "ast/types/StringType.h"
 #include "compare.h"
@@ -388,6 +389,12 @@ std::vector<VariableDefinition> Parser::parseVariableDefinitions(const size_t sc
             _currentToken = current();
             varType = std::string(_currentToken.lexical());
             type = determinVariableTypeByName(varType);
+        }
+        else if (canConsumeKeyWord("file"))
+        {
+            consumeKeyWord("file");
+            varType = std::string(_currentToken.lexical());
+            type = FileType::getFileType();
         }
         else if (tryConsumeKeyWord("array"))
         {
@@ -861,6 +868,17 @@ std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDeclaration(size_t 
                     functionParams.push_back(
                             FunctionArgument{.type = type.value(), .argumentName = param, .isReference = isReference});
                 }
+            }
+            tryConsume(TokenType::SEMICOLON);
+        }
+        else if (canConsumeKeyWord("file"))
+        {
+            consumeKeyWord("file");
+            std::shared_ptr<VariableType> variableType = FileType::getFileType();
+            for (const auto &param: paramNames)
+            {
+                functionParams.push_back(
+                        FunctionArgument{.type = variableType, .argumentName = param, .isReference = isReference});
             }
             tryConsume(TokenType::SEMICOLON);
         }

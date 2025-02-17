@@ -182,11 +182,24 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
     auto context = InitializeModule(unit, options);
     auto intType = VariableType::getInteger();
     auto pCharType = ::PointerType::getPointerTo(VariableType::getInteger(8));
+    context->TheModule->setDataLayout(TheTargetMachine->createDataLayout());
 
-    createPrintfCall(context);
     createSystemCall(context, "exit", {FunctionArgument{.type = intType, .argumentName = "X", .isReference = false}});
     createSystemCall(context, "fflush",
                      {FunctionArgument{.type = VariableType::getPointer(), .argumentName = "X", .isReference = false}});
+    createSystemCall(context, "fopen",
+                     {FunctionArgument{.type = pCharType, .argumentName = "filename"},
+                      {FunctionArgument{.type = pCharType, .argumentName = "modes"}}},
+                     ::PointerType::getUnqual());
+
+    createSystemCall(context, "fclose", {FunctionArgument{.type = ::PointerType::getUnqual(), .argumentName = "file"}},
+                     intType);
+    // ssize_t getline(char **lineptr, size_t *n, FILE *stream);
+    createSystemCall(context, "getline",
+                     {FunctionArgument{.type = ::PointerType::getUnqual(), .argumentName = "lineptr"},
+                      FunctionArgument{.type = ::PointerType::getUnqual(), .argumentName = "n"},
+                      FunctionArgument{.type = ::PointerType::getUnqual(), .argumentName = "file"}},
+                     intType);
 
     if (target.getOS() == Triple::Linux)
     {
@@ -205,8 +218,11 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
                           FunctionArgument{.type = pCharType, .argumentName = "function", .isReference = false}});
     }
 
-    context->TheModule->setDataLayout(TheTargetMachine->createDataLayout());
 
+    createPrintfCall(context);
+    createAssignCall(context);
+    createCloseFileCall(context);
+    createReadLnCall(context);
 
     try
     {

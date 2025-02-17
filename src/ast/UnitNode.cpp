@@ -2,6 +2,8 @@
 #include <iostream>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/IRBuilder.h>
+
+#include "compare.h"
 #include "compiler/Context.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
@@ -45,8 +47,8 @@ std::optional<std::shared_ptr<FunctionDefinitionNode>> UnitNode::getFunctionDefi
 {
     for (auto &def: m_functionDefinitions)
     {
-        if (def->functionSignature() == functionName ||
-            (def->name() == functionName && def->externalName() != def->name()))
+        if (iequals(def->functionSignature(), functionName) ||
+            (iequals(def->name(), functionName) && def->externalName() != def->name()))
         {
             return def;
         }
