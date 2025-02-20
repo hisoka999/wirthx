@@ -72,7 +72,7 @@ void createAssignCall(std::unique_ptr<Context> &context)
             context->Builder->CreateLoad(llvm::PointerType::getUnqual(*context->TheContext), arrayPointerOffset);
     //
     ArgsV.push_back(stringPathPointer);
-    ArgsV.push_back(context->Builder->CreateGlobalStringPtr("rw"));
+    ArgsV.push_back(context->Builder->CreateGlobalStringPtr("r+"));
     const auto callResult = context->Builder->CreateCall(CalleeF, ArgsV);
     const auto resultPointer = context->Builder->CreatePointerCast(callResult, context->Builder->getInt64Ty());
 
@@ -231,8 +231,15 @@ void createReadLnCall(std::unique_ptr<Context> &context)
                 memcopyArgs.push_back(ctx->Builder->getFalse());
                 ctx->Builder->CreateCall(memcpyCall, memcopyArgs);
                 ctx->Builder->CreateStore(allocCall, stringPtr);
+
+                const auto bounds =
+                        ctx->Builder->CreateGEP(valueType, allocCall, llvm::ArrayRef{sizeWithoutNewline}, "", false);
+
+                ctx->Builder->CreateStore(ctx->Builder->getInt8(0), bounds);
             });
 
+
+    // context->Builder->CreateStore(, filePtr);
 
     context->Builder->CreateRetVoid();
 }
