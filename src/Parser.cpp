@@ -1052,8 +1052,8 @@ std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDefinition(size_t s
     if (tryConsumeKeyWord("external"))
     {
         isExternalFunction = true;
-        tryConsume(TokenType::STRING) || tryConsume(TokenType::CHAR);
-        libName = std::string(current().lexical());
+        if (tryConsume(TokenType::STRING) || tryConsume(TokenType::CHAR))
+            libName = std::string(current().lexical());
 
         if (tryConsumeKeyWord("name"))
         {

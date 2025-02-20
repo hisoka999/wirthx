@@ -76,11 +76,6 @@ void createAssignCall(std::unique_ptr<Context> &context)
     const auto callResult = context->Builder->CreateCall(CalleeF, ArgsV);
     const auto resultPointer = context->Builder->CreatePointerCast(callResult, context->Builder->getInt64Ty());
 
-    //  codegen::codegen_ifexpr(context, condition,
-    //                          [](std::unique_ptr<Context> ctx)
-    //                          {
-    //                              // TODO
-    //                          });
 
     llvm::Value *condition =
             context->Builder->CreateCmp(llvm::CmpInst::ICMP_EQ, resultPointer, context->Builder->getInt64(0));
@@ -148,29 +143,30 @@ void createReadLnCall(std::unique_ptr<Context> &context)
                         ctx->TheModule.get(), llvm::Intrinsic::memcpy,
                         {ctx->Builder->getPtrTy(), ctx->Builder->getPtrTy(), ctx->Builder->getInt64Ty()});
                 auto size = ctx->Builder->CreateAdd(result, ctx->Builder->getInt32(-1));
-                //
-                // auto size64 = ctx->Builder->CreateIntCast(size, llvm::Type::getInt64Ty(*ctx->TheContext), true);
-                ctx->Builder->CreateStore(size, stringSizeOffset);
+
+                auto size64 = ctx->Builder->CreateIntCast(size, llvm::Type::getInt64Ty(*ctx->TheContext), true);
+                ctx->Builder->CreateStore(result, stringSizeOffset);
 
                 std::vector<llvm::Value *> memcopyArgs;
                 const auto valueType = VariableType::getInteger(8)->generateLlvmType(ctx);
 
                 const auto boundsLhs = ctx->Builder->CreateGEP(
                         valueType, stringPtr, llvm::ArrayRef<llvm::Value *>{ctx->Builder->getInt64(0)}, "", false);
+                const auto boundsRHS = ctx->Builder->CreateGEP(
+                        valueType, valuePtrPtr, llvm::ArrayRef<llvm::Value *>{ctx->Builder->getInt64(0)}, "", false);
 
-                // const auto loadResult =
-                //         ctx->Builder->CreateLoad(llvm::PointerType::getUnqual(*ctx->TheContext), valuePtrPtr);
-                memcopyArgs.push_back(boundsLhs);
-                memcopyArgs.push_back(valuePtrPtr);
-                memcopyArgs.push_back(size);
+
+                memcopyArgs.push_back(ctx->Builder->CreateBitCast(boundsLhs, ctx->Builder->getPtrTy()));
+                memcopyArgs.push_back(ctx->Builder->CreateBitCast(boundsRHS, ctx->Builder->getPtrTy()));
+                memcopyArgs.push_back(size64);
                 memcopyArgs.push_back(ctx->Builder->getFalse());
 
                 ctx->Builder->CreateCall(memcpyCall, memcopyArgs);
 
-                const auto bounds = ctx->Builder->CreateGEP(
-                        valueType, stringPtr,
-                        llvm::ArrayRef<llvm::Value *>{ctx->Builder->CreateAdd(size, ctx->Builder->getInt32(1))}, "",
-                        false);
+                auto loadedStringPtr =
+                        ctx->Builder->CreateLoad(llvm::PointerType::getUnqual(*ctx->TheContext), stringPtr);
+                const auto bounds =
+                        ctx->Builder->CreateGEP(valueType, loadedStringPtr, llvm::ArrayRef{size64}, "", false);
 
                 ctx->Builder->CreateStore(ctx->Builder->getInt8(0), bounds);
             });
