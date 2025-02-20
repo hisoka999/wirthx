@@ -181,6 +181,7 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
     }
     auto context = InitializeModule(unit, options);
     auto intType = VariableType::getInteger();
+    auto int8Type = VariableType::getInteger(8);
     auto pCharType = ::PointerType::getPointerTo(VariableType::getInteger(8));
     context->TheModule->setDataLayout(TheTargetMachine->createDataLayout());
 
@@ -195,11 +196,8 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
     createSystemCall(context, "fclose", {FunctionArgument{.type = ::PointerType::getUnqual(), .argumentName = "file"}},
                      intType);
     // ssize_t getline(char **lineptr, size_t *n, FILE *stream);
-    createSystemCall(context, "getline",
-                     {FunctionArgument{.type = ::PointerType::getUnqual(), .argumentName = "lineptr"},
-                      FunctionArgument{.type = ::PointerType::getUnqual(), .argumentName = "n"},
-                      FunctionArgument{.type = ::PointerType::getUnqual(), .argumentName = "file"}},
-                     intType);
+    createSystemCall(context, "fgetc", {FunctionArgument{.type = ::PointerType::getUnqual(), .argumentName = "file"}},
+                     int8Type);
 
     if (target.getOS() == Triple::Linux)
     {
