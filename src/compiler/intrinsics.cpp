@@ -103,6 +103,11 @@ void createAssignCall(std::unique_ptr<Context> &context)
         memcopyArgs.push_back(loadedSize);
         memcopyArgs.push_back(context->Builder->getFalse());
         context->Builder->CreateCall(memcpyCall, memcopyArgs);
+
+        const auto bounds = context->Builder->CreateGEP(valueType, allocatedNewFilename,
+                                                        llvm::ArrayRef<llvm::Value *>{loadedSize}, "", false);
+
+        context->Builder->CreateStore(context->Builder->getInt8(0), bounds);
         context->Builder->CreateStore(allocatedNewFilename, fileName);
     }
     context->Builder->CreateRetVoid();
