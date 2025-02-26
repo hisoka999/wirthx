@@ -6,7 +6,7 @@ var
 begin
     line := '';
     AssignFile(test,'testfiles/readfile.txt');
-    //reset(test);
+    reset(test);
     Readln(test,line);
     writeln(line);
     CloseFile(test);

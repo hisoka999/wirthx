@@ -12,9 +12,9 @@
 #include "types/StringType.h"
 
 
-static std::vector<std::string> knownSystemCalls = {"writeln",    "write",  "printf",    "exit", "low",  "high",
-                                                    "setlength",  "length", "pchar",     "new",  "halt", "assert",
-                                                    "assignfile", "readln", "closefile", "reset"};
+static std::vector<std::string> knownSystemCalls = {"writeln",    "write",  "printf",    "exit",  "low",    "high",
+                                                    "setlength",  "length", "pchar",     "new",   "halt",   "assert",
+                                                    "assignfile", "readln", "closefile", "reset", "rewrite"};
 
 bool isKnownSystemCall(const std::string &name)
 {

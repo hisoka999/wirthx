@@ -219,6 +219,8 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
 
     createPrintfCall(context);
     createAssignCall(context);
+    createResetCall(context);
+    createRewriteCall(context);
     createCloseFileCall(context);
     createReadLnCall(context);
 

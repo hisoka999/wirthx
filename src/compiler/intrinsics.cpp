@@ -62,16 +62,74 @@ void createAssignCall(std::unique_ptr<Context> &context)
     llvm::BasicBlock *BB = llvm::BasicBlock::Create(*context->TheContext, "_block", F);
     context->Builder->SetInsertPoint(BB);
 
+    //
+    const auto stringStructPtr = F->getArg(1);
+    const auto type = StringType::getString()->generateLlvmType(context);
+    const auto valueType = IntegerType::getInteger(8)->generateLlvmType(context);
+    const auto arrayPointerOffset = context->Builder->CreateStructGEP(type, stringStructPtr, 2, "string.ptr.offset");
+
+
+    const auto fileName = context->Builder->CreateStructGEP(llvmFileType, F->getArg(0), 0, "file.name");
+    const auto fileNameSize = context->Builder->CreateStructGEP(type, stringStructPtr, 1, "file.name.size");
+
+
+    {
+        auto loadedSize = context->Builder->CreateLoad(context->Builder->getInt64Ty(), fileNameSize, "size");
+
+
+        const auto indexType = VariableType::getInteger(64)->generateLlvmType(context);
+        const auto allocSize = context->Builder->CreateMul(
+                loadedSize, context->Builder->getInt64(valueType->getPrimitiveSizeInBits()));
+        llvm::Value *allocatedNewFilename =
+                context->Builder->CreateMalloc(indexType, //
+                                               valueType, // Type of elements
+                                               allocSize, // Number of elements
+                                               nullptr // Optional array size multiplier (nullptr for scalar allocation)
+                );
+        const auto boundsLhs =
+                context->Builder->CreateGEP(valueType, allocatedNewFilename,
+                                            llvm::ArrayRef<llvm::Value *>{context->Builder->getInt64(0)}, "", false);
+
+        const auto memcpyCall = llvm::Intrinsic::getDeclaration(
+                context->TheModule.get(), llvm::Intrinsic::memcpy,
+                {context->Builder->getPtrTy(), context->Builder->getPtrTy(), context->Builder->getInt64Ty()});
+
+        const auto loadedStringPtr =
+                context->Builder->CreateLoad(llvm::PointerType::getUnqual(*context->TheContext), arrayPointerOffset);
+        std::vector<llvm::Value *> memcopyArgs;
+
+        memcopyArgs.push_back(context->Builder->CreateBitCast(boundsLhs, context->Builder->getPtrTy()));
+        memcopyArgs.push_back(loadedStringPtr);
+        memcopyArgs.push_back(loadedSize);
+        memcopyArgs.push_back(context->Builder->getFalse());
+        context->Builder->CreateCall(memcpyCall, memcopyArgs);
+        context->Builder->CreateStore(allocatedNewFilename, fileName);
+    }
+    context->Builder->CreateRetVoid();
+}
+void createResetCall(std::unique_ptr<Context> &context)
+{
+    std::vector<llvm::Type *> params;
+    auto fileType = FileType::getFileType();
+    auto llvmFileType = fileType->generateLlvmType(context);
+    params.push_back(llvm::PointerType::getUnqual(*context->TheContext));
+
+    llvm::Type *resultType = llvm::Type::getVoidTy(*context->TheContext);
+    llvm::FunctionType *FT = llvm::FunctionType::get(resultType, params, false);
+    llvm::Function *F =
+            llvm::Function::Create(FT, llvm::Function::PrivateLinkage, "reset(file)", context->TheModule.get());
+    llvm::BasicBlock *BB = llvm::BasicBlock::Create(*context->TheContext, "_block", F);
+    context->Builder->SetInsertPoint(BB);
+
     llvm::Function *CalleeF = context->TheModule->getFunction("fopen");
     std::vector<llvm::Value *> ArgsV;
     //
-    auto stringStructPtr = F->getArg(1);
-    auto type = StringType::getString()->generateLlvmType(context);
-    const auto arrayPointerOffset = context->Builder->CreateStructGEP(type, stringStructPtr, 2, "string.ptr.offset");
-    auto stringPathPointer =
-            context->Builder->CreateLoad(llvm::PointerType::getUnqual(*context->TheContext), arrayPointerOffset);
+    auto fileNameOffset = context->Builder->CreateStructGEP(llvmFileType, F->getArg(0), 0, "file.name");
+    const auto fileName =
+            context->Builder->CreateLoad(llvm::PointerType::getUnqual(*context->TheContext), fileNameOffset);
+
     //
-    ArgsV.push_back(stringPathPointer);
+    ArgsV.push_back(fileName);
     ArgsV.push_back(context->Builder->CreateGlobalStringPtr("r+"));
     const auto callResult = context->Builder->CreateCall(CalleeF, ArgsV);
     const auto resultPointer = context->Builder->CreatePointerCast(callResult, context->Builder->getInt64Ty());
@@ -80,17 +138,78 @@ void createAssignCall(std::unique_ptr<Context> &context)
     llvm::Value *condition =
             context->Builder->CreateCmp(llvm::CmpInst::ICMP_EQ, resultPointer, context->Builder->getInt64(0));
     codegen::codegen_ifexpr(context, condition,
-                            [](std::unique_ptr<Context> &ctx)
+                            [fileName](std::unique_ptr<Context> &ctx)
                             {
+                                {
+                                    llvm::Function *CalleeF = ctx->TheModule->getFunction("printf");
+
+                                    std::vector<llvm::Value *> ArgsV = {};
+                                    ArgsV.push_back(ctx->Builder->CreateGlobalString("file with the name %s not found!",
+                                                                                     "format_string"));
+                                    ArgsV.push_back(fileName);
+                                    ctx->Builder->CreateCall(CalleeF, ArgsV);
+                                }
+
                                 llvm::Function *callExit = ctx->TheModule->getFunction("exit");
                                 std::vector<llvm::Value *> ArgsV = {ctx->Builder->getInt32(1)};
 
                                 ctx->Builder->CreateCall(callExit, ArgsV);
                             });
-    auto fileName = context->Builder->CreateStructGEP(llvmFileType, F->getArg(0), 0, "file.name");
     auto filePtr = context->Builder->CreateStructGEP(llvmFileType, F->getArg(0), 1, "file.ptr");
     context->Builder->CreateStore(callResult, filePtr);
-    context->Builder->CreateStore(arrayPointerOffset, fileName);
+
+    context->Builder->CreateRetVoid();
+}
+void createRewriteCall(std::unique_ptr<Context> &context)
+{
+    std::vector<llvm::Type *> params;
+    auto fileType = FileType::getFileType();
+    auto llvmFileType = fileType->generateLlvmType(context);
+    params.push_back(llvm::PointerType::getUnqual(*context->TheContext));
+
+    llvm::Type *resultType = llvm::Type::getVoidTy(*context->TheContext);
+    llvm::FunctionType *FT = llvm::FunctionType::get(resultType, params, false);
+    llvm::Function *F =
+            llvm::Function::Create(FT, llvm::Function::PrivateLinkage, "reset(file)", context->TheModule.get());
+    llvm::BasicBlock *BB = llvm::BasicBlock::Create(*context->TheContext, "_block", F);
+    context->Builder->SetInsertPoint(BB);
+
+    llvm::Function *CalleeF = context->TheModule->getFunction("fopen");
+    std::vector<llvm::Value *> ArgsV;
+    //
+    auto fileNameOffset = context->Builder->CreateStructGEP(llvmFileType, F->getArg(0), 0, "file.name");
+    const auto fileName =
+            context->Builder->CreateLoad(llvm::PointerType::getUnqual(*context->TheContext), fileNameOffset);
+
+    //
+    ArgsV.push_back(fileName);
+    ArgsV.push_back(context->Builder->CreateGlobalStringPtr("w+"));
+    const auto callResult = context->Builder->CreateCall(CalleeF, ArgsV);
+    const auto resultPointer = context->Builder->CreatePointerCast(callResult, context->Builder->getInt64Ty());
+
+
+    llvm::Value *condition =
+            context->Builder->CreateCmp(llvm::CmpInst::ICMP_EQ, resultPointer, context->Builder->getInt64(0));
+    codegen::codegen_ifexpr(context, condition,
+                            [fileName](std::unique_ptr<Context> &ctx)
+                            {
+                                {
+                                    llvm::Function *CalleeF = ctx->TheModule->getFunction("printf");
+
+                                    std::vector<llvm::Value *> ArgsV = {};
+                                    ArgsV.push_back(ctx->Builder->CreateGlobalString("file with the name %s not found!",
+                                                                                     "format_string"));
+                                    ArgsV.push_back(fileName);
+                                    ctx->Builder->CreateCall(CalleeF, ArgsV);
+                                }
+
+                                llvm::Function *callExit = ctx->TheModule->getFunction("exit");
+                                std::vector<llvm::Value *> ArgsV = {ctx->Builder->getInt32(1)};
+
+                                ctx->Builder->CreateCall(callExit, ArgsV);
+                            });
+    auto filePtr = context->Builder->CreateStructGEP(llvmFileType, F->getArg(0), 1, "file.ptr");
+    context->Builder->CreateStore(callResult, filePtr);
 
     context->Builder->CreateRetVoid();
 }
