@@ -1,8 +1,6 @@
 #include "os/command.h"
 #include <climits>
-#include <cstdlib>
 #include <iostream>
-#include <llvm-18/llvm/TargetParser/Host.h>
 #include <llvm/Support/FileSystem.h>
 bool execute_command_list(std::ostream &outstream, std::ostream &errorStream, const std::string &command,
                           std::vector<std::string> args)
