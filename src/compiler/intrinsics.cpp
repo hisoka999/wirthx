@@ -47,6 +47,21 @@ void createPrintfCall(const std::unique_ptr<Context> &context)
     for (auto &arg: F->args())
         arg.setName("__fmt");
 }
+
+void createFPrintfCall(const std::unique_ptr<Context> &context)
+{
+    std::vector<llvm::Type *> params;
+    params.push_back(llvm::PointerType::getUnqual(*context->TheContext));
+    params.push_back(llvm::PointerType::getUnqual(*context->TheContext));
+
+    llvm::Type *resultType = llvm::Type::getInt32Ty(*context->TheContext);
+    llvm::FunctionType *FT = llvm::FunctionType::get(resultType, params, true);
+    llvm::Function *F =
+            llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "fprintf", context->TheModule.get());
+    F->getArg(0)->setName("file");
+    F->getArg(1)->setName("format");
+}
+
 void createAssignCall(std::unique_ptr<Context> &context)
 {
     std::vector<llvm::Type *> params;

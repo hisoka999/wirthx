@@ -181,6 +181,7 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
     }
     auto context = InitializeModule(unit, options);
     auto intType = VariableType::getInteger();
+    auto int64Type = VariableType::getInteger(64);
     auto int8Type = VariableType::getInteger(8);
     auto pCharType = ::PointerType::getPointerTo(VariableType::getInteger(8));
     context->TheModule->setDataLayout(TheTargetMachine->createDataLayout());
@@ -198,6 +199,13 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
     // ssize_t getline(char **lineptr, size_t *n, FILE *stream);
     createSystemCall(context, "fgetc", {FunctionArgument{.type = ::PointerType::getUnqual(), .argumentName = "file"}},
                      int8Type);
+
+    createSystemCall(context, "fwrite",
+                     {FunctionArgument{.type = ::PointerType::getUnqual(), .argumentName = "buffer"},
+                      FunctionArgument{.type = int64Type, .argumentName = "size"},
+                      FunctionArgument{.type = int64Type, .argumentName = "count"},
+                      FunctionArgument{.type = ::PointerType::getUnqual(), .argumentName = "file"}},
+                     int64Type);
 
     if (target.getOS() == Triple::Linux)
     {
@@ -218,6 +226,7 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
 
 
     createPrintfCall(context);
+    createFPrintfCall(context);
     createAssignCall(context);
     createResetCall(context);
     createRewriteCall(context);
@@ -307,7 +316,7 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
     if (context->compilerOptions.runProgram)
     {
 
-        if (!execute_command(outputStream, (basePath / executableName).string()))
+        if (!execute_command(outputStream, errorStream, (basePath / executableName).string()))
         {
             errorStream << "program could not be executed!\n";
         }

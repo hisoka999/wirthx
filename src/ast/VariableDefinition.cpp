@@ -104,7 +104,15 @@ llvm::AllocaInst *VariableDefinition::generateCode(std::unique_ptr<Context> &con
             const auto fileType = std::dynamic_pointer_cast<FileType>(this->variableType);
             if (fileType != nullptr)
             {
-                return context->Builder->CreateAlloca(fileType->generateLlvmType(context), nullptr, this->variableName);
+                auto llvmFileType = fileType->generateLlvmType(context);
+                auto allocatedFile = context->Builder->CreateAlloca(llvmFileType, nullptr, this->variableName);
+                if (llvmValue)
+                {
+                    auto filePtr = context->Builder->CreateStructGEP(llvmFileType, allocatedFile, 1, "file.ptr");
+
+                    context->Builder->CreateStore(llvmValue, filePtr);
+                }
+                return allocatedFile;
             }
         }
         default:

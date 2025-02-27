@@ -2,27 +2,38 @@
 #include <climits>
 #include <cstdlib>
 #include <iostream>
-
-bool execute_command_list(std::ostream &outstream, const std::string &command, std::vector<std::string> args)
+#include <llvm-18/llvm/TargetParser/Host.h>
+#include <llvm/Support/FileSystem.h>
+bool execute_command_list(std::ostream &outstream, std::ostream &errorStream, const std::string &command,
+                          std::vector<std::string> args)
 {
-    char path[PATH_MAX];
+    int LINE_LEN = 1024;
+    char line[LINE_LEN];
+
+    int pfd[2];
+    if (pipe(pfd) < 0)
+        return -1;
+    auto perr = fdopen(pfd[0], "r");
     std::string cmd = command;
 
     for (auto &arg: args)
         cmd += " " + arg;
+    cmd += " 2>&" + std::to_string(pfd[1]);
 
-    const auto fp = popen(cmd.c_str(), "r");
-    if (fp == nullptr)
-        /* Handle error */;
-
-    while (fgets(path, PATH_MAX, fp) != nullptr)
-        outstream << path;
-
-    const int status = pclose(fp);
-    if (status != 0)
+    int status = 0;
+    if (auto pout = popen(cmd.c_str(), "r"))
     {
-        std::cerr << "could not execute command: " << cmd << "\n";
+        close(pfd[1]);
+
+        while (fgets(line, LINE_LEN, pout) != NULL)
+            outstream << line;
+        while (fgets(line, LINE_LEN, perr) != NULL)
+            errorStream << line;
+
+        status = pclose(pout);
     }
 
+    fclose(perr);
+    close(pfd[0]), close(pfd[1]);
     return status != -1;
 }

@@ -1617,6 +1617,21 @@ std::unique_ptr<UnitNode> Parser::parseProgram()
         consume(TokenType::NAMEDTOKEN);
         auto unitName = std::string(current().lexical());
         auto unitNameToken = current();
+        std::vector<std::string> paramNames;
+
+        if (tryConsume(TokenType::LEFT_CURLY))
+        {
+            while (canConsume(TokenType::NAMEDTOKEN))
+            {
+                consume(TokenType::NAMEDTOKEN);
+                auto paramName = current().lexical();
+                paramNames.emplace_back(paramName);
+                m_known_variable_definitions.push_back(VariableDefinition{
+                        .variableType = FileType::getFileType(), .variableName = paramName, .scopeId = 0});
+                tryConsume(TokenType::COMMA);
+            }
+            consume(TokenType::RIGHT_CURLY);
+        }
 
         consume(TokenType::SEMICOLON);
 
@@ -1702,8 +1717,8 @@ std::unique_ptr<UnitNode> Parser::parseProgram()
             blockNode->addVariableDefinition(var);
         }
 
-        return std::make_unique<UnitNode>(unitNameToken, unitType, unitName, m_functionDefinitions, m_typeDefinitions,
-                                          blockNode);
+        return std::make_unique<UnitNode>(unitNameToken, unitType, unitName, paramNames, m_functionDefinitions,
+                                          m_typeDefinitions, blockNode);
     }
     catch (ParserException &e)
     {

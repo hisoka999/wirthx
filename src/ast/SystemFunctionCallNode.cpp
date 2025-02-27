@@ -1,4 +1,6 @@
 #include "SystemFunctionCallNode.h"
+
+#include <iostream>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/TargetParser/Triple.h>
 #include <utility>
@@ -9,6 +11,7 @@
 #include "../compare.h"
 #include "UnitNode.h"
 #include "compiler/Context.h"
+#include "types/FileType.h"
 #include "types/StringType.h"
 
 
@@ -142,17 +145,42 @@ llvm::Value *SystemFunctionCallNode::codegen_length(std::unique_ptr<Context> &co
     }
     return nullptr;
 }
+llvm::Value *SystemFunctionCallNode::find_target_fileout(std::unique_ptr<Context> &context, ASTNode *parent)
+{
+    llvm::Value *loadedStdOut = context->Builder->CreateLoad(llvm::PointerType::getUnqual(*context->TheContext),
+                                                             context->NamedValues["stdout"]);
+
+    for (auto &arg: m_args)
+    {
+        auto type = arg->resolveType(context->ProgramUnit, parent);
+        if (auto fileType = std::dynamic_pointer_cast<FileType>(type))
+        {
+            auto llvmFileType = fileType->generateLlvmType(context);
+            auto argValue = arg->codegen(context);
+
+            auto filePtr = context->Builder->CreateStructGEP(llvmFileType, argValue, 1, "file.ptr");
+
+            loadedStdOut = context->Builder->CreateLoad(llvm::PointerType::getUnqual(*context->TheContext), filePtr);
+            loadedStdOut =
+                    context->Builder->CreateLoad(llvm::PointerType::getUnqual(*context->TheContext), loadedStdOut);
+        }
+    }
+    return loadedStdOut;
+}
 llvm::Value *SystemFunctionCallNode::codegen_write(std::unique_ptr<Context> &context, ASTNode *parent)
 {
-    llvm::Function *CalleeF = context->TheModule->getFunction("printf");
-    if (!CalleeF)
-        LogErrorV("Unknown function referenced");
+    llvm::Function *fprintf = context->TheModule->getFunction("fprintf");
+
+    llvm::Value *loadedStdOut = find_target_fileout(context, parent);
+    if (!fprintf)
+        LogErrorV("the function fprintf was not found");
     for (auto &arg: m_args)
     {
         auto type = arg->resolveType(context->ProgramUnit, parent);
         auto argValue = arg->codegen(context);
 
         std::vector<llvm::Value *> ArgsV;
+        ArgsV.push_back(loadedStdOut);
         if (auto integerType = std::dynamic_pointer_cast<IntegerType>(type))
         {
             if (context->TargetTriple->getOS() == llvm::Triple::Win32)
@@ -178,20 +206,28 @@ llvm::Value *SystemFunctionCallNode::codegen_write(std::unique_ptr<Context> &con
         }
         else if (auto stringType = std::dynamic_pointer_cast<StringType>(type))
         {
+
             ArgsV.push_back(context->Builder->CreateGlobalString("%s", "format_string"));
 
             const auto stringStructPtr = argValue;
-            const auto arrayPointerOffset = context->Builder->CreateStructGEP(
-                    type->generateLlvmType(context), stringStructPtr, 2, "write.string.offset");
+            const auto stringLlvmType = type->generateLlvmType(context);
+            const auto arrayPointerOffset =
+                    context->Builder->CreateStructGEP(stringLlvmType, stringStructPtr, 2, "write.string.offset");
+
+
             const auto value = context->Builder->CreateLoad(llvm::PointerType::getUnqual(*context->TheContext),
                                                             arrayPointerOffset);
 
-
             ArgsV.push_back(value);
         }
+        else if (auto fileType = std::dynamic_pointer_cast<FileType>(type))
+        {
+            continue;
+        }
+        context->Builder->CreateCall(fprintf, ArgsV);
 
-
-        context->Builder->CreateCall(CalleeF, ArgsV);
+        // size_t fwrite( const void* buffer, size_t size, size_t count,
+        // FILE* stream );
     }
     return nullptr;
 }
@@ -199,11 +235,13 @@ llvm::Value *SystemFunctionCallNode::codegen_writeln(std::unique_ptr<Context> &c
 {
     codegen_write(context, parent);
 
-    llvm::Function *CalleeF = context->TheModule->getFunction("printf");
-    if (!CalleeF)
-        LogErrorV("Unknown function referenced");
-    std::vector<llvm::Value *> ArgsV;
+    llvm::Function *fprintf = context->TheModule->getFunction("fprintf");
 
+    llvm::Value *loadedStdOut = find_target_fileout(context, parent);
+    if (!fprintf)
+        LogErrorV("the function fprintf was not found");
+    std::vector<llvm::Value *> ArgsV;
+    ArgsV.push_back(loadedStdOut);
     if (context->TargetTriple->getOS() == llvm::Triple::Win32)
     {
         ArgsV.push_back(context->Builder->CreateGlobalString("\r\n"));
@@ -212,7 +250,7 @@ llvm::Value *SystemFunctionCallNode::codegen_writeln(std::unique_ptr<Context> &c
     {
         ArgsV.push_back(context->Builder->CreateGlobalString("\n"));
     }
-    context->Builder->CreateCall(CalleeF, ArgsV);
+    context->Builder->CreateCall(fprintf, ArgsV);
 
     return nullptr;
 }

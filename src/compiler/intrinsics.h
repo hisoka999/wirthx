@@ -11,6 +11,7 @@ void createSystemCall(std::unique_ptr<Context> &context, std::string functionNam
                       std::vector<FunctionArgument> functionparams, std::shared_ptr<VariableType> returnType = nullptr);
 
 void createPrintfCall(const std::unique_ptr<Context> &context);
+void createFPrintfCall(const std::unique_ptr<Context> &context);
 
 void createAssignCall(std::unique_ptr<Context> &context);
 void createResetCall(std::unique_ptr<Context> &context);

@@ -8,6 +8,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
+#include "types/FileType.h"
 
 
 UnitNode::UnitNode(const Token &token, const UnitType unitType, const std::string &unitName,
@@ -16,6 +17,15 @@ UnitNode::UnitNode(const Token &token, const UnitType unitType, const std::strin
                    const std::shared_ptr<BlockNode> &blockNode) :
     ASTNode(token), m_unitType(unitType), m_unitName(unitName), m_functionDefinitions(functionDefinitions),
     m_typeDefinitions(typeDefinitions), m_blockNode(blockNode)
+{
+}
+UnitNode::UnitNode(const Token &token, UnitType unitType, const std::string &unitName,
+                   const std::vector<std::string> &argumentNames,
+                   const std::vector<std::shared_ptr<FunctionDefinitionNode>> &functionDefinitions,
+                   const std::unordered_map<std::string, std::shared_ptr<VariableType>> &typeDefinitions,
+                   const std::shared_ptr<BlockNode> &blockNode) :
+    ASTNode(token), m_unitType(unitType), m_unitName(unitName), m_functionDefinitions(functionDefinitions),
+    m_typeDefinitions(typeDefinitions), m_blockNode(blockNode), m_argumentNames(argumentNames)
 {
 }
 
@@ -68,6 +78,52 @@ llvm::Value *UnitNode::codegen(std::unique_ptr<Context> &context)
     std::vector<llvm::Type *> params;
 
     m_blockNode->codegenConstantDefinitions(context);
+    {
+        //         @stderr = external dso_local local_unnamed_addr global %struct._IO_FILE*, align 8
+        // @.str = private unnamed_addr constant [9 x i8] c"MY ERROR\00", align 1
+        // @stdout = external dso_local local_unnamed_addr global %struct._IO_FILE*, align 8
+        auto cFile = llvm::PointerType::getUnqual(*context->TheContext);
+        auto fileType = FileType::getFileType();
+        auto ext_stderr = new llvm::GlobalVariable(*context->TheModule, cFile, false,
+                                                   llvm::GlobalValue::ExternalLinkage, nullptr, "stderr");
+        // ext_stderr->setExternallyInitialized(true);
+        ext_stderr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Local);
+        if (m_argumentNames.size() >= 3)
+        {
+            m_blockNode->addVariableDefinition(VariableDefinition{.variableType = fileType,
+                                                                  .variableName = m_argumentNames[2],
+                                                                  .scopeId = 0,
+                                                                  .llvmValue = ext_stderr,
+                                                                  .constant = false});
+        }
+
+        context->NamedValues["stderr"] = ext_stderr;
+        auto ext_stdout = new llvm::GlobalVariable(*context->TheModule, cFile, false,
+                                                   llvm::GlobalValue::ExternalLinkage, nullptr, "stdout");
+        // ext_stdout->setExternallyInitialized(true);
+        context->NamedValues["stdout"] = ext_stdout;
+        if (m_argumentNames.size() >= 2)
+        {
+            m_blockNode->addVariableDefinition(VariableDefinition{.variableType = fileType,
+                                                                  .variableName = m_argumentNames[1],
+                                                                  .scopeId = 0,
+                                                                  .llvmValue = ext_stdout,
+                                                                  .constant = false});
+        }
+        auto ext_stdin = new llvm::GlobalVariable(*context->TheModule, cFile, false, llvm::GlobalValue::ExternalLinkage,
+                                                  nullptr, "stdin");
+        // ext_stdin->setExternallyInitialized(true);
+        context->NamedValues["stdin"] = ext_stdin;
+
+        if (m_argumentNames.size() >= 1)
+        {
+            m_blockNode->addVariableDefinition(VariableDefinition{.variableType = fileType,
+                                                                  .variableName = m_argumentNames[1],
+                                                                  .scopeId = 0,
+                                                                  .llvmValue = ext_stdin,
+                                                                  .constant = false});
+        }
+    }
 
     for (auto &fdef: m_functionDefinitions)
     {

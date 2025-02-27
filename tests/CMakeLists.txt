@@ -7,7 +7,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 mark_as_advanced(
         BUILD_GMOCK BUILD_GTEST BUILD_SHARED_LIBS
         gmock_build_tests gtest_build_samples gtest_build_tests
-        gtest_disable_pthreads gtest_force_shared_crt gtest_hide_internal_symbols
+        gtest_force_shared_crt gtest_hide_internal_symbols
 )
 
 set_target_properties(gtest PROPERTIES FOLDER extern)

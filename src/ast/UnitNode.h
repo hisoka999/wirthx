@@ -20,9 +20,15 @@ private:
     std::vector<std::shared_ptr<FunctionDefinitionNode>> m_functionDefinitions;
     std::unordered_map<std::string, std::shared_ptr<VariableType>> m_typeDefinitions;
     std::shared_ptr<BlockNode> m_blockNode;
+    std::vector<std::string> m_argumentNames;
 
 public:
     UnitNode(const Token &token, UnitType unitType, const std::string &unitName,
+             const std::vector<std::shared_ptr<FunctionDefinitionNode>> &functionDefinitions,
+             const std::unordered_map<std::string, std::shared_ptr<VariableType>> &typeDefinitions,
+             const std::shared_ptr<BlockNode> &blockNode);
+    UnitNode(const Token &token, UnitType unitType, const std::string &unitName,
+             const std::vector<std::string> &argumentNames,
              const std::vector<std::shared_ptr<FunctionDefinitionNode>> &functionDefinitions,
              const std::unordered_map<std::string, std::shared_ptr<VariableType>> &typeDefinitions,
              const std::shared_ptr<BlockNode> &blockNode);
