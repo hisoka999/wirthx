@@ -21,7 +21,7 @@ bool execute_command_list(std::ostream &outstream, std::ostream &errorStream, co
 
     HANDLE cerr_r = nullptr;
     HANDLE cerr_w = nullptr;
- SECURITY_ATTRIBUTES sec_a;
+    SECURITY_ATTRIBUTES sec_a;
     memset(&sec_a, 1, sizeof sec_a);
 
     sec_a.nLength = sizeof(SECURITY_ATTRIBUTES);
