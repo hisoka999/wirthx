@@ -222,6 +222,9 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
                           FunctionArgument{.type = pCharType, .argumentName = "filename", .isReference = false},
                           FunctionArgument{.type = intType, .argumentName = "line", .isReference = false},
                           FunctionArgument{.type = pCharType, .argumentName = "function", .isReference = false}});
+        createSystemCall(context, "__acrt_iob_func",
+                         {FunctionArgument{.type = intType, .argumentName = "line", .isReference = false}},
+                         ::PointerType::getUnqual());
     }
 
 
