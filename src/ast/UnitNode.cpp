@@ -6,6 +6,7 @@
 
 #include "compare.h"
 #include "compiler/Context.h"
+#include "compiler/intrinsics.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
@@ -148,6 +149,8 @@ llvm::Value *UnitNode::codegen(std::unique_ptr<Context> &context)
                                                                       .constant = false});
             }
         }
+
+        createReadLnStdinCall(context);
     }
 
 

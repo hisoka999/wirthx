@@ -17,4 +17,5 @@ void createAssignCall(std::unique_ptr<Context> &context);
 void createResetCall(std::unique_ptr<Context> &context);
 void createRewriteCall(std::unique_ptr<Context> &context);
 void createReadLnCall(std::unique_ptr<Context> &context);
+void createReadLnStdinCall(std::unique_ptr<Context> &context);
 void createCloseFileCall(std::unique_ptr<Context> &context);

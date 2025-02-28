@@ -235,12 +235,10 @@ void createRewriteCall(std::unique_ptr<Context> &context)
 }
 void createReadLnCall(std::unique_ptr<Context> &context)
 {
-
-
     std::vector<llvm::Type *> params;
-    auto fileType = FileType::getFileType();
-    auto llvmFileType = fileType->generateLlvmType(context);
-    auto llvmStringType = StringType::getString()->generateLlvmType(context);
+    const auto fileType = FileType::getFileType();
+    const auto llvmFileType = fileType->generateLlvmType(context);
+    const auto llvmStringType = StringType::getString()->generateLlvmType(context);
     params.push_back(llvm::PointerType::getUnqual(*context->TheContext));
     params.push_back(llvm::PointerType::getUnqual(*context->TheContext));
 
@@ -260,6 +258,151 @@ void createReadLnCall(std::unique_ptr<Context> &context)
 
     auto stringPtr = context->Builder->CreateStructGEP(llvmStringType, F->getArg(1), 2, "string.ptr");
     auto stringSizeOffset = context->Builder->CreateStructGEP(llvmStringType, F->getArg(1), 1, "string.size");
+
+
+    const auto resultPointer = context->Builder->CreatePointerCast(filePtr, context->Builder->getInt64Ty());
+
+    llvm::Value *condition =
+            context->Builder->CreateCmp(llvm::CmpInst::ICMP_NE, resultPointer, context->Builder->getInt64(0));
+    codegen::codegen_ifexpr(
+            context, condition,
+            [filePtr, stringPtr, stringSizeOffset, F](std::unique_ptr<Context> &ctx)
+            {
+                const auto valueType = VariableType::getInteger(8)->generateLlvmType(ctx);
+                auto size = ctx->Builder->CreateAlloca(ctx->Builder->getInt64Ty(), nullptr, "size");
+                ctx->Builder->CreateStore(ctx->Builder->getInt64(0), size);
+                auto currentChar = ctx->Builder->CreateAlloca(valueType, nullptr, "currentChar");
+                ctx->Builder->CreateStore(ctx->Builder->getInt8(0), currentChar);
+
+                auto bufferSize = 256;
+                auto arrayBaseType = llvm::ArrayType::get(valueType, bufferSize);
+                auto buffer = ctx->Builder->CreateAlloca(arrayBaseType, nullptr, "buffer");
+                // auto loadedBuffer = ctx->Builder->CreateLoad(llvm::ArrayType::get(valueType, bufferSize), buffer);
+                {
+                    llvm::BasicBlock *LoopBB = llvm::BasicBlock::Create(*ctx->TheContext, "loop", F);
+                    llvm::BasicBlock *LoopCondBB = llvm::BasicBlock::Create(*ctx->TheContext, "loop.cond", F);
+
+                    llvm::BasicBlock *AfterBB = llvm::BasicBlock::Create(*ctx->TheContext, "afterloop", F);
+
+                    // Insert an explicit fall through from the current block to the LoopBB.
+                    ctx->Builder->CreateBr(LoopCondBB);
+                    ctx->Builder->SetInsertPoint(LoopCondBB);
+                    // Create the "after loop" block and insert it.
+                    // Compute the end condition.
+                    auto currCharValue = ctx->Builder->CreateLoad(valueType, currentChar);
+                    auto condition =
+                            ctx->Builder->CreateCmp(llvm::CmpInst::ICMP_NE, currCharValue, ctx->Builder->getInt8(10));
+                    llvm::Value *EndCond = condition;
+
+
+                    // Insert the conditional branch into the end of LoopEndBB.
+                    ctx->Builder->CreateCondBr(EndCond, LoopBB, AfterBB);
+
+
+                    // Start insertion in LoopBB.
+                    ctx->Builder->SetInsertPoint(LoopBB);
+
+                    // Emit the body of the loop.  This, like any other expr, can change the
+                    // current BB.  Note that we ignore the value computed by the body, but don't
+                    // allow an error.
+                    auto lastBreakBlock = ctx->BreakBlock.Block;
+                    ctx->BreakBlock.Block = AfterBB;
+                    ctx->BreakBlock.BlockUsed = false;
+
+                    ctx->Builder->SetInsertPoint(LoopBB);
+                    llvm::Function *fgetc = ctx->TheModule->getFunction("fgetc");
+                    std::vector<llvm::Value *> fgetcArgs;
+                    fgetcArgs.push_back(filePtr);
+                    auto value = ctx->Builder->CreateCall(fgetc, fgetcArgs);
+                    ctx->Builder->CreateStore(value, currentChar);
+
+                    auto loadedSize = ctx->Builder->CreateLoad(ctx->Builder->getInt64Ty(), size, "size");
+                    const auto bounds = ctx->Builder->CreateGEP(
+                            arrayBaseType, buffer,
+                            llvm::ArrayRef<llvm::Value *>{ctx->Builder->getInt64(0),
+                                                          dynamic_cast<llvm::Value *>(loadedSize)},
+                            "", true);
+
+                    ctx->Builder->CreateStore(value, bounds);
+
+                    auto tmp = ctx->Builder->CreateAdd(loadedSize, ctx->Builder->getInt64(1));
+
+                    ctx->Builder->CreateStore(tmp, size);
+                    ctx->Builder->CreateBr(LoopCondBB);
+
+                    ctx->BreakBlock.Block = lastBreakBlock;
+
+                    // Any new code will be inserted in AfterBB.
+                    ctx->Builder->SetInsertPoint(AfterBB);
+                }
+
+
+                auto loadedSize = ctx->Builder->CreateLoad(ctx->Builder->getInt64Ty(), size, "size");
+
+                auto sizeWithoutNewline = ctx->Builder->CreateAdd(loadedSize, ctx->Builder->getInt64(-1));
+
+                ctx->Builder->CreateStore(loadedSize, stringSizeOffset);
+                auto indexType = VariableType::getInteger(64)->generateLlvmType(ctx);
+                auto allocSize = ctx->Builder->CreateMul(loadedSize,
+                                                         ctx->Builder->getInt64(valueType->getPrimitiveSizeInBits()));
+                llvm::Value *allocCall = ctx->Builder->CreateMalloc(
+                        indexType, //
+                        valueType, // Type of elements
+                        allocSize, // Number of elements
+                        nullptr // Optional array size multiplier (nullptr for scalar allocation)
+                );
+
+                const auto boundsRHS = ctx->Builder->CreateGEP(
+                        llvm::ArrayType::get(valueType, bufferSize), buffer,
+                        llvm::ArrayRef<llvm::Value *>{ctx->Builder->getInt64(0),
+                                                      dynamic_cast<llvm::Value *>(ctx->Builder->getInt64(0))},
+                        "", false);
+                auto memcpyCall = llvm::Intrinsic::getDeclaration(
+                        ctx->TheModule.get(), llvm::Intrinsic::memcpy,
+                        {ctx->Builder->getPtrTy(), ctx->Builder->getPtrTy(), ctx->Builder->getInt64Ty()});
+                std::vector<llvm::Value *> memcopyArgs;
+
+                memcopyArgs.push_back(ctx->Builder->CreateBitCast(allocCall, ctx->Builder->getPtrTy()));
+                memcopyArgs.push_back(boundsRHS);
+                memcopyArgs.push_back(sizeWithoutNewline);
+                memcopyArgs.push_back(ctx->Builder->getFalse());
+                ctx->Builder->CreateCall(memcpyCall, memcopyArgs);
+                ctx->Builder->CreateStore(allocCall, stringPtr);
+
+                const auto bounds =
+                        ctx->Builder->CreateGEP(valueType, allocCall, llvm::ArrayRef{sizeWithoutNewline}, "", false);
+
+                ctx->Builder->CreateStore(ctx->Builder->getInt8(0), bounds);
+            });
+
+
+    // context->Builder->CreateStore(, filePtr);
+
+    context->Builder->CreateRetVoid();
+}
+void createReadLnStdinCall(std::unique_ptr<Context> &context)
+{
+    std::vector<llvm::Type *> params;
+    const auto fileType = FileType::getFileType();
+    const auto llvmFileType = fileType->generateLlvmType(context);
+    const auto llvmStringType = StringType::getString()->generateLlvmType(context);
+    params.push_back(llvm::PointerType::getUnqual(*context->TheContext));
+
+    llvm::Type *resultType = llvm::Type::getVoidTy(*context->TheContext);
+    llvm::FunctionType *FT = llvm::FunctionType::get(resultType, params, false);
+    llvm::Function *F =
+            llvm::Function::Create(FT, llvm::Function::PrivateLinkage, "readln(string)", context->TheModule.get());
+    llvm::BasicBlock *BB = llvm::BasicBlock::Create(*context->TheContext, "_block", F);
+    context->Builder->SetInsertPoint(BB);
+    F->getArg(0)->setName("value");
+    //
+
+
+    auto filePtrOffset = context->Builder->CreateStructGEP(llvmFileType, context->NamedValues["stdin"], 1, "stdin");
+    auto filePtr = context->Builder->CreateLoad(llvm::PointerType::getUnqual(*context->TheContext), filePtrOffset);
+
+    auto stringPtr = context->Builder->CreateStructGEP(llvmStringType, F->getArg(0), 2, "string.ptr");
+    auto stringSizeOffset = context->Builder->CreateStructGEP(llvmStringType, F->getArg(0), 1, "string.size");
 
 
     const auto resultPointer = context->Builder->CreatePointerCast(filePtr, context->Builder->getInt64Ty());
