@@ -551,8 +551,13 @@ std::shared_ptr<ASTNode> Parser::parseBaseExpression(const size_t scope, const s
     if (canConsume(TokenType::LEFT_CURLY))
     {
         consume(TokenType::LEFT_CURLY);
-        auto result = parseExpression(scope, lhs);
+        auto result = parseExpression(scope, nullptr);
         consume(TokenType::RIGHT_CURLY);
+        if (auto binOp = std::dynamic_pointer_cast<BinaryOperationNode>(lhs))
+        {
+            result = std::make_shared<BinaryOperationNode>(binOp->expressionToken(), binOp->binoperator(), binOp->lhs(),
+                                                           result);
+        }
         return parseExpression(scope, result);
     }
 

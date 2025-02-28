@@ -243,7 +243,8 @@ INSTANTIATE_TEST_SUITE_P(CompilerTestNoError, CompilerTest,
                          testing::Values("helloworld", "functions", "math", "includetest", "whileloop", "conditions",
                                          "forloop", "arraytest", "constantstest", "customint", "logicalcondition",
                                          "basicvec2", "dynarray", "externalfunction", "stringtest", "readfile",
-                                         "repeatuntil", "stringcompare", "pointer_test", "rule110", "positive_assert"));
+                                         "repeatuntil", "stringcompare", "pointer_test", "rule110", "positive_assert",
+                                         "stringconv"));
 
 INSTANTIATE_TEST_SUITE_P(CompilerTestWithError, CompilerTestError,
                          testing::Values("arrayaccess", "missing_return_type", "wrong_return_type"));

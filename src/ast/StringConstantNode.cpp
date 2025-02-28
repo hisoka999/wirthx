@@ -69,7 +69,7 @@ llvm::Value *StringConstantNode::codegen(std::unique_ptr<Context> &context)
                 context->Builder->CreateStructGEP(llvmRecordType, stringAlloc, 2, "string.ptr.offset");
         // auto arrayPointer =
         //         context->Builder->CreateAlignedLoad(arrayBaseType, arrayPointerOffset, alignment, "array.ptr");
-        const auto newSize = context->Builder->getInt64(result.size());
+        const auto newSize = context->Builder->getInt64(result.size() + 1);
         // change array size
         context->Builder->CreateStore(context->Builder->getInt64(1), arrayRefCountOffset);
         context->Builder->CreateStore(newSize, arraySizeOffset);

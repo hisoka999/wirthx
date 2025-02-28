@@ -36,6 +36,7 @@ interface
         @returns( 0 if equal)
     }
     function CompareStr( S1,S2 : string) : integer;
+    function Str(value: integer):string;
 
 implementation
 uses ctypes;
@@ -97,4 +98,70 @@ uses ctypes;
                 end;
             end;
     end;
+
+    function Str(value: integer):string;inline;
+    var
+        tmp : integer ;
+        buffer: array [0..100] of char;
+        i  :int64 = 0;
+        k : int64 = 0;
+        j : int64 = 0;
+    begin
+        tmp := value;
+        if tmp < 0 then
+            tmp := tmp * -1;
+
+        while tmp > 0 do
+        begin
+            buffer[i] := tmp mod 10 + '0';
+            tmp := tmp / 10;
+            inc(i);
+        end;
+
+        if value < 0 then
+        begin
+            buffer[i] := '-';
+            inc(i);
+        end;
+        SetLength(Str,i+1);
+        Str[high(Str)] := 0;
+
+        for j := i - 1 downto 0 do
+        begin
+            Str[k] := buffer[j];
+            inc(k);
+        end;
+    end;
+
+    procedure Val(
+       S: string;
+      var V: int64;
+      var Code: Word
+    );
+    var
+        idx : integer = 0;
+        base : integer = 1;
+        tmp : int64 = 0;
+        t2 : int64 = 0;
+        i : int64 = 0;
+        factor : int64 = 1;
+    begin
+        Code := 0;
+        for i := high(S) downto low(S) do
+        begin
+            if S[i] = '-' then
+                factor := -1
+            else if (S[i] >= '0') and (S[i] <= '9') then
+            begin
+                t2 := S[i] - '0';
+                tmp := tmp + base * t2;
+                base:= base * 10;
+            end
+            else
+                Code := i;
+        end;
+        if Code = 0 then
+            V := tmp * factor;
+    end;
+
 end.
