@@ -6,27 +6,29 @@ unit system;
 interface
     type
         PChar = ^char;
-        CFile = pointer;
-        File = record
-                   ptr: pointer;
-                   isOpen: boolean;
-                end;
+
+
 
     {
      Releases the given memory
     }
     procedure freemem(var F: PChar);
-    procedure Assign(var F: File;FileName: String);
-    procedure CloseFile(var F: File);
+    procedure AssignFile(var F: File;FileName: String); external;
+    procedure CloseFile(var F: File); external;
     Procedure inc(var value: integer);
     Procedure inc(var value: int64);
     Procedure dec(var value: integer);
     Procedure dec(var value: int64);
     {
+        opens the file for reading
+    }
+    Procedure reset(var F: file);external;
+
+    {
         @param(F file to read)
         @param(value string to read the file into)
     }
-    procedure Readln(var F: File; var value: string);
+    procedure Readln(var F: File; var value: string); external;
     {
         returns 1 if the string S2 is greater then S1, -1 if the string is smaller and 0 if both are equal
         @param( S1 first string to compare)
@@ -34,13 +36,12 @@ interface
         @returns( 0 if equal)
     }
     function CompareStr( S1,S2 : string) : integer;
+    function Str(value: integer):string;
 
 implementation
 uses ctypes;
 
-    function fgetc(var F : CFile) : cint; external 'c';
-    function fopen(fileName: PChar;mode : PChar) : CFile; external 'c';
-    function fclose(var F : CFile) : cint; external 'c';
+
     procedure cfree(F : PChar); external 'c' name 'free';
 
     procedure freemem(var F: PChar);inline;
@@ -52,21 +53,7 @@ uses ctypes;
         end;
     end;
 
-    procedure Assign(var F: File;FileName: String);
-    begin
-        F.ptr := fopen(pchar(Filename),pchar('r+'));
-        if F.ptr != 0 then
-            F.isOpen := true
-        else
-            writeln('File not found: ',FileName);
 
-    end;
-
-    procedure CloseFile(var F: File);
-    begin
-        if F.isOpen then
-            fclose(F.ptr);
-    end;
 
     Procedure inc(var value: integer); inline;
     begin
@@ -86,54 +73,7 @@ uses ctypes;
     begin
         value := value - 1;
     end;
-    procedure Readln(var F: File; var value: string);
-    var
-        c : char  ;
-        buffer : array [0..100] of char;
-        offset : int64 = 0;
-        bufferIndex : int64 = 0;
-        i : int64;
-        j: int64;
-    begin
 
-        if F.isOpen then
-        begin
-
-            repeat
-            begin
-                c := fgetc(F.ptr);
-
-                if c >= 32 and c <= 125 then
-                begin
-                    //value := value + c;
-                    buffer[bufferIndex] := c;
-                    inc(bufferIndex);
-                    // flush buffer
-                    if high(buffer) = bufferIndex  then
-                    begin
-                        SetLength(value,offset + bufferIndex+1);
-                        for i := 0 to bufferIndex - 1  do
-                        begin
-                            value[i+offset] := buffer[i];
-                        end;
-                        offset := offset + bufferIndex;
-                        bufferIndex := 0;
-                    end;
-
-                end;
-
-            end;
-            until c = 10 or c = 13 or c = -1;
-
-            SetLength(value,offset + bufferIndex+2);// 0-terminator + 1 for the last index
-            for j := 0 to bufferIndex - 1 do
-            begin
-                c := buffer[j];
-                value[j+offset] := c;
-            end;
-            value[bufferIndex+offset ] := 0;
-        end;
-    end;
 
     function CompareStr( S1,S2 : string) : integer;
     var
@@ -158,4 +98,70 @@ uses ctypes;
                 end;
             end;
     end;
+
+    function Str(value: integer):string;inline;
+    var
+        tmp : integer ;
+        buffer: array [0..100] of char;
+        i  :int64 = 0;
+        k : int64 = 0;
+        j : int64 = 0;
+    begin
+        tmp := value;
+        if tmp < 0 then
+            tmp := tmp * -1;
+
+        while tmp > 0 do
+        begin
+            buffer[i] := tmp mod 10 + '0';
+            tmp := tmp / 10;
+            inc(i);
+        end;
+
+        if value < 0 then
+        begin
+            buffer[i] := '-';
+            inc(i);
+        end;
+        SetLength(Str,i+1);
+        Str[high(Str)] := 0;
+
+        for j := i - 1 downto 0 do
+        begin
+            Str[k] := buffer[j];
+            inc(k);
+        end;
+    end;
+
+    procedure Val(
+       S: string;
+      var V: int64;
+      var Code: Word
+    );
+    var
+        idx : integer = 0;
+        base : integer = 1;
+        tmp : int64 = 0;
+        t2 : int64 = 0;
+        i : int64 = 0;
+        factor : int64 = 1;
+    begin
+        Code := 0;
+        for i := high(S) downto low(S) do
+        begin
+            if S[i] = '-' then
+                factor := -1
+            else if (S[i] >= '0') and (S[i] <= '9') then
+            begin
+                t2 := S[i] - '0';
+                tmp := tmp + base * t2;
+                base:= base * 10;
+            end
+            else
+                Code := i;
+        end;
+        if Code = 0 then
+            V := tmp * factor;
+    end;
+
 end.

@@ -207,7 +207,7 @@ std::string FunctionDefinitionNode::functionSignature()
     if (m_functionSignature.empty())
     {
         std::stringstream stream;
-        stream << m_name << "(";
+        stream << to_lower(m_name) << "(";
         for (size_t i = 0; i < m_params.size(); ++i)
         {
             stream << m_params[i].type->typeName << ((i < m_params.size() - 1) ? "," : "");

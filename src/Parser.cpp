@@ -28,6 +28,7 @@
 #include "ast/VariableAccessNode.h"
 #include "ast/VariableAssignmentNode.h"
 #include "ast/WhileNode.h"
+#include "ast/types/FileType.h"
 #include "ast/types/RecordType.h"
 #include "ast/types/StringType.h"
 #include "compare.h"
@@ -389,6 +390,12 @@ std::vector<VariableDefinition> Parser::parseVariableDefinitions(const size_t sc
             varType = std::string(_currentToken.lexical());
             type = determinVariableTypeByName(varType);
         }
+        else if (canConsumeKeyWord("file"))
+        {
+            consumeKeyWord("file");
+            varType = std::string(_currentToken.lexical());
+            type = FileType::getFileType();
+        }
         else if (tryConsumeKeyWord("array"))
         {
             varType = "array";
@@ -544,8 +551,13 @@ std::shared_ptr<ASTNode> Parser::parseBaseExpression(const size_t scope, const s
     if (canConsume(TokenType::LEFT_CURLY))
     {
         consume(TokenType::LEFT_CURLY);
-        auto result = parseExpression(scope, lhs);
+        auto result = parseExpression(scope, nullptr);
         consume(TokenType::RIGHT_CURLY);
+        if (auto binOp = std::dynamic_pointer_cast<BinaryOperationNode>(lhs))
+        {
+            result = std::make_shared<BinaryOperationNode>(binOp->expressionToken(), binOp->binoperator(), binOp->lhs(),
+                                                           result);
+        }
         return parseExpression(scope, result);
     }
 
@@ -864,6 +876,17 @@ std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDeclaration(size_t 
             }
             tryConsume(TokenType::SEMICOLON);
         }
+        else if (canConsumeKeyWord("file"))
+        {
+            consumeKeyWord("file");
+            std::shared_ptr<VariableType> variableType = FileType::getFileType();
+            for (const auto &param: paramNames)
+            {
+                functionParams.push_back(
+                        FunctionArgument{.type = variableType, .argumentName = param, .isReference = isReference});
+            }
+            tryConsume(TokenType::SEMICOLON);
+        }
         else
         {
             // TODO: type def missing
@@ -1034,8 +1057,8 @@ std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDefinition(size_t s
     if (tryConsumeKeyWord("external"))
     {
         isExternalFunction = true;
-        tryConsume(TokenType::STRING) || tryConsume(TokenType::CHAR);
-        libName = std::string(current().lexical());
+        if (tryConsume(TokenType::STRING) || tryConsume(TokenType::CHAR))
+            libName = std::string(current().lexical());
 
         if (tryConsumeKeyWord("name"))
         {
@@ -1599,6 +1622,21 @@ std::unique_ptr<UnitNode> Parser::parseProgram()
         consume(TokenType::NAMEDTOKEN);
         auto unitName = std::string(current().lexical());
         auto unitNameToken = current();
+        std::vector<std::string> paramNames;
+
+        if (tryConsume(TokenType::LEFT_CURLY))
+        {
+            while (canConsume(TokenType::NAMEDTOKEN))
+            {
+                consume(TokenType::NAMEDTOKEN);
+                auto paramName = current().lexical();
+                paramNames.emplace_back(paramName);
+                m_known_variable_definitions.push_back(VariableDefinition{
+                        .variableType = FileType::getFileType(), .variableName = paramName, .scopeId = 0});
+                tryConsume(TokenType::COMMA);
+            }
+            consume(TokenType::RIGHT_CURLY);
+        }
 
         consume(TokenType::SEMICOLON);
 
@@ -1684,8 +1722,8 @@ std::unique_ptr<UnitNode> Parser::parseProgram()
             blockNode->addVariableDefinition(var);
         }
 
-        return std::make_unique<UnitNode>(unitNameToken, unitType, unitName, m_functionDefinitions, m_typeDefinitions,
-                                          blockNode);
+        return std::make_unique<UnitNode>(unitNameToken, unitType, unitName, paramNames, m_functionDefinitions,
+                                          m_typeDefinitions, blockNode);
     }
     catch (ParserException &e)
     {

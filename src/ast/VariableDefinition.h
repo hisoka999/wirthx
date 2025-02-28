@@ -3,13 +3,17 @@
 #include "types/VariableType.h"
 
 class ASTNode;
-
+namespace llvm
+{
+    class Value;
+}
 struct VariableDefinition
 {
     std::shared_ptr<VariableType> variableType;
     std::string variableName;
     size_t scopeId;
     std::shared_ptr<ASTNode> value = nullptr;
+    llvm::Value *llvmValue = nullptr;
     bool constant = false;
 
     llvm::AllocaInst *generateCode(std::unique_ptr<Context> &context) const;

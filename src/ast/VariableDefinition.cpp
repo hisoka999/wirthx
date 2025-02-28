@@ -4,6 +4,7 @@
 #include <magic_enum/magic_enum.hpp>
 #include "ASTNode.h"
 #include "compiler/Context.h"
+#include "types/FileType.h"
 #include "types/RecordType.h"
 #include "types/StringType.h"
 using namespace std::literals;
@@ -97,6 +98,22 @@ llvm::AllocaInst *VariableDefinition::generateCode(std::unique_ptr<Context> &con
             const auto type = std::dynamic_pointer_cast<PointerType>(this->variableType);
             return context->Builder->CreateAlloca(type->pointerBase->generateLlvmType(context), nullptr,
                                                   this->variableName);
+        }
+        case VariableBaseType::File:
+        {
+            const auto fileType = std::dynamic_pointer_cast<FileType>(this->variableType);
+            if (fileType != nullptr)
+            {
+                auto llvmFileType = fileType->generateLlvmType(context);
+                auto allocatedFile = context->Builder->CreateAlloca(llvmFileType, nullptr, this->variableName);
+                if (llvmValue)
+                {
+                    auto filePtr = context->Builder->CreateStructGEP(llvmFileType, allocatedFile, 1, "file.ptr");
+
+                    context->Builder->CreateStore(llvmValue, filePtr);
+                }
+                return allocatedFile;
+            }
         }
         default:
             assert(false && "unsupported variable base type to generate variable definition");

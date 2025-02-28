@@ -5,6 +5,7 @@
 #include <utility>
 #include "FunctionDefinitionNode.h"
 #include "UnitNode.h"
+#include "compare.h"
 #include "compiler/Context.h"
 #include "stdlib.h"
 
@@ -33,7 +34,7 @@ std::string FunctionCallNode::callSignature(const std::unique_ptr<UnitNode> &uni
     {
         parent = parentNode;
     }
-    std::string result = m_name + "(";
+    std::string result = to_lower(m_name) + "(";
     for (size_t i = 0; i < m_args.size(); ++i)
     {
         const auto arg = m_args.at(i)->resolveType(unit, parent);

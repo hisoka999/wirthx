@@ -160,7 +160,7 @@ llvm::Value *BinaryOperationNode::generateForString(llvm::Value *lhs, llvm::Valu
     const auto rhsIndex = context->Builder->CreateLoad(indexType, rhsIndexPtr, "rhs.size");
 
     const auto newSize = context->Builder->CreateAdd(
-            lhsIndex, context->Builder->CreateAdd(rhsIndex, context->Builder->getInt64(1)), "new_size");
+            lhsIndex, context->Builder->CreateAdd(rhsIndex, context->Builder->getInt64(-1)), "new_size");
     ;
 
 
@@ -168,9 +168,7 @@ llvm::Value *BinaryOperationNode::generateForString(llvm::Value *lhs, llvm::Valu
     context->Builder->CreateStore(context->Builder->getInt64(1), arrayRefCountOffset);
     context->Builder->CreateStore(newSize, arraySizeOffset);
 
-    const auto allocCall = context->Builder->CreateMalloc(
-            indexType, context->Builder->getPtrTy(),
-            context->Builder->CreateAdd(newSize, context->Builder->getInt64(1)), nullptr);
+    const auto allocCall = context->Builder->CreateMalloc(indexType, context->Builder->getPtrTy(), newSize, nullptr);
 
 
     const auto memcpyCall = llvm::Intrinsic::getDeclaration(
@@ -196,13 +194,15 @@ llvm::Value *BinaryOperationNode::generateForString(llvm::Value *lhs, llvm::Valu
         const auto rhsPtrOffset = context->Builder->CreateStructGEP(llvmRecordType, rhs, 2, "rhs.ptr.offset");
         const auto loadResult =
                 context->Builder->CreateLoad(llvm::PointerType::getUnqual(*context->TheContext), rhsPtrOffset);
-        const auto bounds =
-                context->Builder->CreateGEP(valueType, allocCall, llvm::ArrayRef<llvm::Value *>{lhsIndex}, "", false);
+        const auto bounds = context->Builder->CreateGEP(
+                valueType, allocCall,
+                llvm::ArrayRef<llvm::Value *>{context->Builder->CreateAdd(lhsIndex, context->Builder->getInt64(-1))},
+                "", false);
 
         std::vector<llvm::Value *> memcopyArgs;
         memcopyArgs.push_back(context->Builder->CreateBitCast(bounds, context->Builder->getPtrTy()));
         memcopyArgs.push_back(context->Builder->CreateBitCast(loadResult, context->Builder->getPtrTy()));
-        memcopyArgs.push_back(context->Builder->CreateAdd(rhsIndex, context->Builder->getInt64(1), "", false));
+        memcopyArgs.push_back(rhsIndex);
         memcopyArgs.push_back(context->Builder->getFalse());
 
         context->Builder->CreateCall(memcpyCall, memcopyArgs);
