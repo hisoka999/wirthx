@@ -109,7 +109,6 @@ llvm::Type *IntegerType::generateLlvmType(std::unique_ptr<Context> &context)
 
 llvm::Type *ArrayType::generateLlvmType(std::unique_ptr<Context> &context)
 {
-
     if (llvmType == nullptr)
     {
         auto arrayBaseType = arrayBase->generateLlvmType(context);

@@ -268,6 +268,11 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
     {
         pass.add(llvm::createAlwaysInlinerLegacyPass());
         pass.add(llvm::createInstructionCombiningPass());
+        TheTargetMachine->setOptLevel(CodeGenOptLevel::Aggressive);
+    }
+    else
+    {
+        TheTargetMachine->setOptLevel(CodeGenOptLevel::None);
     }
 
 

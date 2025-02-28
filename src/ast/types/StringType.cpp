@@ -8,6 +8,11 @@
 
 llvm::Type *StringType::generateLlvmType(std::unique_ptr<Context> &context)
 {
+    if (llvmType != nullptr && llvmType->getContext().pImpl != context->TheContext->pImpl)
+    {
+        llvmType = nullptr;
+    }
+
     if (llvmType == nullptr)
     {
         const auto baseType = IntegerType::getInteger(8);
