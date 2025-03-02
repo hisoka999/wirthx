@@ -7,6 +7,7 @@
 #include "Parser.h"
 #include "compiler/Compiler.h"
 #include "config.h"
+#include "lsp/LanguageServer.h"
 
 using namespace std::literals;
 
@@ -51,6 +52,13 @@ int main(int args, char **argv)
 
     CompilerOptions options = parseCompilerOptions(argList);
 
+
+    if (options.lsp)
+    {
+        LanguageServer languageServer;
+        languageServer.handleRequest();
+        return 0;
+    }
 
     std::ifstream file;
     std::istringstream is;
