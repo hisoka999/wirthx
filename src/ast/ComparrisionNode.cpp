@@ -137,7 +137,7 @@ llvm::Value *ComparrisionNode::codegen(std::unique_ptr<Context> &context)
         if (lhsType && lhsType->baseType == VariableBaseType::String)
         {
 
-            if (llvm::Function *CalleeF = context->TheModule->getFunction("CompareStr(string,string)"))
+            if (llvm::Function *CalleeF = context->TheModule->getFunction("comparestr(string,string)"))
             {
                 std::vector<llvm::Value *> ArgsV = {lhs, rhs};
 

@@ -72,6 +72,7 @@ file(GLOB SRC
         src/ast/types/VariableType.cpp
         src/ast/types/RecordType.cpp
         src/ast/types/StringType.cpp
+        src/ast/types/FileType.cpp
         src/ast/ForNode.cpp
         src/ast/RepeatUntilNode.cpp
         src/ast/BreakNode.cpp

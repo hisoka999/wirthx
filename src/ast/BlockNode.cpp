@@ -1,5 +1,7 @@
 #include "BlockNode.h"
 #include <iostream>
+
+#include "compare.h"
 #include "compiler/Context.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IRBuilder.h"
@@ -122,10 +124,10 @@ llvm::Value *BlockNode::codegen(std::unique_ptr<Context> &context)
             // context->Builder->CreateCall(context->TheModule->getFunction("free"), strValuePtr);
         }
 
-        if (!context->TopLevelFunction || def.variableName != topLevelFunctionName)
+        if (!context->TopLevelFunction || !iequals(def.variableName, topLevelFunctionName))
         {
-            context->NamedAllocations[def.variableName] = nullptr;
-            context->NamedValues[def.variableName] = nullptr;
+            context->NamedValues.erase(def.variableName);
+            context->NamedAllocations.erase(def.variableName);
         }
     }
     return llvm::Constant::getNullValue(llvm::Type::getDoubleTy(*context->TheContext));

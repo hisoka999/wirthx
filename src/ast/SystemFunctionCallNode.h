@@ -1,5 +1,6 @@
 #pragma once
 
+
 #include "FunctionCallNode.h"
 
 bool isKnownSystemCall(const std::string &name);
@@ -9,6 +10,7 @@ class SystemFunctionCallNode final : public FunctionCallNode
 private:
     llvm::Value *codegen_setlength(std::unique_ptr<Context> &context, ASTNode *parent);
     llvm::Value *codegen_length(std::unique_ptr<Context> &context, ASTNode *parent) const;
+    llvm::Value *find_target_fileout(std::unique_ptr<Context> &context, ASTNode *parent);
     llvm::Value *codegen_write(std::unique_ptr<Context> &context, ASTNode *parent);
     llvm::Value *codegen_writeln(std::unique_ptr<Context> &context, ASTNode *parent);
     llvm::Value *codegen_new(std::unique_ptr<Context> &context, ASTNode *parent) const;

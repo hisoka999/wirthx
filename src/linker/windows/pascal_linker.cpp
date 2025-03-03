@@ -9,7 +9,7 @@ bool pascal_link_modules(std::ostream &errStream, const std::filesystem::path &b
     // args.emplace_back("-nostdlib");
 
     args.emplace_back("-o");
-    args.emplace_back((baseDir/ program_name).string());
+    args.emplace_back((baseDir / program_name).string());
     for (auto &obj: object_files)
     {
         auto file = obj;
@@ -19,5 +19,5 @@ bool pascal_link_modules(std::ostream &errStream, const std::filesystem::path &b
     for (auto &flag: flags)
         args.emplace_back(flag);
 
-    return execute_command_list(errStream, "clang", args);
+    return execute_command_list(errStream, errStream, "clang", args);
 }

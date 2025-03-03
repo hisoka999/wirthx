@@ -181,12 +181,31 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
     }
     auto context = InitializeModule(unit, options);
     auto intType = VariableType::getInteger();
+    auto int64Type = VariableType::getInteger(64);
+    auto int8Type = VariableType::getInteger(8);
     auto pCharType = ::PointerType::getPointerTo(VariableType::getInteger(8));
+    context->TheModule->setDataLayout(TheTargetMachine->createDataLayout());
 
-    createPrintfCall(context);
     createSystemCall(context, "exit", {FunctionArgument{.type = intType, .argumentName = "X", .isReference = false}});
     createSystemCall(context, "fflush",
                      {FunctionArgument{.type = VariableType::getPointer(), .argumentName = "X", .isReference = false}});
+    createSystemCall(context, "fopen",
+                     {FunctionArgument{.type = pCharType, .argumentName = "filename"},
+                      {FunctionArgument{.type = pCharType, .argumentName = "modes"}}},
+                     ::PointerType::getUnqual());
+
+    createSystemCall(context, "fclose", {FunctionArgument{.type = ::PointerType::getUnqual(), .argumentName = "file"}},
+                     intType);
+    // ssize_t getline(char **lineptr, size_t *n, FILE *stream);
+    createSystemCall(context, "fgetc", {FunctionArgument{.type = ::PointerType::getUnqual(), .argumentName = "file"}},
+                     int8Type);
+
+    createSystemCall(context, "fwrite",
+                     {FunctionArgument{.type = ::PointerType::getUnqual(), .argumentName = "buffer"},
+                      FunctionArgument{.type = int64Type, .argumentName = "size"},
+                      FunctionArgument{.type = int64Type, .argumentName = "count"},
+                      FunctionArgument{.type = ::PointerType::getUnqual(), .argumentName = "file"}},
+                     int64Type);
 
     if (target.getOS() == Triple::Linux)
     {
@@ -203,10 +222,19 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
                           FunctionArgument{.type = pCharType, .argumentName = "filename", .isReference = false},
                           FunctionArgument{.type = intType, .argumentName = "line", .isReference = false},
                           FunctionArgument{.type = pCharType, .argumentName = "function", .isReference = false}});
+        createSystemCall(context, "__acrt_iob_func",
+                         {FunctionArgument{.type = intType, .argumentName = "line", .isReference = false}},
+                         ::PointerType::getUnqual());
     }
 
-    context->TheModule->setDataLayout(TheTargetMachine->createDataLayout());
 
+    createPrintfCall(context);
+    createFPrintfCall(context);
+    createAssignCall(context);
+    createResetCall(context);
+    createRewriteCall(context);
+    createCloseFileCall(context);
+    createReadLnCall(context);
 
     try
     {
@@ -240,6 +268,11 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
     {
         pass.add(llvm::createAlwaysInlinerLegacyPass());
         pass.add(llvm::createInstructionCombiningPass());
+        TheTargetMachine->setOptLevel(CodeGenOptLevel::Aggressive);
+    }
+    else
+    {
+        TheTargetMachine->setOptLevel(CodeGenOptLevel::None);
     }
 
 
@@ -291,7 +324,7 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
     if (context->compilerOptions.runProgram)
     {
 
-        if (!execute_command(outputStream, (basePath / executableName).string()))
+        if (!execute_command(outputStream, errorStream, (basePath / executableName).string()))
         {
             errorStream << "program could not be executed!\n";
         }
