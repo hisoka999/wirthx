@@ -80,7 +80,7 @@ int main(int args, char **argv)
     switch (options.option)
     {
         case CompileOption::COMPILE:
-            compile_file(options, file_path, std::cerr, std::cout);
+            compile_file(options, file_path, std::cout, std::cout);
             break;
         case CompileOption::JIT:
             assert(false && "JIT compiler is not implemented yet.");

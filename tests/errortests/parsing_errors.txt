@@ -1,0 +1,3 @@
+FILENAME:6:13: error: unexpected token EQUAL!
+FILENAME:8:5: error: unexpected keyword found else!
+FILENAME:8:5: error: unexpected token found KEYWORD!

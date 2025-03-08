@@ -55,6 +55,11 @@ CompilerOptions parseCompilerOptions(std::vector<std::string> &argList)
         {
             options.lsp = true;
         }
+        else
+        {
+            argList.push_back(arg);
+            break;
+        }
     }
 
     if (const char *env_p = std::getenv("WIRTHX_PATH"))

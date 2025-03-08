@@ -92,7 +92,7 @@ std::vector<Token> Lexer::tokenize(const std::string &filename, const std::strin
                     .filename = filename, .source = contentPtr, .byte_offset = i, .num_bytes = offset};
             tokens.emplace_back(source_location, row, column, TokenType::KEYWORD);
             i = endPosition - 1;
-            column += offset + 1;
+            column += offset;
             continue;
         }
 

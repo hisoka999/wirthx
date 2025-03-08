@@ -66,20 +66,25 @@ class Parser
     std::shared_ptr<FunctionDefinitionNode> parseFunctionDefinition(size_t scope, bool isFunction);
 
     std::unique_ptr<UnitNode> parseUnit(bool includeSystem);
-    bool importUnit(const std::string &filename, bool includeSystem = true);
+    bool importUnit(const Token &token, const std::string &filename, bool includeSystem = true);
+
+    bool isFunctionDeclared(const std::string &name);
 
     [[nodiscard]] std::unique_ptr<UnitNode> parseUnit();
     [[nodiscard]] std::unique_ptr<UnitNode> parseProgram();
 
     void parseInterfaceSection();
     void parseImplementationSection(bool includeSystem);
+    void checkLhsExists(const std::shared_ptr<ASTNode> &lhs, const Token &token);
 
 public:
     Parser(const std::vector<std::filesystem::path> &rtlDirectories, std::filesystem::path path,
            const std::unordered_map<std::string, bool> &definitions, const std::vector<Token> &tokens);
     ~Parser() = default;
     [[nodiscard]] bool hasError() const;
-    void printErrors(std::ostream &outputStream);
+    [[nodiscard]] bool hasMessages() const;
+    void printErrors(std::ostream &outputStream, bool printColor);
 
     [[nodiscard]] std::unique_ptr<UnitNode> parseFile();
+    std::vector<ParserError> getErrors() { return m_errors; }
 };

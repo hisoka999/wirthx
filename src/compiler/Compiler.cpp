@@ -176,8 +176,12 @@ void compile_file(const CompilerOptions &options, const std::filesystem::path &i
     auto unit = parser.parseFile();
     if (parser.hasError())
     {
-        parser.printErrors(errorStream);
+        parser.printErrors(errorStream, options.colorOutput);
         return;
+    }
+    if (parser.hasMessages())
+    {
+        parser.printErrors(errorStream, options.colorOutput);
     }
     auto context = InitializeModule(unit, options);
     auto intType = VariableType::getInteger();

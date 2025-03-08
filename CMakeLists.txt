@@ -81,6 +81,7 @@ file(GLOB SRC
         src/compiler/Context.cpp
         src/compiler/Compiler.cpp
         src/compiler/codegen.cpp
+        src/exceptions/CompilerException.cpp
         src/lsp/LanguageServer.cpp
         src/Lexer.cpp
         src/MacroParser.cpp

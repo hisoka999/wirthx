@@ -96,8 +96,10 @@ llvm::AllocaInst *VariableDefinition::generateCode(std::unique_ptr<Context> &con
         case VariableBaseType::Pointer:
         {
             const auto type = std::dynamic_pointer_cast<PointerType>(this->variableType);
-            return context->Builder->CreateAlloca(type->pointerBase->generateLlvmType(context), nullptr,
-                                                  this->variableName);
+            if (type->pointerBase)
+                return context->Builder->CreateAlloca(type->pointerBase->generateLlvmType(context), nullptr,
+                                                      this->variableName);
+            return context->Builder->CreateAlloca(type->generateLlvmType(context), nullptr, this->variableName);
         }
         case VariableBaseType::File:
         {

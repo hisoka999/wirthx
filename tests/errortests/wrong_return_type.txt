@@ -1,1 +1,1 @@
-FILENAME:8:9: the type for the variable "my_function" is "string" but a "integer32" was assigned.
+FILENAME:8:9: error: the type for the variable "my_function" is "string" but a "integer32" was assigned.

@@ -1,1 +1,1 @@
-FILENAME:8:40: the return type for the function "my_function" is missing.
+FILENAME:8:40: error: the return type for the function "my_function" is missing.
