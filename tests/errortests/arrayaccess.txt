@@ -1,1 +1,3 @@
 FILENAME:14:13: error: the array index is not in the defined range.
+    writeln(val[0]);
+            ^-------

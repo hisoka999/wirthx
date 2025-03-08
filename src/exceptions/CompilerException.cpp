@@ -39,6 +39,13 @@ void ParserError::msg(std::ostream &ostream, bool printColor) const
     else
         ostream << token.sourceLocation.filename << ":" << token.row << ":" << token.col << ": "
                 << outputTypeString(outputType) << ": " << message << "\n";
+
+    ostream << token.sourceLocation.sourceline() << "\n";
+    size_t startOffset = token.sourceLocation.byte_offset - token.sourceLocation.lineStart() + 1;
+    size_t endOffset = (token.sourceLocation.source->find('\n', token.sourceLocation.byte_offset) - 1) -
+                       (token.sourceLocation.byte_offset - 1);
+
+    ostream << std::setw(startOffset) << std::setfill(' ') << '^' << std::setw(endOffset) << std::setfill('-') << "\n";
 }
 CompilerException::CompilerException(ParserError error)
 {
