@@ -4,7 +4,7 @@
 
 #include "LanguageServer.h"
 #include <llvm/Support/CommandLine.h>
-#include <llvm/llvm/Support/Endian.h>
+#include <llvm/Support/Endian.h>
 
 #include <iostream>
 #include <llvm/Support/JSON.h>
