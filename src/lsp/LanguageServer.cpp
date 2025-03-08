@@ -3,8 +3,8 @@
 //
 
 #include "LanguageServer.h"
-#include <llvm-18/llvm/Support/Endian.h>
 #include <llvm/Support/CommandLine.h>
+#include <llvm/llvm/Support/Endian.h>
 
 #include <iostream>
 #include <llvm/Support/JSON.h>
