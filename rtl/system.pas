@@ -114,7 +114,7 @@ uses ctypes;
         while tmp > 0 do
         begin
             buffer[i] := tmp mod 10 + '0';
-            tmp := tmp / 10;
+            tmp := tmp div 10;
             inc(i);
         end;
 

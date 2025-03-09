@@ -46,6 +46,7 @@ file(GLOB SRC
         src/ast/VariableDefinition.cpp
         src/ast/ASTNode.cpp
         src/ast/PrintNode.cpp
+        src/ast/DoubleNode.cpp
         src/ast/NumberNode.cpp
         src/ast/CharConstantNode.cpp
         src/ast/StringConstantNode.cpp

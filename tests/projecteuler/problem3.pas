@@ -12,7 +12,7 @@ begin
     while n mod 2 = 0 do
     begin
         largestPrimeFactor := 2;
-        n := n / 2;
+        n := n div 2;
     end;
 
     // Check for odd factors starting from 3
@@ -21,7 +21,7 @@ begin
         while n mod i = 0 do
         begin
             largestPrimeFactor := i;
-            n := n / i;
+            n := n div i;
         end;
 
         i:= i + 2;

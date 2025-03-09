@@ -20,7 +20,7 @@ bool VariableType::isSimpleType() const
         case VariableBaseType::Pointer:
         case VariableBaseType::Integer:
         case VariableBaseType::Float:
-        case VariableBaseType::Real:;
+        case VariableBaseType::Double:
         case VariableBaseType::Boolean:
             return true;
         default:
@@ -36,7 +36,8 @@ llvm::Type *VariableType::generateLlvmType(std::unique_ptr<Context> &context)
         case VariableBaseType::Pointer:
             return llvm::PointerType::getUnqual(*context->TheContext);
         case VariableBaseType::Float:
-        case VariableBaseType::Real:
+            return llvm::Type::getFloatTy(*context->TheContext);
+        case VariableBaseType::Double:
             return llvm::Type::getDoubleTy(*context->TheContext);
         case VariableBaseType::Boolean:
             return llvm::Type::getInt1Ty(*context->TheContext);
@@ -53,6 +54,20 @@ std::shared_ptr<IntegerType> VariableType::getInteger(size_t length)
     integer->length = length;
     integer->typeName = "integer" + std::to_string(length);
     return integer;
+}
+std::shared_ptr<VariableType> VariableType::getSingle()
+{
+    auto floatType = std::make_shared<VariableType>();
+    floatType->baseType = VariableBaseType::Float;
+    floatType->typeName = "single";
+    return floatType;
+}
+std::shared_ptr<VariableType> VariableType::getDouble()
+{
+    auto doubleType = std::make_shared<VariableType>();
+    doubleType->baseType = VariableBaseType::Double;
+    doubleType->typeName = "double";
+    return doubleType;
 }
 
 std::shared_ptr<VariableType> VariableType::getBoolean()
