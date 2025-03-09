@@ -8,16 +8,13 @@
 
 #include <iostream>
 #include <llvm/Support/JSON.h>
+#include <utility>
 #include "Lexer.h"
+#include "MacroParser.h"
 #include "Parser.h"
 
-struct NotificationMessage
-{
-    std::string method;
-    std::vector<std::string> args;
-};
 
-LanguageServer::LanguageServer() {}
+LanguageServer::LanguageServer(CompilerOptions options) : m_options(std::move(options)) {}
 void sendNotification(const std::string &method)
 {
     std::string resultString;
@@ -33,7 +30,7 @@ void sendNotification(const std::string &method)
     std::cout << sstream.str() << "\n";
 }
 
-llvm::json::Object buildPosition(const int line, const int character)
+llvm::json::Object buildPosition(const size_t line, const size_t character)
 {
     llvm::json::Object response;
     response["line"] = line - 1;
@@ -163,7 +160,6 @@ void LanguageServer::handleRequest()
         std::string commandString;
         getline(std::cin, commandString);
         auto length = std::atoi(commandString.substr(16).c_str());
-        // std::cerr << " length: " << length << std::endl;
         getline(std::cin, commandString); // empty line
         std::vector<char> buffer;
         buffer.resize(length);
@@ -173,8 +169,8 @@ void LanguageServer::handleRequest()
         auto request = llvm::json::parse(commandString);
         if (!request)
         {
-            logMessages.push_back("Failed to parse request");
-            logMessages.push_back(" command: " + commandString);
+            logMessages.emplace_back("Failed to parse request");
+            logMessages.emplace_back(" command: " + commandString);
             continue;
         }
         else
@@ -183,8 +179,7 @@ void LanguageServer::handleRequest()
         }
 
         auto requestObject = request.get().getAsObject();
-        auto method = requestObject->getString("method");
-        if (method)
+        if (auto method = requestObject->getString("method"))
         {
             std::string resultString;
 
@@ -246,15 +241,20 @@ void LanguageServer::handleRequest()
                 Lexer lexer;
                 auto tokens = lexer.tokenize(uri.value().str(), text.value().str());
                 std::filesystem::path filePath = uri.value().str();
-                std::vector<std::filesystem::path> rtlDirectories;
-                rtlDirectories.push_back(std::filesystem::current_path() / "rtl");
                 std::unordered_map<std::string, bool> definitions;
-                Parser parser(rtlDirectories, filePath, definitions, tokens);
+                MacroParser macro_parser(definitions);
+                Parser parser(m_options.rtlDirectories, filePath, definitions, macro_parser.parseFile(tokens));
                 auto ast = parser.parseFile();
                 for (auto error: parser.getErrors())
                 {
                     errors.emplace_back(error);
                 }
+            }
+            else if (method.value() == "textDocument/didClose")
+            {
+                auto params = requestObject->getObject("params");
+                auto uri = params->getObject("textDocument")->getString("uri");
+                m_openDocuments.erase(uri.value().str());
             }
             else if (method.value() == "textDocument/didChange")
             {
@@ -267,12 +267,13 @@ void LanguageServer::handleRequest()
                 Lexer lexer;
                 auto tokens = lexer.tokenize(uri.value().str(), text.value().str());
                 std::filesystem::path filePath = uri.value().str();
-                std::vector<std::filesystem::path> rtlDirectories;
-                rtlDirectories.push_back(std::filesystem::current_path() / "rtl");
+
                 std::unordered_map<std::string, bool> definitions;
-                Parser parser(rtlDirectories, filePath, definitions, tokens);
+                MacroParser macro_parser(definitions);
+
+                Parser parser(m_options.rtlDirectories, filePath, definitions, macro_parser.parseFile(tokens));
                 auto ast = parser.parseFile();
-                for (auto error: parser.getErrors())
+                for (auto &error: parser.getErrors())
                 {
                     errors.emplace_back(error);
                 }
@@ -287,19 +288,7 @@ void LanguageServer::handleRequest()
                 Lexer lexer;
                 auto tokens = lexer.tokenize(uri.value().str(), document.text);
                 llvm::json::Array array;
-                // for (auto &token: tokens)
-                // {
-                //     if (token.tokenType == TokenType::KEYWORD)
-                //     {
-                //         llvm::json::Object colorResult;
-                //         llvm::json::Object range;
-                //         range["start"] = buildPosition(token.row, token.col);
-                //         range["end"] = buildPosition(token.row, token.col +
-                //         token.sourceLocation.byte_offset); colorResult["range"] = std::move(range);
-                //         colorResult["color"] = buildColor(token.tokenType);
-                //         array.push_back(std::move(colorResult));
-                //     }
-                // }
+
 
                 response["result"] = std::move(array);
             }
@@ -311,19 +300,6 @@ void LanguageServer::handleRequest()
                 Lexer lexer;
                 auto tokens = lexer.tokenize(uri.value().str(), document.text);
                 llvm::json::Array array;
-                // for (auto &token: tokens)
-                // {
-                //     if (token.tokenType == TokenType::KEYWORD)
-                //     {
-                //         llvm::json::Object colorResult;
-                //         llvm::json::Object range;
-                //         range["start"] = buildPosition(token.row, token.col);
-                //         range["end"] = buildPosition(token.row, token.col +
-                //         token.sourceLocation.byte_offset); colorResult["range"] = std::move(range);
-                //         colorResult["color"] = buildColor(token.tokenType);
-                //         array.push_back(std::move(colorResult));
-                //     }
-                // }
 
                 response["result"] = std::move(array);
             }
@@ -345,7 +321,7 @@ void LanguageServer::handleRequest()
         }
         else
         {
-            logMessages.push_back("method not found");
+            logMessages.emplace_back("method not found");
         }
 
         sendLogMessage(logMessages);

@@ -7,7 +7,7 @@
 
 #include <map>
 #include <string>
-
+#include "compiler/CompilerOptions.h"
 struct LspDocument
 {
     std::string uri;
@@ -17,9 +17,10 @@ struct LspDocument
 class LanguageServer
 {
     std::map<std::string, LspDocument> m_openDocuments;
+    CompilerOptions m_options;
 
 public:
-    explicit LanguageServer();
+    explicit LanguageServer(CompilerOptions options);
 
     void handleRequest();
 };

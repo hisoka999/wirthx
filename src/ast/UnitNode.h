@@ -43,6 +43,7 @@ public:
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
     std::optional<VariableDefinition> getVariableDefinition(const std::string &name);
     std::set<std::string> collectLibsToLink();
+    std::unordered_map<std::string, std::shared_ptr<VariableType>> getTypeDefinitions();
 
     void typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode) override;
 };

@@ -1418,6 +1418,7 @@ bool Parser::importUnit(const Token &token, const std::string &filename, bool in
         if (m_rtlDirectories.end() == it)
             break;
         path = *it / filename;
+        std::cerr << "uses:  " << path << std::endl;
         ++it;
     }
     if (!unitCache.contains(path.string()))
@@ -1449,16 +1450,14 @@ bool Parser::importUnit(const Token &token, const std::string &filename, bool in
         {
             return true;
         }
-
-        for (auto &[typeName, newType]: parser.m_typeDefinitions)
+    }
+    for (auto &[typeName, newType]: unitCache[path.string()]->getTypeDefinitions())
+    {
+        if (!m_typeDefinitions.contains(typeName))
         {
-            if (!m_typeDefinitions.contains(typeName))
-            {
-                m_typeDefinitions[typeName] = newType;
-            }
+            m_typeDefinitions[typeName] = newType;
         }
     }
-
 
     for (auto &definition: unitCache[path.string()]->getFunctionDefinitions())
     {
@@ -1600,10 +1599,6 @@ std::unique_ptr<UnitNode> Parser::parseUnit(bool includeSystem)
 
         consume(TokenType::SEMICOLON);
 
-        if (unitName != "system" && includeSystem)
-        {
-            importUnit(m_tokens.front(), "system.pas", false);
-        }
 
         std::shared_ptr<BlockNode> blockNode = nullptr;
         while (hasNext())

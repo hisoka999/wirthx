@@ -52,10 +52,12 @@ int main(int args, char **argv)
 
     CompilerOptions options = parseCompilerOptions(argList);
 
+    std::filesystem::path programPath(program);
+    options.rtlDirectories.push_back(programPath.parent_path() / "rtl");
 
     if (options.lsp)
     {
-        LanguageServer languageServer;
+        LanguageServer languageServer(options);
         languageServer.handleRequest();
         return 0;
     }
