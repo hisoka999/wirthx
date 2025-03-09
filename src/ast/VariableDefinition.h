@@ -11,6 +11,7 @@ struct VariableDefinition
 {
     std::shared_ptr<VariableType> variableType;
     std::string variableName;
+    std::string alias;
     size_t scopeId;
     std::shared_ptr<ASTNode> value = nullptr;
     llvm::Value *llvmValue = nullptr;

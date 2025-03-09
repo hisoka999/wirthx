@@ -1087,6 +1087,8 @@ std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDefinition(size_t s
 
         m_known_variable_definitions.push_back(
                 VariableDefinition{.variableType = returnType, .variableName = functionName, .scopeId = scope});
+        m_known_variable_definitions.push_back(
+                VariableDefinition{.variableType = returnType, .variableName = "result", .scopeId = scope});
     }
     consume(TokenType::SEMICOLON);
 
@@ -1124,6 +1126,7 @@ std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDefinition(size_t s
         {
             functionBody->addVariableDefinition(VariableDefinition{.variableType = returnType,
                                                                    .variableName = functionName,
+                                                                   .alias = "result",
                                                                    .scopeId = 0,
                                                                    .value = nullptr,
                                                                    .constant = false});
@@ -1139,6 +1142,13 @@ std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDefinition(size_t s
                     std::ranges::remove_if(m_known_variable_definitions, [def](const VariableDefinition &value)
                                            { return def.variableName == value.variableName; })
                             .begin());
+            if (!def.alias.empty())
+            {
+                m_known_variable_definitions.erase(std::ranges::remove_if(m_known_variable_definitions,
+                                                                          [def](const VariableDefinition &value)
+                                                                          { return def.alias == value.variableName; })
+                                                           .begin());
+            }
         }
     }
 
