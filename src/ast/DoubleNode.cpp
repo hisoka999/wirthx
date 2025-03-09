@@ -1,7 +1,7 @@
 #include "DoubleNode.h"
 
-#include <llvm-18/llvm/IR/Constants.h>
-#include <llvm-18/llvm/IR/IRBuilder.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/IRBuilder.h>
 
 #include "compiler/Context.h"
 DoubleNode::DoubleNode(const Token &token, const double value) : ASTNode(token), m_value(value) {}
