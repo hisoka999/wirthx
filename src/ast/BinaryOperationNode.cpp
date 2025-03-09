@@ -5,6 +5,7 @@
 #include "UnitNode.h"
 #include "compiler/Context.h"
 #include "exceptions/CompilerException.h"
+#include "magic_enum/magic_enum.hpp"
 #include "types/StringType.h"
 
 BinaryOperationNode::BinaryOperationNode(const Token &operatorToken, const Operator op,
@@ -46,8 +47,46 @@ llvm::Value *BinaryOperationNode::generateForInteger(llvm::Value *lhs, llvm::Val
             return context->Builder->CreateMul(lhs, rhs, "multmp");
         case Operator::MOD:
             return context->Builder->CreateSRem(lhs, rhs, "srem");
-        case Operator::DIV:
+        case Operator::IDIV:
             return context->Builder->CreateSDiv(lhs, rhs, "sdiv");
+        default:
+            throw CompilerException(ParserError{.token = ASTNode::expressionToken(),
+                                                .message = "the operation " +
+                                                           std::string(magic_enum::enum_name(m_operator)) +
+                                                           " cannot be applied for an integer"});
+    }
+    return nullptr;
+}
+llvm::Value *BinaryOperationNode::generateForFloat(llvm::Value *lhs, llvm::Value *rhs,
+                                                   std::unique_ptr<Context> &context)
+{
+    if (lhs->getType()->isFloatTy() && rhs->getType()->isDoubleTy())
+    {
+        lhs = context->Builder->CreateFPCast(lhs, rhs->getType());
+    }
+    else if (lhs->getType()->isDoubleTy() && rhs->getType()->isFloatTy())
+    {
+        lhs = context->Builder->CreateFPCast(rhs, lhs->getType());
+    }
+
+
+    switch (m_operator)
+    {
+        case Operator::PLUS:
+            return context->Builder->CreateFAdd(lhs, rhs, "addtmp");
+        case Operator::MINUS:
+            return context->Builder->CreateFSub(lhs, rhs, "subtmp");
+        case Operator::MUL:
+            return context->Builder->CreateFMul(lhs, rhs, "multmp");
+        case Operator::MOD:
+            return context->Builder->CreateFRem(lhs, rhs, "srem");
+        case Operator::DIV:
+            return context->Builder->CreateFDiv(lhs, rhs, "sdiv");
+        default:
+            throw CompilerException(ParserError{.token = ASTNode::expressionToken(),
+                                                .message = "the operation " +
+                                                           std::string(magic_enum::enum_name(m_operator)) +
+                                                           " cannot be applied for an float/double"});
     }
     return nullptr;
 }
@@ -245,7 +284,9 @@ llvm::Value *BinaryOperationNode::codegen(std::unique_ptr<Context> &context)
                     assert(false && "unknown variable type for binary opteration");
                     break;
             }
-
+        case VariableBaseType::Double:
+        case VariableBaseType::Float:
+            return generateForFloat(lhs, rhs, context);
         default:
             assert(false && "unknown variable type for binary opteration");
             break;

@@ -220,6 +220,13 @@ llvm::Value *SystemFunctionCallNode::codegen_write(std::unique_ptr<Context> &con
 
             ArgsV.push_back(value);
         }
+        else if (type->baseType == VariableBaseType::Double || type->baseType == VariableBaseType::Float)
+        {
+            ArgsV.push_back(context->Builder->CreateGlobalString("%f", "format_double"));
+
+
+            ArgsV.push_back(context->Builder->CreateFPCast(argValue, context->Builder->getDoubleTy()));
+        }
         else if (auto fileType = std::dynamic_pointer_cast<FileType>(type))
         {
             continue;

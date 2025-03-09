@@ -10,7 +10,7 @@ program problem4;
     begin
         tmp := Str(product);
         is_palindrom := true;
-        for i := 0 to length(tmp) / 2 do
+        for i := 0 to length(tmp) div 2 do
         begin
             if tmp[i] != tmp[length(tmp) - 1 - i] then
             begin

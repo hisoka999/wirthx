@@ -64,10 +64,14 @@ llvm::Value *BlockNode::codegen(std::unique_ptr<Context> &context)
             {
 
                 auto result = def.value->codegen(context);
-                auto type = def.variableType->generateLlvmType(context);
+                const auto type = def.variableType->generateLlvmType(context);
                 if (result->getType()->isIntegerTy())
                 {
                     result = context->Builder->CreateIntCast(result, type, true);
+                }
+                else if (type->isIEEELikeFPTy())
+                {
+                    result = context->Builder->CreateFPCast(result, type);
                 }
                 if (type->isStructTy() && result->getType()->isPointerTy())
                 {

@@ -15,6 +15,7 @@
 #include "ast/BreakNode.h"
 #include "ast/CharConstantNode.h"
 #include "ast/ComparissionNode.h"
+#include "ast/DoubleNode.h"
 #include "ast/FieldAccessNode.h"
 #include "ast/FieldAssignmentNode.h"
 #include "ast/ForNode.h"
@@ -54,6 +55,9 @@ Parser::Parser(const std::vector<std::filesystem::path> &rtlDirectories, std::fi
     m_typeDefinitions["boolean"] = VariableType::getBoolean();
     m_typeDefinitions["pointer"] = PointerType::getUnqual();
     m_typeDefinitions["pinteger"] = PointerType::getPointerTo(VariableType::getInteger());
+    m_typeDefinitions["double"] = VariableType::getDouble();
+    m_typeDefinitions["real"] = VariableType::getDouble();
+    m_typeDefinitions["single"] = VariableType::getSingle();
 }
 bool Parser::hasError() const
 {
@@ -171,6 +175,12 @@ std::shared_ptr<ASTNode> Parser::parseNumber()
 {
     consume(TokenType::NUMBER);
     auto token = current();
+    if (token.lexical().find('.') != std::string::npos)
+    {
+        auto value = std::atof(token.lexical().data());
+        return std::make_shared<DoubleNode>(token, value);
+    }
+
     auto value = std::atoll(token.lexical().data());
     auto base = 1 + static_cast<int>(std::log2(value));
     base = (base > 32) ? 64 : 32;
@@ -569,7 +579,7 @@ std::shared_ptr<ASTNode> Parser::parseBaseExpression(const size_t scope, const s
         checkLhsExists(lhs, operatorToken);
         consumeKeyWord("div");
         auto rhs = parseToken(scope);
-        return parseExpression(scope, std::make_shared<BinaryOperationNode>(operatorToken, Operator::DIV, lhs, rhs));
+        return parseExpression(scope, std::make_shared<BinaryOperationNode>(operatorToken, Operator::IDIV, lhs, rhs));
     }
     if (canConsume(TokenType::LEFT_CURLY))
     {
@@ -1418,7 +1428,6 @@ bool Parser::importUnit(const Token &token, const std::string &filename, bool in
         if (m_rtlDirectories.end() == it)
             break;
         path = *it / filename;
-        std::cerr << "uses:  " << path << std::endl;
         ++it;
     }
     if (!unitCache.contains(path.string()))

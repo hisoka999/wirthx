@@ -76,7 +76,13 @@ llvm::Value *VariableAssignmentNode::codegen(std::unique_ptr<Context> &context)
         // context->NamedValues[m_variableName] = expressionResult;
         return allocatedValue;
     }
-
+    if (type->isIEEELikeFPTy() && expressionResult->getType()->isIEEELikeFPTy())
+    {
+        allocatedValue = context->Builder->CreateFPCast(allocatedValue, expressionResult->getType());
+        context->Builder->CreateStore(expressionResult, allocatedValue);
+        // context->NamedValues[m_variableName] = expressionResult;
+        return allocatedValue;
+    }
 
     if (type->isStructTy() && expressionResult->getType()->isPointerTy())
     {

@@ -312,9 +312,12 @@ bool Lexer::find_string(const std::string &content, size_t start, size_t *endPos
     }
     return true;
 }
-bool isNumberStart(char c) { return (c >= '0' && c <= '9') || c == '-'; }
+constexpr bool isNumber(const char c) { return (c >= '0' && c <= '9'); }
 
-bool Lexer::find_number(const std::string &content, size_t start, size_t *endPosition)
+constexpr bool isNumberStart(const char c) { return isNumber(c) || c == '-'; }
+
+
+bool Lexer::find_number(const std::string &content, const size_t start, size_t *endPosition)
 {
     int index = 0;
     char current = content[start];
@@ -322,7 +325,8 @@ bool Lexer::find_number(const std::string &content, size_t start, size_t *endPos
         return false;
     if (!isNumberStart(current))
         return false;
-    while ((current >= '0' && current <= '9') || (index == 0 && current == '-'))
+    while (isNumber(current) or (index == 0 and current == '-') or
+           (current == '.' and isNumber(content[*endPosition + 1])))
     {
 
         *endPosition += 1;
@@ -334,7 +338,7 @@ bool Lexer::find_number(const std::string &content, size_t start, size_t *endPos
     return true;
 }
 
-bool Lexer::find_token(const std::string &content, size_t start, size_t *endPosition)
+bool Lexer::find_token(const std::string &content, const size_t start, size_t *endPosition)
 {
     char current = content[start];
     *endPosition = start;
@@ -355,7 +359,7 @@ bool Lexer::find_token(const std::string &content, size_t start, size_t *endPosi
     return true;
 }
 
-bool Lexer::find_fixed_token(const std::string &content, size_t start, size_t *endPosition)
+bool Lexer::find_fixed_token(const std::string &content, const size_t start, size_t *endPosition)
 {
 
     char current = content[start];
@@ -372,18 +376,9 @@ bool Lexer::find_fixed_token(const std::string &content, size_t start, size_t *e
 
     const auto tmp = content.substr(start, *endPosition - start);
     return std::ranges::any_of(possible_tokens, [tmp](const std::string &token) { return iequals(tmp, token); });
-    // for (const auto &token: possible_tokens)
-    // {
-    //     if (iequals(tmp, token))
-    //     {
-    //         return true;
-    //     }
-    // }
-    //
-    // return false;
 }
 
-bool Lexer::find_comment(const std::string &content, size_t start, size_t *endPosition)
+bool Lexer::find_comment(const std::string &content, const size_t start, size_t *endPosition)
 {
     if (content[start] == '{')
     {

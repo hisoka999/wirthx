@@ -7,7 +7,8 @@ enum class Operator : char
     MINUS = '-',
     MUL = '*',
     MOD = '%',
-    DIV = '/'
+    DIV = '/',
+    IDIV = 'D'
 };
 
 class BinaryOperationNode : public ASTNode
@@ -18,6 +19,7 @@ class BinaryOperationNode : public ASTNode
     Operator m_operator;
 
     llvm::Value *generateForInteger(llvm::Value *lhs, llvm::Value *rhs, std::unique_ptr<Context> &context);
+    llvm::Value *generateForFloat(llvm::Value *lhs, llvm::Value *rhs, std::unique_ptr<Context> &context);
     llvm::Value *generateForString(llvm::Value *lhs, llvm::Value *rhs, std::unique_ptr<Context> &context);
 
 public:

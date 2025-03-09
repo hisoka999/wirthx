@@ -48,28 +48,58 @@ llvm::Value *ComparrisionNode::codegen(std::unique_ptr<Context> &context)
     assert(rhs && "rhs of the comparison is null");
 
     llvm::CmpInst::Predicate pred = llvm::CmpInst::ICMP_EQ;
-    switch (m_operator)
+    if (lhs->getType()->isDoubleTy() || lhs->getType()->isFloatTy())
     {
-        case CMPOperator::NOT_EQUALS:
-            pred = llvm::CmpInst::ICMP_NE;
-            break;
-        case CMPOperator::EQUALS:
+        pred = llvm::CmpInst::FCMP_OEQ;
+        switch (m_operator)
+        {
+            case CMPOperator::NOT_EQUALS:
+                pred = llvm::CmpInst::FCMP_ONE;
+                break;
+            case CMPOperator::EQUALS:
 
-            break;
-        case CMPOperator::GREATER:
-            pred = llvm::CmpInst::ICMP_SGT;
-            break;
-        case CMPOperator::GREATER_EQUAL:
-            pred = llvm::CmpInst::ICMP_SGE;
-            break;
-        case CMPOperator::LESS:
-            pred = llvm::CmpInst::ICMP_SLT;
-            break;
-        case CMPOperator::LESS_EQUAL:
-            pred = llvm::CmpInst::ICMP_SLE;
-            break;
-        default:
-            break;
+                break;
+            case CMPOperator::GREATER:
+                pred = llvm::CmpInst::FCMP_OGT;
+                break;
+            case CMPOperator::GREATER_EQUAL:
+                pred = llvm::CmpInst::FCMP_OGE;
+                break;
+            case CMPOperator::LESS:
+                pred = llvm::CmpInst::FCMP_OLT;
+                break;
+            case CMPOperator::LESS_EQUAL:
+                pred = llvm::CmpInst::FCMP_OLE;
+                break;
+            default:
+                break;
+        }
+    }
+    else
+    {
+        switch (m_operator)
+        {
+            case CMPOperator::NOT_EQUALS:
+                pred = llvm::CmpInst::ICMP_NE;
+                break;
+            case CMPOperator::EQUALS:
+
+                break;
+            case CMPOperator::GREATER:
+                pred = llvm::CmpInst::ICMP_SGT;
+                break;
+            case CMPOperator::GREATER_EQUAL:
+                pred = llvm::CmpInst::ICMP_SGE;
+                break;
+            case CMPOperator::LESS:
+                pred = llvm::CmpInst::ICMP_SLT;
+                break;
+            case CMPOperator::LESS_EQUAL:
+                pred = llvm::CmpInst::ICMP_SLE;
+                break;
+            default:
+                break;
+        }
     }
 
     ASTNode *parent = context->ProgramUnit.get();
@@ -131,7 +161,17 @@ llvm::Value *ComparrisionNode::codegen(std::unique_ptr<Context> &context)
             rhs = context->Builder->CreateIntCast(rhs, targetType, true, "rhs_cast");
         }
     }
-
+    else if (lhsType && (lhsType->baseType == VariableBaseType::Float or lhsType->baseType == VariableBaseType::Double))
+    {
+        if (lhs->getType()->isFloatTy() && rhs->getType()->isDoubleTy())
+        {
+            lhs = context->Builder->CreateFPCast(lhs, rhs->getType());
+        }
+        else if (lhs->getType()->isDoubleTy() && rhs->getType()->isFloatTy())
+        {
+            lhs = context->Builder->CreateFPCast(rhs, lhs->getType());
+        }
+    }
     else
     {
         if (lhsType && lhsType->baseType == VariableBaseType::String)

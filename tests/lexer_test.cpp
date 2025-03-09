@@ -373,7 +373,7 @@ TEST(LexerTest, LexMacroSimple)
 }
 
 
-TEST(LexerText, FunctionCalls)
+TEST(LexerTest, FunctionCalls)
 {
     Lexer lexer;
     auto result = lexer.tokenize("filename.pas", R"(program test;
@@ -443,4 +443,82 @@ end.)");
     ASSERT_EQ(result[12].sourceLocation.num_bytes, 3);
 
     // ASSERT_EQ(result[7].tokenType, TokenType::T_EOF);
+}
+
+
+TEST(LexerTest, LexFloatNumber)
+{
+    Lexer lexer;
+    auto result = lexer.tokenize("filename.pas", R"(
+    myVar := 2.55;
+    myVar := -3.14;
+)");
+    EXPECT_EQ(result.size(), 11);
+    size_t i = 0;
+    ASSERT_EQ(result[i].tokenType, TokenType::NAMEDTOKEN);
+    ASSERT_EQ(result[i].lexical(), "myVar"sv);
+    i++;
+    ASSERT_EQ(result[i].tokenType, TokenType::COLON);
+    ASSERT_EQ(result[i].lexical(), ":"sv);
+    i++;
+    ASSERT_EQ(result[i].tokenType, TokenType::EQUAL);
+    ASSERT_EQ(result[i].lexical(), "="sv);
+    i++;
+    ASSERT_EQ(result[i].tokenType, TokenType::NUMBER);
+    ASSERT_EQ(result[i].lexical(), "2.55"sv);
+    i++;
+    ASSERT_EQ(result[i].tokenType, TokenType::SEMICOLON);
+    ASSERT_EQ(result[i].lexical(), ";"sv);
+    i++;
+    ASSERT_EQ(result[i].tokenType, TokenType::NAMEDTOKEN);
+    ASSERT_EQ(result[i].lexical(), "myVar"sv);
+    i++;
+    ASSERT_EQ(result[i].tokenType, TokenType::COLON);
+    ASSERT_EQ(result[i].lexical(), ":"sv);
+    i++;
+    ASSERT_EQ(result[i].tokenType, TokenType::EQUAL);
+    ASSERT_EQ(result[i].lexical(), "="sv);
+    i++;
+    ASSERT_EQ(result[i].tokenType, TokenType::NUMBER);
+    ASSERT_EQ(result[i].lexical(), "-3.14"sv);
+    i++;
+    ASSERT_EQ(result[i].tokenType, TokenType::SEMICOLON);
+    ASSERT_EQ(result[i].lexical(), ";"sv);
+}
+
+TEST(LexerTest, ParseArray)
+{
+    //        buffer: array [0..100] of char;
+    Lexer lexer;
+    auto result = lexer.tokenize("filename.pas", R"(
+    buffer: array [0..100] of char;
+)");
+    EXPECT_EQ(result.size(), 13);
+    size_t i = 0;
+    ASSERT_EQ(result[i].tokenType, TokenType::NAMEDTOKEN);
+    ASSERT_EQ(result[i].lexical(), "buffer"sv);
+    i++;
+    ASSERT_EQ(result[i].tokenType, TokenType::COLON);
+    ASSERT_EQ(result[i].lexical(), ":"sv);
+    i++;
+    ASSERT_EQ(result[i].tokenType, TokenType::KEYWORD);
+    ASSERT_EQ(result[i].lexical(), "array"sv);
+    i++;
+    ASSERT_EQ(result[i].tokenType, TokenType::LEFT_SQUAR);
+    ASSERT_EQ(result[i].lexical(), "["sv);
+    i++;
+    ASSERT_EQ(result[i].tokenType, TokenType::NUMBER);
+    ASSERT_EQ(result[i].lexical(), "0"sv);
+    i++;
+    ASSERT_EQ(result[i].tokenType, TokenType::DOT);
+    ASSERT_EQ(result[i].lexical(), "."sv);
+    i++;
+    ASSERT_EQ(result[i].tokenType, TokenType::DOT);
+    ASSERT_EQ(result[i].lexical(), "."sv);
+    i++;
+    ASSERT_EQ(result[i].tokenType, TokenType::NUMBER);
+    ASSERT_EQ(result[i].lexical(), "100"sv);
+    i++;
+    ASSERT_EQ(result[i].tokenType, TokenType::RIGHT_SQUAR);
+    ASSERT_EQ(result[i].lexical(), "]"sv);
 }

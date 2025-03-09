@@ -1,0 +1,5 @@
+number1 = 2.440000
+number1 + number2 = 5.990000
+number1 - number2 = -1.110000
+number1 * number2 = 8.662000
+number1 / number2 = 0.687324

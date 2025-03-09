@@ -72,7 +72,9 @@ llvm::AllocaInst *VariableDefinition::generateCode(std::unique_ptr<Context> &con
             return allocation;
         }
         case VariableBaseType::Float:
-        case VariableBaseType::Real:
+            return context->Builder->CreateAlloca(llvm::Type::getFloatTy(*context->TheContext), nullptr,
+                                                  this->variableName);
+        case VariableBaseType::Double:
             return context->Builder->CreateAlloca(llvm::Type::getDoubleTy(*context->TheContext), nullptr,
                                                   this->variableName);
         case VariableBaseType::Struct:
