@@ -26,6 +26,8 @@ struct CompilerOptions
     bool runProgram = false;
     bool printLLVMIR = false;
     bool printAST = false;
+    bool lsp = false;
+    bool colorOutput = true;
 };
 
 std::string shiftarg(std::vector<std::string> &args);

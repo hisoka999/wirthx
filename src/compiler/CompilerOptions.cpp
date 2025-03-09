@@ -16,7 +16,7 @@ CompilerOptions parseCompilerOptions(std::vector<std::string> &argList)
     options.outputDirectory = std::filesystem::current_path().string();
     options.compilerPath = shiftarg(argList);
 
-    while (argList.size() > 1)
+    while (!argList.empty())
     {
         auto arg = shiftarg(argList);
         if (arg == "--ast"sv)
@@ -50,6 +50,15 @@ CompilerOptions parseCompilerOptions(std::vector<std::string> &argList)
         else if (arg == "--debug")
         {
             options.buildMode = BuildMode::Debug;
+        }
+        else if (arg == "--lsp")
+        {
+            options.lsp = true;
+        }
+        else
+        {
+            argList.push_back(arg);
+            break;
         }
     }
 

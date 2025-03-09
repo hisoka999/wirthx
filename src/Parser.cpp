@@ -55,13 +55,21 @@ Parser::Parser(const std::vector<std::filesystem::path> &rtlDirectories, std::fi
     m_typeDefinitions["pointer"] = PointerType::getUnqual();
     m_typeDefinitions["pinteger"] = PointerType::getPointerTo(VariableType::getInteger());
 }
-bool Parser::hasError() const { return !m_errors.empty(); }
-void Parser::printErrors(std::ostream &outputStream)
+bool Parser::hasError() const
+{
+    for (auto &msg: m_errors)
+    {
+        if (msg.outputType == OutputType::ERROR)
+            return true;
+    }
+    return false;
+}
+bool Parser::hasMessages() const { return !m_errors.empty(); }
+void Parser::printErrors(std::ostream &outputStream, bool printColor)
 {
     for (auto &error: m_errors)
     {
-        outputStream << error.token.sourceLocation.filename << ":" << error.token.row << ":" << error.token.col << ": "
-                     << error.message << "\n";
+        error.msg(outputStream, printColor);
     }
 }
 
@@ -484,6 +492,16 @@ std::shared_ptr<ASTNode> Parser::parseLogicalExpression(const size_t scope, std:
     return lhs;
 }
 
+void Parser::checkLhsExists(const std::shared_ptr<ASTNode> &lhs, const Token &token)
+{
+    if (!lhs)
+    {
+        m_errors.push_back(ParserError{
+
+                .token = token,
+                .message = "unexpected token " + std::string(magic_enum::enum_name(token.tokenType)) + "!"});
+    }
+}
 /*
  a1 * a2 + b1 * b2 ==> (a * a) + (b * b)
  1. lhs = a1
@@ -501,6 +519,7 @@ std::shared_ptr<ASTNode> Parser::parseBaseExpression(const size_t scope, const s
     if (tryConsume(TokenType::PLUS))
     {
         Token operatorToken = current();
+        checkLhsExists(lhs, operatorToken);
         auto rhs = parseToken(scope);
 
         if (canConsume(TokenType::MUL) or canConsume(TokenType::DIV) or canConsume(TokenType::LEFT_CURLY))
@@ -513,7 +532,7 @@ std::shared_ptr<ASTNode> Parser::parseBaseExpression(const size_t scope, const s
     if (tryConsume(TokenType::MINUS))
     {
         Token operatorToken = current();
-
+        checkLhsExists(lhs, operatorToken);
         auto rhs = parseToken(scope);
         if (canConsume(TokenType::MUL) or canConsume(TokenType::DIV) or canConsume(TokenType::LEFT_CURLY))
         {
@@ -525,18 +544,21 @@ std::shared_ptr<ASTNode> Parser::parseBaseExpression(const size_t scope, const s
     if (tryConsume(TokenType::MUL))
     {
         Token operatorToken = current();
+        checkLhsExists(lhs, operatorToken);
         auto rhs = parseToken(scope);
         return parseExpression(scope, std::make_shared<BinaryOperationNode>(operatorToken, Operator::MUL, lhs, rhs));
     }
     if (tryConsume(TokenType::DIV))
     {
         Token operatorToken = current();
+        checkLhsExists(lhs, operatorToken);
         auto rhs = parseToken(scope);
         return parseExpression(scope, std::make_shared<BinaryOperationNode>(operatorToken, Operator::DIV, lhs, rhs));
     }
     if (canConsumeKeyWord("mod"))
     {
         Token operatorToken = current();
+        checkLhsExists(lhs, operatorToken);
         consumeKeyWord("mod");
         auto rhs = parseToken(scope);
         return parseExpression(scope, std::make_shared<BinaryOperationNode>(operatorToken, Operator::MOD, lhs, rhs));
@@ -544,6 +566,7 @@ std::shared_ptr<ASTNode> Parser::parseBaseExpression(const size_t scope, const s
     if (canConsumeKeyWord("div"))
     {
         Token operatorToken = current();
+        checkLhsExists(lhs, operatorToken);
         consumeKeyWord("div");
         auto rhs = parseToken(scope);
         return parseExpression(scope, std::make_shared<BinaryOperationNode>(operatorToken, Operator::DIV, lhs, rhs));
@@ -567,6 +590,7 @@ std::shared_ptr<ASTNode> Parser::parseBaseExpression(const size_t scope, const s
         {
             consume(TokenType::GREATER);
             auto operatorToken = current();
+            checkLhsExists(lhs, operatorToken);
             if (canConsume(TokenType::EQUAL))
             {
                 consume(TokenType::EQUAL);
@@ -582,6 +606,7 @@ std::shared_ptr<ASTNode> Parser::parseBaseExpression(const size_t scope, const s
         {
             consume(TokenType::LESS);
             auto operatorToken = current();
+            checkLhsExists(lhs, operatorToken);
             if (canConsume(TokenType::EQUAL))
             {
                 consume(TokenType::EQUAL);
@@ -598,6 +623,7 @@ std::shared_ptr<ASTNode> Parser::parseBaseExpression(const size_t scope, const s
             consume(TokenType::BANG);
             consume(TokenType::EQUAL);
             auto operatorToken = current();
+            checkLhsExists(lhs, operatorToken);
             auto rhs = parseBaseExpression(scope);
             return parseExpression(
                     scope, std::make_shared<ComparrisionNode>(operatorToken, CMPOperator::NOT_EQUALS, lhs, rhs));
@@ -607,6 +633,7 @@ std::shared_ptr<ASTNode> Parser::parseBaseExpression(const size_t scope, const s
         {
             consume(TokenType::EQUAL);
             auto operatorToken = current();
+            checkLhsExists(lhs, operatorToken);
             auto rhs = parseBaseExpression(scope);
             return parseExpression(scope,
                                    std::make_shared<ComparrisionNode>(operatorToken, CMPOperator::EQUALS, lhs, rhs));
@@ -656,7 +683,6 @@ std::shared_ptr<ASTNode> Parser::parseVariableAssignment(size_t scope)
             m_errors.push_back(
                     ParserError{.token = currentToken,
                                 .message = "The variable " + std::string(variableName) + " is not yet declared!"});
-            return nullptr;
         }
 
         // parse expression
@@ -926,8 +952,8 @@ std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDeclaration(size_t 
 
     if (tryConsumeKeyWord("external"))
     {
-        tryConsume(TokenType::STRING) || tryConsume(TokenType::CHAR);
-        libName = std::string(current().lexical());
+        if (tryConsume(TokenType::STRING) || tryConsume(TokenType::CHAR))
+            libName = std::string(current().lexical());
 
         if (tryConsumeKeyWord("name"))
         {
@@ -1028,7 +1054,7 @@ std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDefinition(size_t s
         if (!tryConsume(TokenType::COLON))
         {
             m_errors.push_back(
-                    ParserError{.token = current(),
+                    ParserError{.token = m_tokens[m_current + 1],
                                 .message = "the return type for the function \"" + functionName + "\" is missing."});
             throw ParserException(m_errors);
         }
@@ -1354,7 +1380,7 @@ std::shared_ptr<ASTNode> Parser::parseFunctionCall(const size_t scope)
     auto nameToken = current();
     auto functionName = current().lexical();
     const bool isSysCall = isKnownSystemCall(functionName);
-    if (!isSysCall && std::ranges::find(m_known_function_names, functionName) == std::end(m_known_function_names))
+    if (!isSysCall && !isFunctionDeclared(functionName))
     {
         m_errors.push_back(ParserError{
                 .token = current(), .message = "a function with the name '" + functionName + "' is not yet defined!"});
@@ -1383,7 +1409,7 @@ std::shared_ptr<ASTNode> Parser::parseFunctionCall(const size_t scope)
     return std::make_shared<FunctionCallNode>(nameToken, functionName, callArgs);
 }
 
-bool Parser::importUnit(const std::string &filename, bool includeSystem)
+bool Parser::importUnit(const Token &token, const std::string &filename, bool includeSystem)
 {
     auto path = this->m_file_path.parent_path() / filename;
     auto it = m_rtlDirectories.begin();
@@ -1392,6 +1418,7 @@ bool Parser::importUnit(const std::string &filename, bool includeSystem)
         if (m_rtlDirectories.end() == it)
             break;
         path = *it / filename;
+        std::cerr << "uses:  " << path << std::endl;
         ++it;
     }
     if (!unitCache.contains(path.string()))
@@ -1401,10 +1428,8 @@ bool Parser::importUnit(const std::string &filename, bool includeSystem)
         file.open(path, std::ios::in);
         if (!file.is_open())
         {
-            m_errors.push_back(ParserError{.token = current(),
-                                           .message = std::string(current().lexical()) + " is not a valid unit"});
-            m_errors.push_back(
-                    ParserError{.token = current(), .message = path.string() + " is not a valid pascal file"});
+            m_errors.push_back(ParserError{.token = token, .message = filename + " is not a valid unit"});
+            m_errors.push_back(ParserError{.token = token, .message = filename + " is not a valid pascal file"});
 
 
             return true;
@@ -1425,16 +1450,14 @@ bool Parser::importUnit(const std::string &filename, bool includeSystem)
         {
             return true;
         }
-
-        for (auto &[typeName, newType]: parser.m_typeDefinitions)
+    }
+    for (auto &[typeName, newType]: unitCache[path.string()]->getTypeDefinitions())
+    {
+        if (!m_typeDefinitions.contains(typeName))
         {
-            if (!m_typeDefinitions.contains(typeName))
-            {
-                m_typeDefinitions[typeName] = newType;
-            }
+            m_typeDefinitions[typeName] = newType;
         }
     }
-
 
     for (auto &definition: unitCache[path.string()]->getFunctionDefinitions())
     {
@@ -1458,6 +1481,24 @@ bool Parser::importUnit(const std::string &filename, bool includeSystem)
 
     return false;
 }
+bool Parser::isFunctionDeclared(const std::string &name)
+{
+    for (const auto &function: m_functionDefinitions)
+    {
+        if (iequals(function->name(), name))
+        {
+            return true;
+        }
+    }
+    for (const auto &function_name: m_known_function_names)
+    {
+        if (iequals(function_name, name))
+        {
+            return true;
+        }
+    }
+    return false;
+}
 
 void Parser::parseInterfaceSection()
 {
@@ -1466,7 +1507,7 @@ void Parser::parseInterfaceSection()
         while (consume(TokenType::NAMEDTOKEN))
         {
             auto filename = std::string(current().lexical()) + ".pas";
-            importUnit(filename);
+            importUnit(current(), filename);
 
 
             if (!tryConsume(TokenType::COMMA))
@@ -1508,7 +1549,7 @@ void Parser::parseImplementationSection(bool includeSystem)
         while (consume(TokenType::NAMEDTOKEN))
         {
             auto filename = std::string(current().lexical()) + ".pas";
-            importUnit(filename, includeSystem);
+            importUnit(current(), filename, includeSystem);
 
 
             if (!tryConsume(TokenType::COMMA))
@@ -1558,10 +1599,6 @@ std::unique_ptr<UnitNode> Parser::parseUnit(bool includeSystem)
 
         consume(TokenType::SEMICOLON);
 
-        if (unitName != "system" && includeSystem)
-        {
-            importUnit("system.pas", false);
-        }
 
         std::shared_ptr<BlockNode> blockNode = nullptr;
         while (hasNext())
@@ -1600,13 +1637,29 @@ std::unique_ptr<UnitNode> Parser::parseUnit(bool includeSystem)
             throw ParserException(m_errors);
         }
 
+        for (auto declaration: m_functionDeclarations)
+        {
+            bool found = false;
+            for (auto def: m_functionDefinitions)
+            {
+                if (def->functionSignature() == declaration->functionSignature())
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                m_functionDefinitions.emplace_back(declaration);
+            }
+        }
+
 
         return std::make_unique<UnitNode>(unitNameToken, unitType, unitName, m_functionDefinitions, m_typeDefinitions,
                                           blockNode);
     }
     catch (ParserException &e)
     {
-        std::cerr << e.what();
     }
     return nullptr;
 }
@@ -1642,7 +1695,7 @@ std::unique_ptr<UnitNode> Parser::parseProgram()
 
         if (unitName != "system")
         {
-            importUnit("system.pas", false);
+            importUnit(m_tokens.front(), "system.pas", false);
         }
 
         std::shared_ptr<BlockNode> blockNode = nullptr;
@@ -1677,7 +1730,7 @@ std::unique_ptr<UnitNode> Parser::parseProgram()
                 while (consume(TokenType::NAMEDTOKEN))
                 {
                     auto filename = std::string(current().lexical()) + ".pas";
-                    importUnit(filename);
+                    importUnit(current(), filename);
 
 
                     if (!tryConsume(TokenType::COMMA))
@@ -1727,7 +1780,6 @@ std::unique_ptr<UnitNode> Parser::parseProgram()
     }
     catch (ParserException &e)
     {
-        std::cerr << e.what();
     }
     return nullptr;
 }

@@ -19,6 +19,8 @@ interface
       S2: string
     ):Integer;
 
+    function strlen(str :  pchar) : int64; external 'c' name 'strlen';
+
 implementation
 
     function CompareStr( S1,S2 : string) : integer;

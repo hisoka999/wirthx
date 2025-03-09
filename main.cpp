@@ -7,6 +7,7 @@
 #include "Parser.h"
 #include "compiler/Compiler.h"
 #include "config.h"
+#include "lsp/LanguageServer.h"
 
 using namespace std::literals;
 
@@ -51,6 +52,15 @@ int main(int args, char **argv)
 
     CompilerOptions options = parseCompilerOptions(argList);
 
+    std::filesystem::path programPath(program);
+    options.rtlDirectories.push_back(programPath.parent_path() / "rtl");
+
+    if (options.lsp)
+    {
+        LanguageServer languageServer(options);
+        languageServer.handleRequest();
+        return 0;
+    }
 
     std::ifstream file;
     std::istringstream is;
@@ -72,7 +82,7 @@ int main(int args, char **argv)
     switch (options.option)
     {
         case CompileOption::COMPILE:
-            compile_file(options, file_path, std::cerr, std::cout);
+            compile_file(options, file_path, std::cout, std::cout);
             break;
         case CompileOption::JIT:
             assert(false && "JIT compiler is not implemented yet.");

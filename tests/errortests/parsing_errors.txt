@@ -1,0 +1,9 @@
+FILENAME:6:13: error: unexpected token EQUAL!
+    if bla == 10 then
+            ^--------
+FILENAME:8:5: error: unexpected keyword found else!
+    else
+    ^---
+FILENAME:8:5: error: unexpected token found KEYWORD!
+    else
+    ^---

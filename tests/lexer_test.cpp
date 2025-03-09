@@ -371,3 +371,76 @@ TEST(LexerTest, LexMacroSimple)
 
     ASSERT_EQ(result[7].tokenType, TokenType::T_EOF);
 }
+
+
+TEST(LexerText, FunctionCalls)
+{
+    Lexer lexer;
+    auto result = lexer.tokenize("filename.pas", R"(program test;
+begin
+    for i := 0 to high(arr) do
+    begin
+        stmt := i;
+    end;
+end.)");
+
+    EXPECT_EQ(result.size(), 26);
+    ASSERT_EQ(result[0].tokenType, TokenType::KEYWORD);
+    ASSERT_EQ(result[0].lexical(), "program"sv);
+
+    ASSERT_EQ(result[1].tokenType, TokenType::NAMEDTOKEN);
+    ASSERT_EQ(result[1].lexical(), "test"sv);
+
+    ASSERT_EQ(result[2].tokenType, TokenType::SEMICOLON);
+    ASSERT_EQ(result[2].lexical(), ";"sv);
+
+    ASSERT_EQ(result[3].tokenType, TokenType::KEYWORD);
+    ASSERT_EQ(result[3].lexical(), "begin"sv);
+
+    ASSERT_EQ(result[4].tokenType, TokenType::KEYWORD);
+    ASSERT_EQ(result[4].lexical(), "for"sv);
+
+
+    ASSERT_EQ(result[5].tokenType, TokenType::NAMEDTOKEN);
+    ASSERT_EQ(result[5].lexical(), "i"sv);
+    ASSERT_EQ(result[5].row, 3);
+    ASSERT_EQ(result[5].col, 9);
+
+    ASSERT_EQ(result[6].tokenType, TokenType::COLON);
+    ASSERT_EQ(result[6].lexical(), ":"sv);
+    ASSERT_EQ(result[6].row, 3);
+    ASSERT_EQ(result[6].col, 11);
+
+    ASSERT_EQ(result[7].tokenType, TokenType::EQUAL);
+    ASSERT_EQ(result[7].lexical(), "="sv);
+    ASSERT_EQ(result[7].row, 3);
+    ASSERT_EQ(result[7].col, 12);
+
+    ASSERT_EQ(result[8].tokenType, TokenType::NUMBER);
+    ASSERT_EQ(result[8].lexical(), "0"sv);
+    ASSERT_EQ(result[8].row, 3);
+    ASSERT_EQ(result[8].col, 14);
+
+    ASSERT_EQ(result[9].tokenType, TokenType::KEYWORD);
+    ASSERT_EQ(result[9].lexical(), "to"sv);
+    ASSERT_EQ(result[9].row, 3);
+    ASSERT_EQ(result[9].col, 16);
+
+    ASSERT_EQ(result[10].tokenType, TokenType::NAMEDTOKEN);
+    ASSERT_EQ(result[10].lexical(), "high"sv);
+    ASSERT_EQ(result[10].row, 3);
+    ASSERT_EQ(result[10].col, 19);
+
+    ASSERT_EQ(result[11].tokenType, TokenType::LEFT_CURLY);
+    ASSERT_EQ(result[11].lexical(), "("sv);
+    ASSERT_EQ(result[11].row, 3);
+    ASSERT_EQ(result[11].col, 23);
+
+    ASSERT_EQ(result[12].tokenType, TokenType::NAMEDTOKEN);
+    ASSERT_EQ(result[12].lexical(), "arr"sv);
+    ASSERT_EQ(result[12].row, 3);
+    ASSERT_EQ(result[12].col, 24);
+    ASSERT_EQ(result[12].sourceLocation.num_bytes, 3);
+
+    // ASSERT_EQ(result[7].tokenType, TokenType::T_EOF);
+}

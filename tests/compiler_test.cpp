@@ -152,6 +152,7 @@ TEST_P(CompilerTestError, CompilerTestWithError)
     std::stringstream erstream;
     CompilerOptions options;
     options.rtlDirectories.emplace_back("rtl");
+    options.colorOutput = false;
     compile_file(options, input_path, erstream, ostream);
 
     std::ifstream file;
@@ -171,7 +172,8 @@ TEST_P(CompilerTestError, CompilerTestWithError)
     buffer << file.rdbuf();
     auto expected = buffer.str();
     std::string placeholder = "FILENAME";
-    expected = expected.replace(expected.find(placeholder), placeholder.size(), input_path.string());
+    while (expected.find(placeholder) != std::string::npos)
+        expected = expected.replace(expected.find(placeholder), placeholder.size(), input_path.string());
     std::cout << "expected: " << expected;
     std::cout << ostream.str() << "\n";
     ASSERT_EQ(erstream.str(), expected);
@@ -247,7 +249,7 @@ INSTANTIATE_TEST_SUITE_P(CompilerTestNoError, CompilerTest,
                                          "stringconv"));
 
 INSTANTIATE_TEST_SUITE_P(CompilerTestWithError, CompilerTestError,
-                         testing::Values("arrayaccess", "missing_return_type", "wrong_return_type"));
+                         testing::Values("arrayaccess", "missing_return_type", "wrong_return_type", "parsing_errors"));
 
 INSTANTIATE_TEST_SUITE_P(ProjectEuler, ProjectEulerTest,
                          testing::Values("problem1", "problem2", "problem3", "problem4", "problem5", "problem6",
