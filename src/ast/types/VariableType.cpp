@@ -21,7 +21,6 @@ bool VariableType::isSimpleType() const
         case VariableBaseType::Integer:
         case VariableBaseType::Float:
         case VariableBaseType::Double:
-        case VariableBaseType::Real:;
         case VariableBaseType::Boolean:
             return true;
         default:
