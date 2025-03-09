@@ -60,6 +60,10 @@ llvm::Value *BlockNode::codegen(std::unique_ptr<Context> &context)
 
         {
             context->NamedAllocations[def.variableName] = def.generateCode(context);
+            if (!def.alias.empty())
+            {
+                context->NamedAllocations[def.alias] = context->NamedAllocations[def.variableName];
+            }
             if (def.value)
             {
 

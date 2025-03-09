@@ -17,7 +17,7 @@ program problem6;
     var
         i : int64;
     begin
-    sum_and_square := 0;
+        sum_and_square := 0;
         for i := 1 to value do
             sum_and_square := sum_and_square + i;
 

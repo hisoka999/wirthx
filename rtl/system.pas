@@ -85,15 +85,15 @@ uses ctypes;
     begin
         length_S1 := length(S1);
         length_S2 := length(S2);
-        CompareStr := length_S1 - length_S2;
+        result := length_S1 - length_S2;
         max := length_S1 - 1;
-        if CompareStr = 0 then
+        if result = 0 then
             for idx := 0 to max do
             begin
                 tmp := S1[idx] - S2[idx];
                 if tmp != 0 then
                 begin
-                    CompareStr := tmp;
+                    result := tmp;
                     break;
                 end;
             end;
