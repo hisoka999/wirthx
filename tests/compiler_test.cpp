@@ -250,7 +250,8 @@ INSTANTIATE_TEST_SUITE_P(CompilerTestNoError, CompilerTest,
                                          "enumtest", "rangetypetest", "casetest", "forintest", "classtest"));
 
 INSTANTIATE_TEST_SUITE_P(CompilerTestWithError, CompilerTestError,
-                         testing::Values("arrayaccess", "missing_return_type", "wrong_return_type", "parsing_errors"));
+                         testing::Values("arrayaccess", "missing_return_type", "wrong_return_type", "parsing_errors",
+                                         "classvisibility"));
 
 INSTANTIATE_TEST_SUITE_P(ProjectEuler, ProjectEulerTest,
                          testing::Values("problem1", "problem2", "problem3", "problem4", "problem5", "problem6",

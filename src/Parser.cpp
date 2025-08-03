@@ -1088,6 +1088,17 @@ std::shared_ptr<ASTNode> Parser::parseMethodCall(const Scope &scope, const Token
                     if (auto memberFunction = classType->getMemberFunction(methodNameToken.lexical());
                         memberFunction.has_value())
                     {
+                        if ((memberFunction->accessModifier == AccessModifier::Protected &&
+                             (!scope.classType || *scope.classType != *classType)) ||
+                            (memberFunction->accessModifier == AccessModifier::Private && !scope.classType))
+                        {
+                            m_errors.push_back(ParserError{.token = methodNameToken,
+                                                           .message = "The member function '" +
+                                                                      methodNameToken.lexical() +
+                                                                      "' is not accessible in this context!"});
+                            return nullptr;
+                        }
+
                         return std::make_shared<MethodCallNode>(variableNameToken, methodNameToken,
                                                                 memberFunction.value(), arguments);
                     }
@@ -2134,7 +2145,6 @@ void Parser::parseImplementationSection(bool includeSystem)
         }
         else if (tryConsumeKeyWord("constructor"))
         {
-            // TODO
             m_functionDefinitions.emplace_back(parseFunctionDefinition(scope, FunctionType::Constructor));
         }
         else if (!canConsumeKeyWord("end") && !canConsumeKeyWord("initialization"))
