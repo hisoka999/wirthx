@@ -93,7 +93,7 @@ void createFPrintfCall(const std::unique_ptr<Context> &context)
 void createAssignCall(std::unique_ptr<Context> &context)
 {
     std::vector<llvm::Type *> params;
-    const auto fileType = context->programUnit()->getTypeDefinitions().getType("file");
+    const auto fileType = context->programUnit()->getTypeDefinitions().getType("file").value();
     const auto llvmFileType = fileType->generateLlvmType(context);
     params.push_back(llvm::PointerType::getUnqual(*context->context()));
     params.push_back(llvm::PointerType::getUnqual(*context->context()));
@@ -154,7 +154,7 @@ void createAssignCall(std::unique_ptr<Context> &context)
 void createResetCall(std::unique_ptr<Context> &context)
 {
     std::vector<llvm::Type *> params;
-    const auto fileType = context->programUnit()->getTypeDefinitions().getType("file");
+    const auto fileType = context->programUnit()->getTypeDefinitions().getType("file").value();
     const auto llvmFileType = fileType->generateLlvmType(context);
     params.push_back(llvm::PointerType::getUnqual(*context->context()));
 
@@ -206,7 +206,7 @@ void createResetCall(std::unique_ptr<Context> &context)
 void createRewriteCall(std::unique_ptr<Context> &context)
 {
     std::vector<llvm::Type *> params;
-    const auto fileType = context->programUnit()->getTypeDefinitions().getType("file");
+    const auto fileType = context->programUnit()->getTypeDefinitions().getType("file").value();
     const auto llvmFileType = fileType->generateLlvmType(context);
     params.push_back(llvm::PointerType::getUnqual(*context->context()));
 
@@ -258,7 +258,7 @@ void createRewriteCall(std::unique_ptr<Context> &context)
 void createReadLnCall(std::unique_ptr<Context> &context)
 {
     std::vector<llvm::Type *> params;
-    const auto fileType = context->programUnit()->getTypeDefinitions().getType("file");
+    const auto fileType = context->programUnit()->getTypeDefinitions().getType("file").value();
     const auto llvmFileType = fileType->generateLlvmType(context);
     const auto llvmStringType = StringType::getString()->generateLlvmType(context);
     params.push_back(llvm::PointerType::getUnqual(*context->context()));
@@ -404,7 +404,7 @@ void createReadLnCall(std::unique_ptr<Context> &context)
 void createReadLnStdinCall(std::unique_ptr<Context> &context)
 {
     std::vector<llvm::Type *> params;
-    const auto fileType = context->programUnit()->getTypeDefinitions().getType("file");
+    const auto fileType = context->programUnit()->getTypeDefinitions().getType("file").value();
     const auto llvmFileType = fileType->generateLlvmType(context);
     const auto llvmStringType = StringType::getString()->generateLlvmType(context);
     params.push_back(llvm::PointerType::getUnqual(*context->context()));
@@ -552,7 +552,7 @@ void createCloseFileCall(std::unique_ptr<Context> &context)
 {
     std::vector<llvm::Type *> params;
 
-    const auto fileType = context->programUnit()->getTypeDefinitions().getType("file");
+    const auto fileType = context->programUnit()->getTypeDefinitions().getType("file").value();
     const auto llvmFileType = fileType->generateLlvmType(context);
     params.push_back(llvm::PointerType::getUnqual(*context->context()));
 

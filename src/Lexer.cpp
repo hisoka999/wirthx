@@ -2,26 +2,30 @@
 #include <iostream>
 #include "compare.h"
 
-inline std::vector<std::string> possible_tokens = {"program",   "unit",         "uses",
-                                                   "begin",     "end",          "procedure",
-                                                   "function",  "var",          "if",
-                                                   "then",      "else",         "while",
-                                                   "do",        "for",          "to",
-                                                   "break",     "repeat",       "until",
-                                                   "type",      "array",        "of",
-                                                   "const",     "true",         "false",
-                                                   "and",       "or",           "not",
-                                                   "record",    "external",     "name",
-                                                   "mod",       "inline",       "implementation",
-                                                   "interface", "finalization", "initialization",
-                                                   "div",       "downto",       "file",
-                                                   "case",      "in",           "nil"};
+inline std::vector<std::string> possible_tokens = {
+        "program",   "unit",         "uses",
+        "begin",     "end",          "procedure",
+        "function",  "var",          "if",
+        "then",      "else",         "while",
+        "do",        "for",          "to",
+        "break",     "repeat",       "until",
+        "type",      "array",        "of",
+        "const",     "true",         "false",
+        "and",       "or",           "not",
+        "record",    "external",     "name",
+        "mod",       "inline",       "implementation",
+        "interface", "finalization", "initialization",
+        "div",       "downto",       "file",
+        "case",      "in",           "nil",
+        "class",     "constructor",  "private",
+        "public",    "protected",    "published",
+};
 
 inline std::vector<std::string> macro_token{"ifdef", "else", "endif"};
 
-Lexer::Lexer() {}
+Lexer::Lexer() = default;
 
-Lexer::~Lexer() {}
+Lexer::~Lexer() = default;
 
 constexpr bool validStartNameChar(const char value)
 {

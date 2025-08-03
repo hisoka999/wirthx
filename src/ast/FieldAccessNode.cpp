@@ -92,7 +92,7 @@ llvm::Value *FieldAccessNode::codegen(std::unique_ptr<Context> &context)
 
 
         auto arrayValue = context->builder()->CreateStructGEP(V->getAllocatedType(), V, index, fieldName);
-        return context->builder()->CreateLoad(field.variableType->generateLlvmType(context), arrayValue);
+        return context->builder()->CreateLoad(field.variableType->generateLlvmType(context), arrayValue, fieldName);
     }
 }
 

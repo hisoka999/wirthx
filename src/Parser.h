@@ -13,10 +13,19 @@
 #include <unordered_map>
 
 #include "ast/types/ArrayType.h"
+#include "ast/types/ClassType.h"
 #include "ast/types/TypeRegistry.h"
 
 
 class EnumType;
+
+
+struct Scope
+{
+    std::shared_ptr<ASTNode> rootNode;
+    std::shared_ptr<ClassType> classType = nullptr;
+    size_t id;
+};
 
 
 class Parser
@@ -37,9 +46,9 @@ class Parser
 
     Token next();
     Token current();
-    [[nodiscard]] bool isConstantDefined(const std::string_view &name, const size_t scope);
+    [[nodiscard]] bool isConstantDefined(const std::string_view &name, const Scope &scope);
 
-    [[nodiscard]] bool isVariableDefined(const std::string_view &name, size_t scope);
+    [[nodiscard]] bool isVariableDefined(const std::string_view &name, const Scope &scope);
     [[nodiscard]] bool hasNext() const;
     bool consume(TokenType tokenType);
     bool tryConsume(TokenType tokenType);
@@ -52,33 +61,38 @@ class Parser
     determinVariableTypeByName(const std::string &name) const;
     std::shared_ptr<ASTNode> parseEscapedString(const Token &token);
     std::shared_ptr<ASTNode> parseNumber();
-    std::optional<std::shared_ptr<VariableType>> parseVariableType(size_t scope, bool includeErrors,
+    AccessModifier tryParseAccessModifier(AccessModifier defaultModifier = AccessModifier::Public);
+    std::optional<std::shared_ptr<VariableType>> parseVariableType(const Scope &scope, bool includeErrors,
                                                                    const std::string &typeName = "");
-    void parseTypeDefinitions(size_t scope);
-    std::optional<VariableDefinition> parseConstantDefinition(size_t scope);
-    std::shared_ptr<ASTNode> parseArrayConstructor(size_t size);
-    std::vector<VariableDefinition> parseVariableDefinitions(size_t scope);
-    std::shared_ptr<ArrayType> parseArray(size_t scope);
-    std::shared_ptr<ASTNode> parseStatement(size_t scope, bool withSemicolon = true);
-    void parseConstantDefinitions(size_t scope, std::vector<VariableDefinition> &variable_definitions);
-    std::shared_ptr<ASTNode> parseBaseExpression(size_t scope, const std::shared_ptr<ASTNode> &origLhs = nullptr,
+    void parseTypeDefinitions(const Scope &scope);
+    std::optional<VariableDefinition> parseConstantDefinition(const Scope &scope);
+    std::shared_ptr<ASTNode> parseArrayConstructor(const Scope &scope);
+    std::vector<VariableDefinition> parseVariableDefinitions(const Scope &scope);
+    std::optional<std::shared_ptr<ArrayType>> parseArray(const Scope &scope);
+    std::shared_ptr<ASTNode> parseStatement(const Scope &scope, bool withSemicolon = true);
+    void parseConstantDefinitions(const Scope &scope, std::vector<VariableDefinition> &variable_definitions);
+    std::shared_ptr<ASTNode> parseBaseExpression(const Scope &scope, const std::shared_ptr<ASTNode> &origLhs = nullptr,
                                                  bool includeCompare = true);
-    std::shared_ptr<ASTNode> parseExpression(size_t scope, const std::shared_ptr<ASTNode> &origLhs = nullptr);
-    std::shared_ptr<ASTNode> parseLogicalExpression(size_t scope, std::shared_ptr<ASTNode> lhs);
+    std::shared_ptr<ASTNode> parseExpression(const Scope &scope, const std::shared_ptr<ASTNode> &origLhs = nullptr);
+    std::shared_ptr<ASTNode> parseLogicalExpression(const Scope &scope, std::shared_ptr<ASTNode> lhs);
 
-    std::shared_ptr<BlockNode> parseBlock(size_t scope);
-    std::shared_ptr<ASTNode> parseKeyword(size_t scope, bool withSemicolon);
-    std::shared_ptr<ASTNode> parseFunctionCall(size_t scope);
-    std::shared_ptr<ASTNode> parseVariableAssignment(size_t scope);
+    std::shared_ptr<BlockNode> parseBlock(const Scope &scope);
+    std::shared_ptr<ASTNode> parseKeyword(const Scope &scope, bool withSemicolon);
+    std::shared_ptr<ASTNode> parseFunctionCall(const Scope &scope);
+    std::shared_ptr<ASTNode> parseVariableAssignment(const Scope &scope);
     std::optional<std::shared_ptr<EnumType>> tryGetEnumTypeByValue(const std::string &enumKey) const;
-    std::shared_ptr<ASTNode> parseConstantAccess(size_t scope);
-    std::shared_ptr<ASTNode> parseVariableAccess(size_t scope);
-    std::shared_ptr<ASTNode> parseToken(size_t scope);
-    std::shared_ptr<ASTNode> parseRangeElementOrType(size_t scope);
-    std::shared_ptr<ASTNode> parseRangeElement(const size_t scope);
+    std::shared_ptr<ASTNode> parseConstantAccess(const Scope &scope);
+    std::shared_ptr<ASTNode> parseMethodCall(const Scope &scope, const Token &variableNameToken,
+                                             const Token &methodNameToken);
+    [[nodiscard]] bool isFieldAMethodCall(const std::string &variableName, const std::string &methodName,
+                                          const Scope &scope) const;
+    std::shared_ptr<ASTNode> parseVariableAccess(const Scope &scope);
+    std::shared_ptr<ASTNode> parseToken(const Scope &scope);
+    std::shared_ptr<ASTNode> parseRangeElementOrType(const Scope &scope);
+    std::shared_ptr<ASTNode> parseRangeElement(const Scope &scope);
 
-    std::shared_ptr<FunctionDefinitionNode> parseFunctionDeclaration(size_t scope, bool isFunction);
-    std::shared_ptr<FunctionDefinitionNode> parseFunctionDefinition(size_t scope, bool isFunction);
+    std::shared_ptr<FunctionDefinitionNode> parseFunctionDeclaration(const Scope &scope, FunctionType functionType);
+    std::shared_ptr<FunctionDefinitionNode> parseFunctionDefinition(const Scope &scope, FunctionType functionType);
 
     std::unique_ptr<UnitNode> parseUnit(bool includeSystem);
     bool importUnit(const Token &token, const std::string &filename, bool includeSystem = true);

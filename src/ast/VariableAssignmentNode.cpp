@@ -7,6 +7,7 @@
 #include "VariableAccessNode.h"
 #include "compiler/Context.h"
 #include "exceptions/CompilerException.h"
+#include "types/ClassType.h"
 
 VariableAssignmentNode::VariableAssignmentNode(const Token &variableName, const std::shared_ptr<ASTNode> &expression,
                                                bool dereference) :
@@ -57,13 +58,80 @@ llvm::Value *VariableAssignmentNode::codegen(std::unique_ptr<Context> &context)
         type = context->namedAllocation(m_variableName)->getAllocatedType();
     }
 
+    if (!allocatedValue && context->currentFunction())
+    {
+        auto functionDefinition =
+                context->programUnit()->getFunctionDefinition(context->currentFunction()->getName().str());
+        if (functionDefinition.has_value() && functionDefinition.value()->parent() &&
+            functionDefinition.value()->functionType() != FunctionType::Constructor)
+        {
+            auto thisPointer = context->currentFunction()->getArg(0);
+            auto rawType = context->programUnit()
+                                   ->getTypeDefinitions()
+                                   .getType(functionDefinition.value()->parent().value())
+                                   .value();
+            if (const auto classType = std::dynamic_pointer_cast<ClassType>(rawType))
+            {
+                if (auto member = classType->member(m_variableName); member.has_value())
+                {
+                    const auto fieldName = "self." + m_variableName;
+                    auto llvmRecordType = llvm::cast<llvm::StructType>(classType->generateLlvmType(context));
+
+
+                    type = member.value().variableDefinition->variableType->generateLlvmType(context);
+                    const auto index = classType->getFieldIndexByName(m_variableName);
+
+
+                    auto fieldPointer =
+                            context->builder()->CreateStructGEP(llvmRecordType, thisPointer, index, fieldName);
+
+                    auto expressionResult = m_expression->codegen(context);
+
+                    context->builder()->CreateStore(expressionResult, fieldPointer);
+                    return expressionResult;
+                }
+            }
+        }
+        else if (functionDefinition.value()->functionType() == FunctionType::Constructor)
+        {
+            auto thisPointer = context->findValue("self").value();
+            auto rawType = context->programUnit()
+                                   ->getTypeDefinitions()
+                                   .getType(functionDefinition.value()->parent().value())
+                                   .value();
+            if (const auto classType = std::dynamic_pointer_cast<ClassType>(rawType))
+            {
+                if (auto member = classType->member(m_variableName); member.has_value())
+                {
+                    const auto fieldName = "self." + m_variableName;
+                    auto llvmRecordType = classType->generateLlvmType(context);
+
+                    type = member.value().variableDefinition->variableType->generateLlvmType(context);
+                    const auto index = classType->getFieldIndexByName(m_variableName);
+
+
+                    auto arrayValue =
+                            context->builder()->CreateStructGEP(llvmRecordType, thisPointer, index, fieldName);
+
+                    auto expressionResult = m_expression->codegen(context);
+
+                    context->builder()->CreateStore(expressionResult, arrayValue);
+                    return expressionResult;
+                }
+            }
+        }
+    }
+
 
     if (!allocatedValue)
+    {
         return LogErrorV("Unknown variable name for assignment: " + m_variableName);
+    }
 
 
     auto expressionResult = m_expression->codegen(context);
-
+    assert(expressionResult != nullptr && "Expression result should not be null");
+    assert(type != nullptr && "Type should not be null");
     if (type->isIntegerTy() && expressionResult->getType()->isIntegerTy())
     {
         const auto targetType = llvm::IntegerType::get(*context->context(), type->getIntegerBitWidth());
@@ -72,13 +140,6 @@ llvm::Value *VariableAssignmentNode::codegen(std::unique_ptr<Context> &context)
             expressionResult = context->builder()->CreateIntCast(expressionResult, targetType, true, "lhs_cast");
         }
 
-        context->builder()->CreateStore(expressionResult, allocatedValue);
-        // context->NamedValues[m_variableName] = expressionResult;
-        return allocatedValue;
-    }
-    if (type->isIEEELikeFPTy() && expressionResult->getType()->isIEEELikeFPTy())
-    {
-        allocatedValue = context->builder()->CreateFPCast(allocatedValue, expressionResult->getType());
         context->builder()->CreateStore(expressionResult, allocatedValue);
         // context->NamedValues[m_variableName] = expressionResult;
         return allocatedValue;

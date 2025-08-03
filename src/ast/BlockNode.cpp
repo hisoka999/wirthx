@@ -116,10 +116,17 @@ llvm::Value *BlockNode::codegen(std::unique_ptr<Context> &context)
 
     auto topLevelFunctionName = (context->currentFunction()) ? context->currentFunction()->getName().str() : "";
     if (context->currentFunction())
+    {
         topLevelFunctionName = topLevelFunctionName.substr(0, topLevelFunctionName.find('('));
+        if (topLevelFunctionName.find('.') != std::string::npos)
+        {
+            topLevelFunctionName = topLevelFunctionName.substr(topLevelFunctionName.find('.') + 1);
+        }
+    }
     for (auto &def: m_variableDefinitions)
     {
-        if (!context->currentFunction() || !iequals(def.variableName, topLevelFunctionName))
+        if (!context->currentFunction() ||
+            (!iequals(def.variableName, topLevelFunctionName) && !iequals(def.variableName, "self")))
         {
             context->removeName(def.variableName);
         }

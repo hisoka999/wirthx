@@ -18,6 +18,14 @@ enum class FunctionAttribute
     Inline
 };
 
+enum class FunctionType
+{
+    Function,
+    Procedure,
+    Constructor,
+    Destructor
+};
+
 
 class FunctionDefinitionNode : public ASTNode
 {
@@ -27,17 +35,22 @@ private:
     std::string m_libName;
     std::vector<FunctionArgument> m_params;
     std::shared_ptr<BlockNode> m_body;
-    bool m_isProcedure;
+    FunctionType m_functionType;
     std::shared_ptr<VariableType> m_returnType;
     std::vector<FunctionAttribute> m_attributes;
     std::string m_functionSignature;
+    std::optional<Token> m_parent;
 
 public:
-    FunctionDefinitionNode(const Token &token, std::string name, std::vector<FunctionArgument> params,
-                           std::shared_ptr<BlockNode> body, bool isProcedure,
-                           std::shared_ptr<VariableType> returnType = std::make_shared<VariableType>());
+    FunctionDefinitionNode(const Token &token, std::string name, const std::vector<FunctionArgument> &params,
+                           std::shared_ptr<BlockNode> body, FunctionType functionType,
+                           std::optional<Token> parent = std::nullopt,
+                           std::shared_ptr<VariableType> returnType = std::make_shared<VariableType>()
+
+    );
     FunctionDefinitionNode(const Token &token, std::string name, std::string externalName, std::string libName,
-                           std::vector<FunctionArgument> params, bool isProcedure,
+                           const std::vector<FunctionArgument> &params, FunctionType functionType,
+                           std::optional<Token> parent = std::nullopt,
                            std::shared_ptr<VariableType> returnType = std::make_shared<VariableType>());
     ~FunctionDefinitionNode() override = default;
     void print() override;
@@ -46,11 +59,13 @@ public:
     std::string &externalName();
     std::string &libName();
     std::shared_ptr<VariableType> returnType();
-    std::optional<FunctionArgument> getParam(const std::string &paramName) const;
+    [[nodiscard]] std::optional<FunctionArgument> getParam(const std::string &paramName) const;
     std::optional<FunctionArgument> getParam(const size_t index);
-    std::shared_ptr<BlockNode> body() const;
+    [[nodiscard]] std::shared_ptr<BlockNode> body() const;
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
 
     void typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode) override;
     void addAttribute(FunctionAttribute attribute);
+    [[nodiscard]] FunctionType functionType() const;
+    [[nodiscard]] std::optional<std::string> parent() const;
 };

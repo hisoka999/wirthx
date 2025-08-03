@@ -4,63 +4,36 @@
 #include <utility>
 
 #include "FieldAccessNode.h"
+#include "UnitNode.h"
 #include "compare.h"
 #include "compiler/Context.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
+#include "types/ClassType.h"
 #include "types/RecordType.h"
 
 
 FunctionDefinitionNode::FunctionDefinitionNode(const Token &token, std::string name,
-                                               std::vector<FunctionArgument> params, std::shared_ptr<BlockNode> body,
-                                               const bool isProcedure, std::shared_ptr<VariableType> returnType) :
-    ASTNode(token), m_name(std::move(name)), m_externalName(m_name), m_params(std::move(params)),
-    m_body(std::move(body)), m_isProcedure(isProcedure), m_returnType(std::move(returnType))
+                                               const std::vector<FunctionArgument> &params,
+                                               std::shared_ptr<BlockNode> body, const FunctionType functionType,
+                                               std::optional<Token> parent, std::shared_ptr<VariableType> returnType) :
+    ASTNode(token), m_name(std::move(name)), m_externalName(m_name), m_params(params), m_body(std::move(body)),
+    m_functionType(functionType), m_returnType(std::move(returnType)), m_parent(std::move(parent))
 {
 }
 
 FunctionDefinitionNode::FunctionDefinitionNode(const Token &token, std::string name, std::string externalName,
-                                               std::string libName, std::vector<FunctionArgument> params,
-                                               const bool isProcedure, std::shared_ptr<VariableType> returnType) :
+                                               std::string libName, const std::vector<FunctionArgument> &params,
+                                               const FunctionType functionType, std::optional<Token> parent,
+                                               std::shared_ptr<VariableType> returnType) :
     ASTNode(token), m_name(std::move(name)), m_externalName(std::move(externalName)), m_libName(std::move(libName)),
-    m_params(std::move(params)), m_body(nullptr), m_isProcedure(isProcedure), m_returnType(std::move(returnType))
+    m_params(params), m_body(nullptr), m_functionType(functionType), m_returnType(std::move(returnType)),
+    m_parent(std::move(parent))
 {
 }
 
-void FunctionDefinitionNode::print()
-{
-    if (m_isProcedure)
-        std::cout << "procedure " + m_name + "(";
-    else
-        std::cout << "function " + m_name + "(";
-    for (size_t i = 0; i < m_params.size(); ++i)
-    {
-        auto &param = m_params[i];
-        if (param.isReference)
-        {
-            std::cout << "var ";
-        }
-        std::cout << param.argumentName + " :" + param.type->typeName;
-
-        if (i != m_params.size() - 1)
-        {
-            std::cout << ",";
-        }
-    }
-    std::cout << ")";
-    if (m_isProcedure)
-    {
-        std::cout << "\n";
-    }
-    else
-    {
-        std::cout << ": " << m_returnType->typeName << ";\n";
-    }
-    m_body->print();
-
-    // std::cout << "end;\n";
-}
+void FunctionDefinitionNode::print() {}
 
 std::string &FunctionDefinitionNode::name() { return m_name; }
 
@@ -70,7 +43,13 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
 {
     std::vector<llvm::Type *> params;
 
-    for (auto &param: m_params)
+    if (m_parent && m_functionType != FunctionType::Constructor)
+    {
+        auto classType = context->programUnit()->getTypeDefinitions().getType(m_parent.value().lexical());
+        params.push_back(classType.value()->generateLlvmType(context)->getPointerTo());
+    }
+
+    for (const auto &param: m_params)
     {
 
         if (param.isReference || param.type->baseType == VariableBaseType::Struct ||
@@ -86,9 +65,18 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
         }
     }
     llvm::Type *resultType;
-    if (m_isProcedure)
+    if (m_functionType == FunctionType::Procedure)
     {
         resultType = llvm::Type::getVoidTy(*context->context());
+    }
+    else if (m_functionType == FunctionType::Constructor)
+    {
+        auto type = context->programUnit()->getTypeDefinitions().getType(m_parent->lexical());
+        if (!type.has_value())
+        {
+            return LogErrorV("Unknown type for constructor: " + m_parent->lexical());
+        }
+        resultType = type.value()->generateLlvmType(context);
     }
     else
     {
@@ -111,8 +99,18 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
 
     // Set names for all arguments.
     unsigned idx = 0;
+    size_t offset = 0;
+    if (m_parent && m_functionType != FunctionType::Constructor)
+    {
+        offset = 1;
+    }
     for (auto &arg: functionDefinition->args())
     {
+        if (arg.getArgNo() == 0 && offset == 1)
+        {
+            arg.setName("self");
+            continue;
+        }
         const auto param = m_params[idx];
         if (!param.isReference && param.type->baseType == VariableBaseType::Struct)
         {
@@ -128,8 +126,13 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
     {
         // functionDefinition->setDSOLocal(true);
         functionDefinition->addFnAttr(llvm::Attribute::MustProgress);
-        if (!m_isProcedure && m_returnType->baseType == VariableBaseType::String)
+        if (m_functionType != FunctionType::Procedure && m_returnType &&
+            m_returnType->baseType == VariableBaseType::String)
             functionDefinition->addFnAttr(llvm::Attribute::NoFree);
+        if (m_functionType == FunctionType::Constructor)
+        {
+            functionDefinition->addFnAttr(llvm::Attribute::NoFree);
+        }
         llvm::AttrBuilder b(*context->context());
         b.addAttribute("frame-pointer", "all");
         functionDefinition->addFnAttrs(b);
@@ -153,15 +156,34 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
     {
         context->explicitReturn = false;
         m_body->setBlockName(m_name + "_block");
+        if (m_functionType == FunctionType::Constructor)
+        {
+            auto type = context->programUnit()->getTypeDefinitions().getType(m_parent->lexical());
+            if (!type.has_value())
+            {
+                return LogErrorV("Unknown type for constructor: " + m_parent->lexical());
+            }
+            m_body->addVariableDefinition(VariableDefinition{.variableType = type.value(),
+                                                             .variableName = "self",
+                                                             .token = ASTNode::expressionToken(),
+                                                             .alias = "",
+                                                             .scopeId = 0,
+                                                             .llvmValue = nullptr,
+                                                             .constant = false});
+        }
         m_body->codegen(context);
-        if (m_isProcedure)
+        if (m_functionType == FunctionType::Procedure)
         {
             context->builder()->CreateRetVoid();
 
             context->verifyFunction(functionDefinition);
             return functionDefinition;
         }
-        if (!context->explicitReturn)
+        if (m_functionType == FunctionType::Constructor)
+        {
+            context->builder()->CreateRet(context->builder()->CreateLoad(resultType, context->namedAllocation("self")));
+        }
+        else if (!context->explicitReturn)
         {
             context->builder()->CreateRet(context->builder()->CreateLoad(resultType, context->namedAllocation(m_name)));
         }
@@ -181,6 +203,11 @@ void FunctionDefinitionNode::typeCheck(const std::unique_ptr<UnitNode> &unit, AS
         m_body->typeCheck(unit, this);
 }
 void FunctionDefinitionNode::addAttribute(FunctionAttribute attribute) { m_attributes.emplace_back(attribute); }
+FunctionType FunctionDefinitionNode::functionType() const { return m_functionType; }
+std::optional<std::string> FunctionDefinitionNode::parent() const
+{
+    return m_parent.has_value() ? std::make_optional(m_parent.value().lexical()) : std::nullopt;
+}
 
 std::optional<FunctionArgument> FunctionDefinitionNode::getParam(const std::string &paramName) const
 {
@@ -210,10 +237,14 @@ std::string FunctionDefinitionNode::functionSignature()
 {
     if (!m_libName.empty())
         return m_externalName;
-
     if (m_functionSignature.empty())
     {
         std::stringstream stream;
+        if (m_parent)
+        {
+            stream << to_lower(m_parent->lexical()) << ".";
+        }
+
         stream << to_lower(m_name) << "(";
         for (size_t i = 0; i < m_params.size(); ++i)
         {

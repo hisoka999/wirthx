@@ -80,9 +80,6 @@ llvm::Value *FieldAssignmentNode::codegen(std::unique_ptr<Context> &context)
             }
         }
     }
-    if (!V)
-        return LogErrorV("Unknown record variable name "s + m_variableName);
-
 
     std::optional<VariableDefinition> structDef;
     if (context->currentFunction())
@@ -92,11 +89,19 @@ llvm::Value *FieldAssignmentNode::codegen(std::unique_ptr<Context> &context)
         if (functionDefinition)
             structDef = functionDefinition.value()->body()->getVariableDefinition(m_variableName);
     }
-
     if (!structDef)
     {
         structDef = context->programUnit()->getVariableDefinition(m_variableName);
     }
+    else if (!V)
+    {
+        V = context->namedAllocation(structDef->variableName);
+    }
+
+    if (!V)
+        return LogErrorV("Unknown record variable name "s + m_variableName);
+
+
     auto recordType = std::dynamic_pointer_cast<RecordType>(structDef->variableType);
 
     auto index = recordType->getFieldIndexByName(m_fieldName);
@@ -107,11 +112,16 @@ llvm::Value *FieldAssignmentNode::codegen(std::unique_ptr<Context> &context)
             context->builder()->CreateStructGEP(recordType->generateLlvmType(context), V, index, fieldName);
 
     auto fieldType = field.variableType->generateLlvmType(context);
-    auto bitLength = fieldType->getIntegerBitWidth();
+
     auto result = m_expression->codegen(context);
-    if (result->getType()->isIntegerTy() && result->getType()->getIntegerBitWidth() != bitLength)
+
+    if (fieldType->isIntegerTy())
     {
-        result = context->builder()->CreateIntCast(result, fieldType, true, "result_cast");
+        const auto bitLength = fieldType->getIntegerBitWidth();
+        if (result->getType()->isIntegerTy() && result->getType()->getIntegerBitWidth() != bitLength)
+        {
+            result = context->builder()->CreateIntCast(result, fieldType, true, "result_cast");
+        }
     }
 
     const llvm::DataLayout &DL = context->module()->getDataLayout();

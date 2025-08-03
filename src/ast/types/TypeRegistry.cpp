@@ -9,4 +9,11 @@ void TypeRegistry::registerType(const std::string &name, const std::shared_ptr<V
 {
     m_types[name] = type;
 }
-std::shared_ptr<VariableType> TypeRegistry::getType(const std::string &name) const { return m_types.at(name); }
+std::optional<std::shared_ptr<VariableType>> TypeRegistry::getType(const std::string &name) const
+{
+    if (!hasType(name))
+    {
+        return std::nullopt;
+    }
+    return m_types.at(name);
+}

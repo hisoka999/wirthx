@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>
 #include <llvm/IR/InstrTypes.h>
+#include <ranges>
 
 #include "ast/ArrayAccessNode.h"
 #include "ast/ArrayAssignmentNode.h"
@@ -16,6 +17,7 @@
 #include "ast/CaseNode.h"
 #include "ast/CharConstantNode.h"
 #include "ast/ComparissionNode.h"
+#include "ast/CreateObjectNode.h"
 #include "ast/DoubleNode.h"
 #include "ast/EnumAccessNode.h"
 #include "ast/FieldAccessNode.h"
@@ -25,6 +27,7 @@
 #include "ast/FunctionCallNode.h"
 #include "ast/IfConditionNode.h"
 #include "ast/LogicalExpressionNode.h"
+#include "ast/MethodCallNode.h"
 #include "ast/MinusNode.h"
 #include "ast/NilPointerNode.h"
 #include "ast/NumberNode.h"
@@ -35,6 +38,7 @@
 #include "ast/VariableAccessNode.h"
 #include "ast/VariableAssignmentNode.h"
 #include "ast/WhileNode.h"
+#include "ast/types/ClassType.h"
 #include "ast/types/EnumType.h"
 #include "ast/types/FileType.h"
 #include "ast/types/RecordType.h"
@@ -65,6 +69,7 @@ Parser::Parser(const std::vector<std::filesystem::path> &rtlDirectories, std::fi
     m_typeDefinitions.registerType("double", VariableType::getDouble());
     m_typeDefinitions.registerType("real", VariableType::getDouble());
     m_typeDefinitions.registerType("single", VariableType::getSingle());
+    m_typeDefinitions.registerType("float", VariableType::getSingle());
     m_typeDefinitions.registerType("file", FileType::getFileType());
 }
 bool Parser::hasError() const
@@ -194,20 +199,45 @@ std::shared_ptr<ASTNode> Parser::parseNumber()
     base = (base > 32) ? 64 : 32;
     return std::make_shared<NumberNode>(token, value, base);
 }
-bool Parser::isVariableDefined(const std::string_view &name, const size_t scope)
+AccessModifier Parser::tryParseAccessModifier(AccessModifier defaultModifier)
 {
+    if (tryConsumeKeyWord("public"))
+        return AccessModifier::Public;
+    if (tryConsumeKeyWord("protected"))
+        return AccessModifier::Protected;
+    if (tryConsumeKeyWord("private"))
+        return AccessModifier::Private;
+    if (tryConsumeKeyWord("published"))
+        return AccessModifier::Published;
+    return defaultModifier;
+}
+bool Parser::isVariableDefined(const std::string_view &name, const Scope &scope)
+{
+    if (scope.classType)
+    {
+        // Check if the variable is defined in the class scope
+        for (const auto &member: scope.classType->members())
+        {
+            if (iequals(member.variableDefinition->variableName, name) &&
+                member.variableDefinition->scopeId <= scope.id)
+            {
+                return true;
+            }
+        }
+    }
+
     return std::ranges::any_of(m_known_variable_definitions, [name, scope](const VariableDefinition &def)
-                               { return iequals(def.variableName, name) && def.scopeId <= scope; });
+                               { return iequals(def.variableName, name) && def.scopeId <= scope.id; });
 }
 
-bool Parser::isConstantDefined(const std::string_view &name, const size_t scope)
+bool Parser::isConstantDefined(const std::string_view &name, const Scope &scope)
 {
     return std::ranges::any_of(m_known_variable_definitions, [name, scope](const VariableDefinition &def)
-                               { return iequals(def.variableName, name) && def.scopeId <= scope && def.constant; });
+                               { return iequals(def.variableName, name) && def.scopeId <= scope.id && def.constant; });
 }
 
 
-std::optional<std::shared_ptr<VariableType>> Parser::parseVariableType(size_t scope, bool includeErrors,
+std::optional<std::shared_ptr<VariableType>> Parser::parseVariableType(const Scope &scope, bool includeErrors,
                                                                        const std::string &typeName)
 {
 
@@ -229,6 +259,78 @@ std::optional<std::shared_ptr<VariableType>> Parser::parseVariableType(size_t sc
 
         consumeKeyWord("end");
         return std::make_shared<RecordType>(fieldDefinitions, typeName);
+    }
+    else if (tryConsumeKeyWord("class"))
+    {
+        auto classType = std::make_shared<ClassType>(typeName);
+        do
+        {
+            auto modifier = tryParseAccessModifier(AccessModifier::Public);
+            if (canConsume(TokenType::NAMEDTOKEN))
+            {
+                consume(TokenType::NAMEDTOKEN);
+                auto memberToken = current();
+
+                consume(TokenType::COLON);
+
+                consume(TokenType::NAMEDTOKEN);
+                auto memberTypeName = current();
+                const auto memberType = determinVariableTypeByName(memberTypeName.lexical());
+                if (!memberType.has_value())
+                {
+
+                    m_errors.push_back(ParserError{.token = memberTypeName,
+                                                   .message = "The type " + memberTypeName.lexical() +
+                                                              " could not be determined!"});
+                }
+                consume(TokenType::SEMICOLON);
+                classType->addMember(ClassMember{.accessModifier = modifier,
+                                                 .variableDefinition = std::make_shared<VariableDefinition>(
+                                                         VariableDefinition{.variableType = memberType.value(),
+                                                                            .variableName = memberToken.lexical(),
+                                                                            .token = memberToken,
+                                                                            .scopeId = scope.id})});
+            }
+            else if (tryConsumeKeyWord("constructor"))
+            {
+                auto functionDefinition = parseFunctionDeclaration(scope, FunctionType::Constructor);
+                classType->setConstructor(functionDefinition);
+            }
+            else if (canConsumeKeyWord("destructor"))
+            {
+                consumeKeyWord("destructor");
+                consume(TokenType::LEFT_CURLY);
+                consume(TokenType::RIGHT_CURLY);
+            }
+            else if (tryConsumeKeyWord("function"))
+            {
+                if (auto functionDefinition = parseFunctionDeclaration(scope, FunctionType::Function))
+                {
+                    classType->addMemberFunction(MemberFunction{
+                            .accessModifier = modifier, .functionDefinition = functionDefinition, .strict = false});
+                }
+            }
+            else if (tryConsumeKeyWord("procedure"))
+            {
+                if (auto functionDefinition = parseFunctionDeclaration(scope, FunctionType::Procedure))
+                {
+                    classType->addMemberFunction(MemberFunction{
+                            .accessModifier = modifier, .functionDefinition = functionDefinition, .strict = false});
+                }
+            }
+            else if (tryConsumeKeyWord("end"))
+            {
+                break;
+            }
+            else
+            {
+                m_errors.emplace_back(
+                        ParserError{.token = current(),
+                                    .message = "expected a member definition, constructor, destructor or function!"});
+            }
+        }
+        while (true);
+        return classType;
     }
     else if (canConsume(TokenType::NAMEDTOKEN) || canConsume(TokenType::MINUS))
     {
@@ -265,6 +367,7 @@ std::optional<std::shared_ptr<VariableType>> Parser::parseVariableType(size_t sc
                 }
             }
         }
+
         else
         {
             consume(TokenType::NAMEDTOKEN);
@@ -330,7 +433,7 @@ std::optional<std::shared_ptr<VariableType>> Parser::parseVariableType(size_t sc
 }
 
 
-void Parser::parseTypeDefinitions(const size_t scope)
+void Parser::parseTypeDefinitions(const Scope &scope)
 {
     // parse type definitions
     while (tryConsume(TokenType::NAMEDTOKEN))
@@ -344,7 +447,7 @@ void Parser::parseTypeDefinitions(const size_t scope)
         }
     }
 }
-std::shared_ptr<ArrayType> Parser::parseArray(size_t scope)
+std::optional<std::shared_ptr<ArrayType>> Parser::parseArray(const Scope &scope)
 {
     const auto isFixedArray = tryConsume(TokenType::LEFT_SQUAR);
     size_t arrayStart = 0;
@@ -388,15 +491,21 @@ std::shared_ptr<ArrayType> Parser::parseArray(size_t scope)
     consume(TokenType::NAMEDTOKEN);
     const auto internalTypeName = std::string(current().lexical());
     const auto internalType = determinVariableTypeByName(internalTypeName);
+    if (!internalType.has_value())
+    {
+        m_errors.push_back(ParserError{.token = current(),
+                                       .message = "The type " + internalTypeName + " could not be determined!"});
+        return std::nullopt;
+    }
 
 
-    if (isFixedArray)
+    if (isFixedArray && internalType)
     {
         return ArrayType::getFixedArray(arrayStart, arrayEnd, internalType.value());
     }
     return ArrayType::getDynArray(internalType.value());
 }
-std::optional<VariableDefinition> Parser::parseConstantDefinition(size_t scope)
+std::optional<VariableDefinition> Parser::parseConstantDefinition(const Scope &scope)
 {
 
     // consume var declarations
@@ -450,11 +559,11 @@ std::optional<VariableDefinition> Parser::parseConstantDefinition(size_t scope)
     return VariableDefinition{.variableType = type.value(),
                               .variableName = varName,
                               .token = varNameToken,
-                              .scopeId = scope,
+                              .scopeId = scope.id,
                               .value = value,
                               .constant = true};
 }
-std::shared_ptr<ASTNode> Parser::parseArrayConstructor(size_t size)
+std::shared_ptr<ASTNode> Parser::parseArrayConstructor(const Scope &scope)
 {
     std::vector<std::shared_ptr<ASTNode>> arguments;
     consume(TokenType::LEFT_SQUAR);
@@ -462,13 +571,13 @@ std::shared_ptr<ASTNode> Parser::parseArrayConstructor(size_t size)
 
     while (!canConsume(TokenType::RIGHT_SQUAR))
     {
-        arguments.push_back(parseToken(size));
+        arguments.push_back(parseToken(scope));
         tryConsume(TokenType::COMMA);
     }
     consume(TokenType::RIGHT_SQUAR);
     return std::make_shared<ArrayInitialisationNode>(startToken, arguments);
 }
-std::vector<VariableDefinition> Parser::parseVariableDefinitions(const size_t scope)
+std::vector<VariableDefinition> Parser::parseVariableDefinitions(const Scope &scope)
 {
     std::vector<VariableDefinition> result;
     Token _currentToken = current();
@@ -560,14 +669,14 @@ std::vector<VariableDefinition> Parser::parseVariableDefinitions(const size_t sc
         result.push_back(VariableDefinition{.variableType = type.value(),
                                             .variableName = varName.lexical(),
                                             .token = varName,
-                                            .scopeId = scope,
+                                            .scopeId = scope.id,
                                             .value = value,
                                             .constant = false});
     }
     return result;
 }
 
-std::shared_ptr<ASTNode> Parser::parseLogicalExpression(const size_t scope, std::shared_ptr<ASTNode> lhs)
+std::shared_ptr<ASTNode> Parser::parseLogicalExpression(const Scope &scope, std::shared_ptr<ASTNode> lhs)
 {
     if (canConsumeKeyWord("not"))
     {
@@ -615,7 +724,7 @@ void Parser::checkLhsExists(const std::shared_ptr<ASTNode> &lhs, const Token &to
 */
 static std::map<Operator, int> operatorPrecedence{
         {Operator::MUL, 20}, {Operator::DIV, 10}, {Operator::PLUS, 5}, {Operator::MINUS, 2}};
-std::shared_ptr<ASTNode> Parser::parseBaseExpression(const size_t scope, const std::shared_ptr<ASTNode> &origLhs,
+std::shared_ptr<ASTNode> Parser::parseBaseExpression(const Scope &scope, const std::shared_ptr<ASTNode> &origLhs,
                                                      bool includeCompare)
 {
     auto lhs = (origLhs) ? origLhs : parseToken(scope);
@@ -755,7 +864,7 @@ std::shared_ptr<ASTNode> Parser::parseBaseExpression(const size_t scope, const s
     return lhs;
 }
 
-std::shared_ptr<ASTNode> Parser::parseExpression(const size_t scope, const std::shared_ptr<ASTNode> &origLhs)
+std::shared_ptr<ASTNode> Parser::parseExpression(const Scope &scope, const std::shared_ptr<ASTNode> &origLhs)
 {
     auto lhs = parseLogicalExpression(scope, origLhs);
     if (!lhs)
@@ -770,7 +879,7 @@ std::shared_ptr<ASTNode> Parser::parseExpression(const size_t scope, const std::
     return lhs;
 }
 
-std::shared_ptr<ASTNode> Parser::parseVariableAssignment(size_t scope)
+std::shared_ptr<ASTNode> Parser::parseVariableAssignment(const Scope &scope)
 {
     consume(TokenType::NAMEDTOKEN);
     auto currentToken = current();
@@ -811,6 +920,12 @@ std::shared_ptr<ASTNode> Parser::parseVariableAssignment(size_t scope)
             return nullptr;
         }
         auto fieldName = current();
+        if (canConsume(TokenType::LEFT_CURLY))
+        {
+            return parseMethodCall(scope, variableNameToken, fieldName);
+        }
+
+
         consume(TokenType::COLON);
         if (!consume(TokenType::EQUAL))
         {
@@ -858,7 +973,7 @@ std::shared_ptr<ASTNode> Parser::parseVariableAssignment(size_t scope)
 }
 std::optional<std::shared_ptr<EnumType>> Parser::tryGetEnumTypeByValue(const std::string &enumKey) const
 {
-    for (const auto &[typeName, type]: m_typeDefinitions)
+    for (const auto &type: m_typeDefinitions | std::views::values)
     {
         if (auto enumType = std::dynamic_pointer_cast<EnumType>(type))
         {
@@ -869,7 +984,7 @@ std::optional<std::shared_ptr<EnumType>> Parser::tryGetEnumTypeByValue(const std
     return std::nullopt;
 }
 
-std::shared_ptr<ASTNode> Parser::parseRangeElement(const size_t scope)
+std::shared_ptr<ASTNode> Parser::parseRangeElement(const Scope &scope)
 {
     if (canConsume(TokenType::NUMBER))
     {
@@ -926,7 +1041,7 @@ std::shared_ptr<ASTNode> Parser::parseRangeElement(const size_t scope)
     return nullptr;
 }
 
-std::shared_ptr<ASTNode> Parser::parseConstantAccess(const size_t scope)
+std::shared_ptr<ASTNode> Parser::parseConstantAccess(const Scope &scope)
 {
     consume(TokenType::NAMEDTOKEN);
     auto token = current();
@@ -947,7 +1062,62 @@ std::shared_ptr<ASTNode> Parser::parseConstantAccess(const size_t scope)
     return std::make_shared<VariableAccessNode>(token, dereference);
 }
 
-std::shared_ptr<ASTNode> Parser::parseVariableAccess(const size_t scope)
+std::shared_ptr<ASTNode> Parser::parseMethodCall(const Scope &scope, const Token &variableNameToken,
+                                                 const Token &methodNameToken)
+{
+    std::vector<std::shared_ptr<ASTNode>> arguments;
+    if (tryConsume(TokenType::LEFT_CURLY))
+    {
+
+        while (!canConsume(TokenType::RIGHT_CURLY))
+        {
+            arguments.push_back(parseToken(scope));
+            tryConsume(TokenType::COMMA);
+        }
+        consume(TokenType::RIGHT_CURLY);
+    }
+
+    for (const auto &def: m_known_variable_definitions)
+    {
+        if (iequals(def.variableName, variableNameToken.lexical()))
+        {
+            if (def.variableType->baseType == VariableBaseType::Class)
+            {
+                if (const auto classType = std::dynamic_pointer_cast<ClassType>(def.variableType))
+                {
+                    if (auto memberFunction = classType->getMemberFunction(methodNameToken.lexical());
+                        memberFunction.has_value())
+                    {
+                        return std::make_shared<MethodCallNode>(variableNameToken, methodNameToken,
+                                                                memberFunction.value(), arguments);
+                    }
+                    m_errors.push_back(ParserError{.token = methodNameToken,
+                                                   .message = "The member function '" + methodNameToken.lexical() +
+                                                              "' is not defined!"});
+                    return nullptr;
+                }
+            }
+        }
+    }
+    return nullptr;
+}
+bool Parser::isFieldAMethodCall(const std::string &variableName, const std::string &methodName,
+                                const Scope &scope) const
+{
+
+    for (auto &def: m_known_variable_definitions)
+    {
+        if (iequals(def.variableName, variableName) && def.scopeId <= scope.id)
+        {
+            if (const auto classType = std::dynamic_pointer_cast<ClassType>(def.variableType))
+            {
+                return classType->hasMemberFunction(methodName);
+            }
+        }
+    }
+    return false;
+}
+std::shared_ptr<ASTNode> Parser::parseVariableAccess(const Scope &scope)
 {
     consume(TokenType::NAMEDTOKEN);
     auto token = current();
@@ -972,13 +1142,57 @@ std::shared_ptr<ASTNode> Parser::parseVariableAccess(const size_t scope)
         consume(TokenType::DOT);
         consume(TokenType::NAMEDTOKEN);
         Token field = current();
-        if (!isVariableDefined(token.lexical(), scope))
+        if (auto type = m_typeDefinitions.getType(token.lexical()))
+        {
+            consume(TokenType::LEFT_CURLY);
+            std::vector<std::shared_ptr<ASTNode>> arguments;
+            while (!canConsume(TokenType::RIGHT_CURLY))
+            {
+                arguments.push_back(parseToken(scope));
+                tryConsume(TokenType::COMMA);
+            }
+            consume(TokenType::RIGHT_CURLY);
+
+            // static method call on a class
+            if (auto classType = std::dynamic_pointer_cast<ClassType>(type.value()))
+            {
+                if (auto constructor = classType->constructor())
+                {
+
+                    if (field.lexical() == constructor->name() &&
+                        constructor->functionType() == FunctionType::Constructor)
+                    {
+                        return std::make_shared<CreateObjectNode>(token, classType, field, constructor, arguments);
+                    }
+                    m_errors.push_back(ParserError{.token = field,
+                                                   .message = "The member function '" + field.lexical() +
+                                                              "' is not a constructor!"});
+                    return nullptr;
+                }
+                else
+                {
+                    m_errors.push_back(
+                            ParserError{.token = field, .message = "class type '" + field.lexical() + "' not found!"});
+                }
+            }
+            else
+            {
+                m_errors.push_back(
+                        ParserError{.token = field, .message = "class type '" + field.lexical() + "' not found!"});
+            }
+        }
+        else if (!isVariableDefined(token.lexical(), scope))
         {
             m_errors.push_back(
                     ParserError{.token = token,
                                 .message = "A variable with the name '" + token.lexical() + "' is not yet defined!"});
             return nullptr;
         }
+        if (isFieldAMethodCall(token.lexical(), field.lexical(), scope))
+        {
+            return parseMethodCall(scope, token, field);
+        }
+
         return std::make_shared<FieldAccessNode>(token, field);
     }
 
@@ -996,7 +1210,7 @@ std::shared_ptr<ASTNode> Parser::parseVariableAccess(const size_t scope)
 
     return std::make_shared<VariableAccessNode>(token, dereference);
 }
-std::shared_ptr<ASTNode> Parser::parseToken(const size_t scope)
+std::shared_ptr<ASTNode> Parser::parseToken(const Scope &scope)
 {
     if (canConsume(TokenType::NUMBER))
     {
@@ -1055,7 +1269,7 @@ std::shared_ptr<ASTNode> Parser::parseToken(const size_t scope)
     }
     return nullptr;
 }
-std::shared_ptr<ASTNode> Parser::parseRangeElementOrType(const size_t scope)
+std::shared_ptr<ASTNode> Parser::parseRangeElementOrType(const Scope &scope)
 {
 
     if (auto type = parseVariableType(scope, false); type.has_value())
@@ -1069,7 +1283,7 @@ std::shared_ptr<ASTNode> Parser::parseRangeElementOrType(const size_t scope)
     }
     return nullptr;
 }
-std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDeclaration(size_t scope, bool isFunction)
+std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDeclaration(const Scope &scope, FunctionType functionType)
 {
     consume(TokenType::NAMEDTOKEN);
     auto functionNameToken = current();
@@ -1079,88 +1293,90 @@ std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDeclaration(size_t 
     std::string externalName = functionName;
 
     std::shared_ptr<FunctionDefinitionNode> functionDefinition = nullptr;
-
-    consume(TokenType::LEFT_CURLY);
-    auto token = next();
     std::vector<FunctionArgument> functionParams;
     std::vector<FunctionAttribute> functionAttributes;
-    while (token.tokenType != TokenType::RIGHT_CURLY)
+    if (tryConsume(TokenType::LEFT_CURLY))
     {
+        auto token = next();
 
-        bool isReference = false;
-        if (token.tokenType == TokenType::KEYWORD && iequals(token.lexical(), "var"))
+        while (token.tokenType != TokenType::RIGHT_CURLY)
         {
-            next();
-            isReference = true;
-        }
-        token = current();
-        const std::string funcParamName = token.lexical();
-        std::vector<Token> paramNames;
-        paramNames.push_back(token);
-        while (canConsume(TokenType::COMMA))
-        {
-            consume(TokenType::COMMA);
-            consume(TokenType::NAMEDTOKEN);
-            paramNames.emplace_back(current());
-        }
 
-        consume(TokenType::COLON);
-        if (canConsume(TokenType::NAMEDTOKEN))
-        {
-            token = next();
-            auto type = determinVariableTypeByName(token.lexical());
-
-            for (const auto &param: paramNames)
+            bool isReference = false;
+            if (token.tokenType == TokenType::KEYWORD && iequals(token.lexical(), "var"))
             {
+                next();
+                isReference = true;
+            }
+            token = current();
+            const std::string funcParamName = token.lexical();
+            std::vector<Token> paramNames;
+            paramNames.push_back(token);
+            while (canConsume(TokenType::COMMA))
+            {
+                consume(TokenType::COMMA);
+                consume(TokenType::NAMEDTOKEN);
+                paramNames.emplace_back(current());
+            }
 
-                if (isVariableDefined(param.lexical(), scope))
+            consume(TokenType::COLON);
+            if (canConsume(TokenType::NAMEDTOKEN))
+            {
+                token = next();
+                auto type = determinVariableTypeByName(token.lexical());
+
+                for (const auto &param: paramNames)
                 {
-                    m_errors.push_back(ParserError{.token = token,
-                                                   .message = "A variable with the name " + param.lexical() +
-                                                              " was allready defined!"});
+
+                    if (isVariableDefined(param.lexical(), scope))
+                    {
+                        m_errors.push_back(ParserError{.token = token,
+                                                       .message = "A variable with the name " + param.lexical() +
+                                                                  " was allready defined!"});
+                    }
+                    else if (!type.has_value())
+                    {
+                        m_errors.push_back(ParserError{.token = token,
+                                                       .message = "A type " + token.lexical() + " of the variable " +
+                                                                  param.lexical() + " could not be determined!"});
+                    }
+                    else
+                    {
+
+
+                        functionParams.push_back(FunctionArgument{.type = type.value(),
+                                                                  .argumentName = param.lexical(),
+                                                                  .token = param,
+                                                                  .isReference = isReference});
+                    }
                 }
-                else if (!type.has_value())
+                tryConsume(TokenType::SEMICOLON);
+            }
+            else if (canConsumeKeyWord("file"))
+            {
+                consumeKeyWord("file");
+                auto variableType = m_typeDefinitions.getType("file");
+                for (const auto &param: paramNames)
                 {
-                    m_errors.push_back(ParserError{.token = token,
-                                                   .message = "A type " + token.lexical() + " of the variable " +
-                                                              param.lexical() + " could not be determined!"});
-                }
-                else
-                {
-
-
-                    functionParams.push_back(FunctionArgument{.type = type.value(),
+                    functionParams.push_back(FunctionArgument{.type = variableType.value(),
                                                               .argumentName = param.lexical(),
                                                               .token = param,
                                                               .isReference = isReference});
                 }
+                tryConsume(TokenType::SEMICOLON);
             }
-            tryConsume(TokenType::SEMICOLON);
-        }
-        else if (canConsumeKeyWord("file"))
-        {
-            consumeKeyWord("file");
-            std::shared_ptr<VariableType> variableType = m_typeDefinitions.getType("file");
-            for (const auto &param: paramNames)
+            else
             {
-                functionParams.push_back(FunctionArgument{.type = variableType,
-                                                          .argumentName = param.lexical(),
-                                                          .token = param,
-                                                          .isReference = isReference});
+                // TODO: type def missing
+                m_errors.push_back(ParserError{.token = token,
+                                               .message = "For the parameter definition " + funcParamName +
+                                                          " there is a type missing"});
             }
-            tryConsume(TokenType::SEMICOLON);
-        }
-        else
-        {
-            // TODO: type def missing
-            m_errors.push_back(ParserError{.token = token,
-                                           .message = "For the parameter definition " + funcParamName +
-                                                      " there is a type missing"});
-        }
 
-        token = next();
+            token = next();
+        }
     }
-    if (isFunction)
+    if (functionType == FunctionType::Function)
         if (!tryConsume(TokenType::COLON))
         {
             m_errors.push_back(
@@ -1170,7 +1386,7 @@ std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDeclaration(size_t 
         }
     std::shared_ptr<VariableType> returnType;
 
-    if (isFunction && consume(TokenType::NAMEDTOKEN))
+    if (functionType == FunctionType::Function && consume(TokenType::NAMEDTOKEN))
     {
         const auto typeName = current().lexical();
         const auto type = determinVariableTypeByName(typeName);
@@ -1207,92 +1423,103 @@ std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDeclaration(size_t 
 
 
     return std::make_shared<FunctionDefinitionNode>(functionNameToken, functionName, externalName, libName,
-                                                    functionParams, !isFunction, returnType);
+                                                    functionParams, functionType, std::nullopt, returnType);
 }
-std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDefinition(size_t scope, bool isFunction)
+std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDefinition(const Scope &scope, FunctionType functionType)
 {
     consume(TokenType::NAMEDTOKEN);
     auto functionNameToken = current();
     auto functionName = current().lexical();
     m_known_function_names.push_back(functionName);
+    std::optional<Token> parentToken = std::nullopt;
+    if (tryConsume(TokenType::DOT))
+    {
+        parentToken = functionNameToken;
+        consume(TokenType::NAMEDTOKEN);
+        functionNameToken = current();
+        functionName = functionNameToken.lexical();
+    }
+
     bool isExternalFunction = false;
     std::string libName;
     std::string externalName = functionName;
 
     std::shared_ptr<FunctionDefinitionNode> functionDefinition = nullptr;
-
-    consume(TokenType::LEFT_CURLY);
-    auto token = next();
     std::vector<FunctionArgument> functionParams;
     std::vector<FunctionAttribute> functionAttributes;
-    while (token.tokenType != TokenType::RIGHT_CURLY)
+    if (tryConsume(TokenType::LEFT_CURLY))
     {
+        auto token = next();
 
-        bool isReference = false;
-        if (token.tokenType == TokenType::KEYWORD && iequals(token.lexical(), "var"))
+        while (token.tokenType != TokenType::RIGHT_CURLY)
         {
-            next();
-            isReference = true;
-        }
-        token = current();
-        const auto funcParamName = token;
-        std::vector<Token> paramNames;
-        paramNames.push_back(funcParamName);
-        while (canConsume(TokenType::COMMA))
-        {
-            consume(TokenType::COMMA);
-            consume(TokenType::NAMEDTOKEN);
-            paramNames.emplace_back(current());
-        }
 
-        consume(TokenType::COLON);
-        if (canConsume(TokenType::NAMEDTOKEN))
-        {
-            token = next();
-            auto type = determinVariableTypeByName(token.lexical());
-
-            for (const auto &param: paramNames)
+            bool isReference = false;
+            if (token.tokenType == TokenType::KEYWORD && iequals(token.lexical(), "var"))
             {
-
-                if (isVariableDefined(param.lexical(), scope))
-                {
-                    m_errors.push_back(ParserError{.token = token,
-                                                   .message = "A variable with the name " + param.lexical() +
-                                                              " was allready defined!"});
-                }
-                else if (!type.has_value())
-                {
-                    m_errors.push_back(ParserError{.token = token,
-                                                   .message = "A type " + token.lexical() + " of the variable " +
-                                                              param.lexical() + " could not be determined!"});
-                }
-                else
-                {
-
-                    m_known_variable_definitions.push_back(VariableDefinition{.variableType = type.value(),
-                                                                              .variableName = param.lexical(),
-                                                                              .token = param,
-                                                                              .scopeId = scope});
-
-                    functionParams.push_back(FunctionArgument{.type = type.value(),
-                                                              .argumentName = param.lexical(),
-                                                              .token = param,
-                                                              .isReference = isReference});
-                }
+                next();
+                isReference = true;
             }
-            tryConsume(TokenType::SEMICOLON);
-        }
-        else
-        {
-            // TODO: type def missing
-            m_errors.push_back(ParserError{.token = token,
-                                           .message = "For the parameter definition " + funcParamName.lexical() +
-                                                      " there is a type missing"});
-        }
+            token = current();
+            const auto funcParamName = token;
+            std::vector<Token> paramNames;
+            paramNames.push_back(funcParamName);
+            while (canConsume(TokenType::COMMA))
+            {
+                consume(TokenType::COMMA);
+                consume(TokenType::NAMEDTOKEN);
+                paramNames.emplace_back(current());
+            }
 
-        token = next();
+            consume(TokenType::COLON);
+            if (canConsume(TokenType::NAMEDTOKEN))
+            {
+                token = next();
+                auto type = determinVariableTypeByName(token.lexical());
+
+                for (const auto &param: paramNames)
+                {
+
+                    if (isVariableDefined(param.lexical(), scope))
+                    {
+                        m_errors.push_back(ParserError{.token = token,
+                                                       .message = "A variable with the name " + param.lexical() +
+                                                                  " was allready defined!"});
+                    }
+                    else if (!type.has_value())
+                    {
+                        m_errors.push_back(ParserError{.token = token,
+                                                       .message = "A type " + token.lexical() + " of the variable " +
+                                                                  param.lexical() + " could not be determined!"});
+                    }
+                    else
+                    {
+
+                        m_known_variable_definitions.push_back(VariableDefinition{.variableType = type.value(),
+                                                                                  .variableName = param.lexical(),
+                                                                                  .token = param,
+                                                                                  .scopeId = scope.id});
+
+                        functionParams.push_back(FunctionArgument{.type = type.value(),
+                                                                  .argumentName = param.lexical(),
+                                                                  .token = param,
+                                                                  .isReference = isReference});
+                    }
+                }
+                tryConsume(TokenType::SEMICOLON);
+            }
+            else
+            {
+                // TODO: type def missing
+                m_errors.push_back(ParserError{.token = token,
+                                               .message = "For the parameter definition " + funcParamName.lexical() +
+                                                          " there is a type missing"});
+            }
+
+            token = next();
+        }
     }
-    if (isFunction)
+    if (functionType == FunctionType::Function)
         if (!tryConsume(TokenType::COLON))
         {
             m_errors.push_back(
@@ -1302,11 +1529,10 @@ std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDefinition(size_t s
         }
     std::shared_ptr<VariableType> returnType;
 
-    if (isFunction && consume(TokenType::NAMEDTOKEN))
+    if (functionType == FunctionType::Function && consume(TokenType::NAMEDTOKEN))
     {
         const auto typeName = current().lexical();
-        const auto type = determinVariableTypeByName(typeName);
-        if (!type)
+        if (const auto type = determinVariableTypeByName(typeName); !type)
         {
             m_errors.push_back(
                     ParserError{.token = current(),
@@ -1317,14 +1543,25 @@ std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDefinition(size_t s
             returnType = type.value();
         }
 
-        m_known_variable_definitions.push_back(VariableDefinition{.variableType = returnType,
-                                                                  .variableName = functionName,
-                                                                  .token = functionNameToken,
-                                                                  .scopeId = scope});
         m_known_variable_definitions.push_back(VariableDefinition{
-                .variableType = returnType, .variableName = "result", .token = functionNameToken, .scopeId = scope});
+                .variableType = returnType,
+                .variableName = functionName,
+                .token = functionNameToken,
+                .scopeId = scope.id,
+        });
+
+        m_known_variable_definitions.push_back(VariableDefinition{
+                .variableType = returnType, .variableName = "result", .token = functionNameToken, .scopeId = scope.id});
     }
     consume(TokenType::SEMICOLON);
+
+    if (parentToken)
+    {
+        auto type = m_typeDefinitions.getType(parentToken->lexical());
+
+        m_known_variable_definitions.push_back(VariableDefinition{
+                .variableType = type.value(), .variableName = "self", .token = functionNameToken, .scopeId = scope.id});
+    }
 
     if (tryConsumeKeyWord("external"))
     {
@@ -1349,14 +1586,24 @@ std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDefinition(size_t s
     // parse function body
     if (isExternalFunction)
     {
-        functionDefinition = std::make_shared<FunctionDefinitionNode>(functionNameToken, functionName, externalName,
-                                                                      libName, functionParams, !isFunction, returnType);
+        functionDefinition =
+                std::make_shared<FunctionDefinitionNode>(functionNameToken, functionName, externalName, libName,
+                                                         functionParams, functionType, parentToken, returnType);
     }
     else
     {
-        auto functionBody = parseBlock(scope + 1);
+        Scope blockScope{.rootNode = scope.rootNode, .id = scope.id + 1};
+        if (parentToken)
+        {
+            auto type = m_typeDefinitions.getType(parentToken->lexical());
+            if (auto classType = std::dynamic_pointer_cast<ClassType>(type.value()))
+            {
+                blockScope.classType = classType;
+            }
+        }
+        auto functionBody = parseBlock(blockScope);
         consume(TokenType::SEMICOLON);
-        if (isFunction)
+        if (functionType == FunctionType::Function)
         {
             functionBody->addVariableDefinition(VariableDefinition{.variableType = returnType,
                                                                    .variableName = functionName,
@@ -1366,8 +1613,8 @@ std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDefinition(size_t s
                                                                    .value = nullptr,
                                                                    .constant = false});
         }
-        functionDefinition = std::make_shared<FunctionDefinitionNode>(functionNameToken, functionName, functionParams,
-                                                                      functionBody, !isFunction, returnType);
+        functionDefinition = std::make_shared<FunctionDefinitionNode>(
+                functionNameToken, functionName, functionParams, functionBody, functionType, parentToken, returnType);
         for (auto attribute: functionAttributes)
             functionDefinition->addAttribute(attribute);
 
@@ -1398,7 +1645,7 @@ std::shared_ptr<FunctionDefinitionNode> Parser::parseFunctionDefinition(size_t s
     return functionDefinition;
 }
 
-std::shared_ptr<ASTNode> Parser::parseStatement(size_t scope, bool withSemicolon)
+std::shared_ptr<ASTNode> Parser::parseStatement(const Scope &scope, bool withSemicolon)
 {
     std::shared_ptr<ASTNode> result = nullptr;
     if (canConsume(TokenType::NAMEDTOKEN))
@@ -1430,7 +1677,7 @@ std::shared_ptr<ASTNode> Parser::parseStatement(size_t scope, bool withSemicolon
 }
 
 
-void Parser::parseConstantDefinitions(size_t scope, std::vector<VariableDefinition> &variable_definitions)
+void Parser::parseConstantDefinitions(const Scope &scope, std::vector<VariableDefinition> &variable_definitions)
 {
     if (tryConsumeKeyWord("const"))
     {
@@ -1445,7 +1692,7 @@ void Parser::parseConstantDefinitions(size_t scope, std::vector<VariableDefiniti
         }
     }
 }
-std::shared_ptr<BlockNode> Parser::parseBlock(const size_t scope)
+std::shared_ptr<BlockNode> Parser::parseBlock(const Scope &scope)
 {
     std::vector<VariableDefinition> variable_definitions;
 
@@ -1455,7 +1702,7 @@ std::shared_ptr<BlockNode> Parser::parseBlock(const size_t scope)
     {
         while (!canConsumeKeyWord("begin"))
         {
-            auto def = parseVariableDefinitions(scope);
+            const auto def = parseVariableDefinitions(scope);
             for (auto &definition: def)
             {
                 variable_definitions.push_back(definition);
@@ -1484,7 +1731,7 @@ std::shared_ptr<BlockNode> Parser::parseBlock(const size_t scope)
 
     return std::make_shared<BlockNode>(beginToken, variable_definitions, expressions);
 }
-std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope, bool withSemicolon)
+std::shared_ptr<ASTNode> Parser::parseKeyword(const Scope &scope, bool withSemicolon)
 {
     if (tryConsumeKeyWord("if"))
     {
@@ -1497,7 +1744,7 @@ std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope, bool withSemicolon)
         auto blockIf = canConsumeKeyWord("begin");
         if (blockIf)
         {
-            ifStatements.emplace_back(parseBlock(scope + 1));
+            ifStatements.emplace_back(parseBlock(Scope{.rootNode = scope.rootNode, .id = scope.id + 1}));
             tryConsume(TokenType::SEMICOLON);
         }
         else
@@ -1508,7 +1755,7 @@ std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope, bool withSemicolon)
         {
             if (canConsumeKeyWord("begin"))
             {
-                elseStatements.emplace_back(parseBlock(scope + 1));
+                elseStatements.emplace_back(parseBlock(Scope{.rootNode = scope.rootNode, .id = scope.id + 1}));
                 tryConsume(TokenType::SEMICOLON);
             }
             else
@@ -1533,14 +1780,14 @@ std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope, bool withSemicolon)
         if (canConsumeKeyWord("in"))
         {
             consumeKeyWord("in");
-            auto loopExpression = parseBaseExpression(scope + 1);
+            auto loopExpression = parseBaseExpression(Scope{.rootNode = scope.rootNode, .id = scope.id + 1});
             std::vector<std::shared_ptr<ASTNode>> forNodes;
 
             consumeKeyWord("do");
 
             if (canConsumeKeyWord("begin"))
             {
-                forNodes.emplace_back(parseBlock(scope + 1));
+                forNodes.emplace_back(parseBlock(Scope{.rootNode = scope.rootNode, .id = scope.id + 1}));
                 if (withSemicolon)
                     tryConsume(TokenType::SEMICOLON);
             }
@@ -1553,7 +1800,7 @@ std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope, bool withSemicolon)
 
         consume(TokenType::COLON);
         consume(TokenType::EQUAL);
-        auto loopStart = parseBaseExpression(scope + 1);
+        auto loopStart = parseBaseExpression(Scope{.rootNode = scope.rootNode, .id = scope.id + 1});
         int increment;
         if (tryConsumeKeyWord("to"))
         {
@@ -1570,7 +1817,7 @@ std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope, bool withSemicolon)
                                                       std::string(m_tokens[m_current + 1].lexical()) + "!"});
             throw ParserException(m_errors);
         }
-        auto loopEnd = parseBaseExpression(scope + 1);
+        auto loopEnd = parseBaseExpression(Scope{.rootNode = scope.rootNode, .id = scope.id + 1});
 
         std::vector<std::shared_ptr<ASTNode>> forNodes;
 
@@ -1578,7 +1825,7 @@ std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope, bool withSemicolon)
 
         if (canConsumeKeyWord("begin"))
         {
-            forNodes.emplace_back(parseBlock(scope + 1));
+            forNodes.emplace_back(parseBlock(Scope{.rootNode = scope.rootNode, .id = scope.id + 1}));
             if (withSemicolon)
                 tryConsume(TokenType::SEMICOLON);
         }
@@ -1594,7 +1841,7 @@ std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope, bool withSemicolon)
     {
         auto whileToken = current();
 
-        auto expression = parseExpression(scope + 1);
+        auto expression = parseExpression(Scope{.rootNode = scope.rootNode, .id = scope.id + 1});
         std::vector<std::shared_ptr<ASTNode>> whileNodes;
 
         consumeKeyWord("do");
@@ -1605,7 +1852,7 @@ std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope, bool withSemicolon)
         }
         else
         {
-            whileNodes.push_back(parseBlock(scope + 1));
+            whileNodes.push_back(parseBlock(Scope{.rootNode = scope.rootNode, .id = scope.id + 1}));
             if (withSemicolon)
                 consume(TokenType::SEMICOLON);
         }
@@ -1624,12 +1871,12 @@ std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope, bool withSemicolon)
         }
         else
         {
-            whileNodes.push_back(parseBlock(scope + 1));
+            whileNodes.push_back(parseBlock(Scope{.rootNode = scope.rootNode, .id = scope.id + 1}));
         }
         tryConsume(TokenType::SEMICOLON);
 
         consumeKeyWord("until");
-        auto expression = parseExpression(scope + 1);
+        auto expression = parseExpression(Scope{.rootNode = scope.rootNode, .id = scope.id + 1});
         if (withSemicolon)
             tryConsume(TokenType::SEMICOLON);
 
@@ -1671,7 +1918,7 @@ std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope, bool withSemicolon)
             }
             else
             {
-                elseExpressions.push_back(parseBlock(scope + 1));
+                elseExpressions.push_back(parseBlock(Scope{.rootNode = scope.rootNode, .id = scope.id + 1}));
             }
         }
         else
@@ -1690,7 +1937,7 @@ std::shared_ptr<ASTNode> Parser::parseKeyword(size_t scope, bool withSemicolon)
 
     return nullptr;
 }
-std::shared_ptr<ASTNode> Parser::parseFunctionCall(const size_t scope)
+std::shared_ptr<ASTNode> Parser::parseFunctionCall(const Scope &scope)
 {
     consume(TokenType::NAMEDTOKEN);
     auto nameToken = current();
@@ -1827,20 +2074,21 @@ void Parser::parseInterfaceSection()
         }
         consume(TokenType::SEMICOLON);
     }
+    const Scope scope = {.rootNode = nullptr, .id = 0};
 
     while (!canConsumeKeyWord("implementation"))
     {
         if (tryConsumeKeyWord("type"))
         {
-            parseTypeDefinitions(0);
+            parseTypeDefinitions(scope);
         }
         else if (tryConsumeKeyWord("procedure"))
         {
-            m_functionDeclarations.emplace_back(parseFunctionDeclaration(0, false));
+            m_functionDeclarations.emplace_back(parseFunctionDeclaration(scope, FunctionType::Procedure));
         }
         else if (tryConsumeKeyWord("function"))
         {
-            m_functionDeclarations.emplace_back(parseFunctionDeclaration(0, true));
+            m_functionDeclarations.emplace_back(parseFunctionDeclaration(scope, FunctionType::Function));
         }
         else if (!canConsumeKeyWord("implementation"))
         {
@@ -1869,20 +2117,25 @@ void Parser::parseImplementationSection(bool includeSystem)
         }
         consume(TokenType::SEMICOLON);
     }
-
+    const Scope scope = {.rootNode = nullptr, .id = 0};
     while (!canConsumeKeyWord("end") && !canConsumeKeyWord("initialization"))
     {
         if (tryConsumeKeyWord("type"))
         {
-            parseTypeDefinitions(0);
+            parseTypeDefinitions(scope);
         }
         else if (tryConsumeKeyWord("procedure"))
         {
-            m_functionDefinitions.emplace_back(parseFunctionDefinition(0, false));
+            m_functionDefinitions.emplace_back(parseFunctionDefinition(scope, FunctionType::Procedure));
         }
         else if (tryConsumeKeyWord("function"))
         {
-            m_functionDefinitions.emplace_back(parseFunctionDefinition(0, true));
+            m_functionDefinitions.emplace_back(parseFunctionDefinition(scope, FunctionType::Function));
+        }
+        else if (tryConsumeKeyWord("constructor"))
+        {
+            // TODO
+            m_functionDefinitions.emplace_back(parseFunctionDefinition(scope, FunctionType::Constructor));
         }
         else if (!canConsumeKeyWord("end") && !canConsumeKeyWord("initialization"))
         {
@@ -1997,7 +2250,7 @@ std::unique_ptr<UnitNode> Parser::parseProgram()
                 auto paramName = current().lexical();
                 paramNames.emplace_back(paramName);
                 m_known_variable_definitions.push_back(
-                        VariableDefinition{.variableType = m_typeDefinitions.getType("file"),
+                        VariableDefinition{.variableType = m_typeDefinitions.getType("file").value(),
                                            .variableName = paramName,
                                            .token = current(),
                                            .scopeId = 0});
@@ -2015,9 +2268,10 @@ std::unique_ptr<UnitNode> Parser::parseProgram()
 
         std::shared_ptr<BlockNode> blockNode = nullptr;
         std::vector<VariableDefinition> variable_definitions;
+        const Scope scope = {.rootNode = nullptr, .id = 0};
+
         while (hasNext())
         {
-            constexpr int scope = 0;
             if (tryConsumeKeyWord("type"))
             {
                 parseTypeDefinitions(scope);
@@ -2055,11 +2309,15 @@ std::unique_ptr<UnitNode> Parser::parseProgram()
             }
             else if (tryConsumeKeyWord("procedure"))
             {
-                m_functionDefinitions.emplace_back(parseFunctionDefinition(scope, false));
+                m_functionDefinitions.emplace_back(parseFunctionDefinition(scope, FunctionType::Procedure));
             }
             else if (tryConsumeKeyWord("function"))
             {
-                m_functionDefinitions.emplace_back(parseFunctionDefinition(scope, true));
+                m_functionDefinitions.emplace_back(parseFunctionDefinition(scope, FunctionType::Function));
+            }
+            else if (tryConsumeKeyWord("constructor"))
+            {
+                m_functionDefinitions.emplace_back(parseFunctionDefinition(scope, FunctionType::Constructor));
             }
             else if (canConsumeKeyWord("const") || canConsumeKeyWord("var") || canConsumeKeyWord("begin"))
             {

@@ -125,7 +125,7 @@ llvm::Value *UnitNode::codegen(std::unique_ptr<Context> &context)
             ext_stderr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Local);
             if (m_argumentNames.size() >= 3)
             {
-                m_blockNode->addVariableDefinition(VariableDefinition{.variableType = fileType,
+                m_blockNode->addVariableDefinition(VariableDefinition{.variableType = fileType.value(),
                                                                       .variableName = m_argumentNames[2],
                                                                       .scopeId = 0,
                                                                       .llvmValue = ext_stderr,
@@ -139,7 +139,7 @@ llvm::Value *UnitNode::codegen(std::unique_ptr<Context> &context)
             context->setNamedValue("stdout", ext_stdout);
             if (m_argumentNames.size() >= 2)
             {
-                m_blockNode->addVariableDefinition(VariableDefinition{.variableType = fileType,
+                m_blockNode->addVariableDefinition(VariableDefinition{.variableType = fileType.value(),
                                                                       .variableName = m_argumentNames[1],
                                                                       .scopeId = 0,
                                                                       .llvmValue = ext_stdout,
@@ -151,7 +151,7 @@ llvm::Value *UnitNode::codegen(std::unique_ptr<Context> &context)
             context->setNamedValue("stdin", ext_stdin);
             if (!m_argumentNames.empty())
             {
-                m_blockNode->addVariableDefinition(VariableDefinition{.variableType = fileType,
+                m_blockNode->addVariableDefinition(VariableDefinition{.variableType = fileType.value(),
                                                                       .variableName = m_argumentNames[1],
                                                                       .scopeId = 0,
                                                                       .llvmValue = ext_stdin,
@@ -197,10 +197,10 @@ llvm::Value *UnitNode::codegen(std::unique_ptr<Context> &context)
 
         if (m_argumentNames.size() >= 2)
         {
-            auto fileType = context->programUnit()->getTypeDefinitions().getType("file");
+            const auto fileType = context->programUnit()->getTypeDefinitions().getType("file");
 
 
-            m_blockNode->addVariableDefinition(VariableDefinition{.variableType = fileType,
+            m_blockNode->addVariableDefinition(VariableDefinition{.variableType = fileType.value(),
                                                                   .variableName = m_argumentNames[1],
                                                                   .scopeId = 0,
                                                                   .llvmValue = context->namedValue("stdout"),
@@ -210,7 +210,7 @@ llvm::Value *UnitNode::codegen(std::unique_ptr<Context> &context)
 
         if (m_argumentNames.size() >= 1)
         {
-            m_blockNode->addVariableDefinition(VariableDefinition{.variableType = fileType,
+            m_blockNode->addVariableDefinition(VariableDefinition{.variableType = fileType.value(),
                                                                   .variableName = m_argumentNames[0],
                                                                   .scopeId = 0,
                                                                   .llvmValue = context->namedValue("stdin"),
@@ -220,7 +220,7 @@ llvm::Value *UnitNode::codegen(std::unique_ptr<Context> &context)
 
         if (m_argumentNames.size() >= 2)
         {
-            m_blockNode->addVariableDefinition(VariableDefinition{.variableType = fileType,
+            m_blockNode->addVariableDefinition(VariableDefinition{.variableType = fileType.value(),
                                                                   .variableName = m_argumentNames[2],
                                                                   .scopeId = 0,
                                                                   .llvmValue = context->namedValue("stderr"),

@@ -2,6 +2,7 @@
 #include <iostream>
 #include <llvm/IR/IRBuilder.h>
 #include "FunctionCallNode.h"
+#include "MethodCallNode.h"
 #include "UnitNode.h"
 #include "compare.h"
 #include "compiler/Context.h"
@@ -23,25 +24,59 @@ llvm::Value *VariableAccessNode::codegen(std::unique_ptr<Context> &context)
         return V;
     }
 
-    llvm::AllocaInst *A = context->namedAllocation(m_variableName);
+    llvm::AllocaInst *allocation = context->namedAllocation(m_variableName);
 
-    if (!A)
+
+    const auto functionDefinition =
+            context->programUnit()->getFunctionDefinition(context->currentFunction()->getName().str());
+    if (functionDefinition.has_value() && functionDefinition.value()->parent() &&
+        functionDefinition.value()->functionType() != FunctionType::Constructor)
+    {
+        const auto thisPointer = context->currentFunction()->getArg(0);
+
+
+        const auto rawType = context->programUnit()
+                                     ->getTypeDefinitions()
+                                     .getType(functionDefinition.value()->parent().value())
+                                     .value();
+        if (const auto classType = std::dynamic_pointer_cast<ClassType>(rawType))
+        {
+            if (const auto member = classType->member(m_variableName); member.has_value())
+            {
+                const auto fieldName = "self." + m_variableName;
+                const auto llvmRecordType = classType->generateLlvmType(context);
+
+                const auto index = classType->getFieldIndexByName(m_variableName);
+
+
+                const llvm::DataLayout &DL = context->module()->getDataLayout();
+                const auto fieldType = member.value().variableDefinition->variableType->generateLlvmType(context);
+
+
+                const auto fieldPointer =
+                        context->builder()->CreateStructGEP(llvmRecordType, thisPointer, index, fieldName);
+
+                const auto alignment = DL.getPrefTypeAlign(fieldType);
+                return context->builder()->CreateAlignedLoad(fieldType, fieldPointer, alignment, m_variableName);
+            }
+        }
+    }
+    if (!allocation)
     {
         for (auto &arg: context->currentFunction()->args())
         {
             if (iequals(arg.getName(), variableName))
             {
-                auto functionDefinition =
-                        context->programUnit()->getFunctionDefinition(context->currentFunction()->getName().str());
 
-                const auto argType = functionDefinition.value()->getParam(arg.getArgNo());
+                const auto argType = functionDefinition.value()->getParam(arg.getName().str());
                 const auto llvmArgType = argType->type->generateLlvmType(context);
                 auto argValue = context->currentFunction()->getArg(arg.getArgNo());
                 if (argType->type->baseType == VariableBaseType::Struct)
                 {
                     llvm::AllocaInst *alloca =
                             context->builder()->CreateAlloca(llvmArgType, nullptr, argType->argumentName + "_struct");
-                    return context->builder()->CreateLoad(A->getAllocatedType(), alloca, m_variableName.c_str());
+                    return context->builder()->CreateLoad(allocation->getAllocatedType(), alloca,
+                                                          m_variableName.c_str());
                 }
                 if (argType->isReference && (argType->type->isSimpleType()))
                 {
@@ -53,10 +88,8 @@ llvm::Value *VariableAccessNode::codegen(std::unique_ptr<Context> &context)
             }
         }
 
-
         return LogErrorV("Unknown variable name: " + m_variableName);
     }
-
     // auto type = resolveType(context->programUnit(), resolveParent(context));
     // if (!m_dereference && type->baseType == VariableBaseType::Pointer)
     // {
@@ -64,11 +97,11 @@ llvm::Value *VariableAccessNode::codegen(std::unique_ptr<Context> &context)
     // }
 
     // Load the value.
-    if (A->getAllocatedType()->isStructTy() || !context->loadValue)
-        return A;
+    if (allocation->getAllocatedType()->isStructTy() || !context->loadValue)
+        return allocation;
 
 
-    return context->builder()->CreateLoad(A->getAllocatedType(), A, m_variableName.c_str());
+    return context->builder()->CreateLoad(allocation->getAllocatedType(), allocation, m_variableName.c_str());
 }
 
 std::shared_ptr<VariableType> VariableAccessNode::resolveType(const std::unique_ptr<UnitNode> &unit, ASTNode *parent)
@@ -84,6 +117,18 @@ std::shared_ptr<VariableType> VariableAccessNode::resolveType(const std::unique_
         {
             type = var.value().variableType;
         }
+
+        if (type == nullptr && functionDefinition->parent())
+        {
+            if (auto tmpClassType = unit->getTypeDefinitions().getType(functionDefinition->parent().value()))
+            {
+                const auto classType = std::dynamic_pointer_cast<ClassType>(tmpClassType.value());
+                if (auto memberVariable = classType->member(m_variableName))
+                {
+                    type = memberVariable.value().variableDefinition->variableType;
+                }
+            }
+        }
     }
     else if (auto *functionCall = dynamic_cast<FunctionCallNode *>(parent))
     {
@@ -94,6 +139,21 @@ std::shared_ptr<VariableType> VariableAccessNode::resolveType(const std::unique_
                 type = param.value().type;
             }
             if (auto var = unitFunctionDefinition.value()->body()->getVariableDefinition(m_variableName))
+            {
+                type = var.value().variableType;
+            }
+        }
+    }
+    else if (auto *methodCall = dynamic_cast<MethodCallNode *>(parent))
+    {
+
+        if (auto unitFunctionDefinition = methodCall->memberFunction().functionDefinition)
+        {
+            if (auto param = unitFunctionDefinition->getParam(m_variableName))
+            {
+                type = param.value().type;
+            }
+            if (auto var = unitFunctionDefinition->body()->getVariableDefinition(m_variableName))
             {
                 type = var.value().variableType;
             }
