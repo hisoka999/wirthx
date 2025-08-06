@@ -11,11 +11,12 @@ For now only `linux-x86-64` and `win64` are supported.
 ## Current Restrictions
 
 > [!WARNING]
-> - only ascii characters are allowed in the source code
+> - only ascii characters are allowed in the source code and strings do not support unicode
 > - no support for `set` types
 > - no support for `file` types with a sub type
 > - no support for `packed` types
-> - no support for `class` or `object` types
+> - no support for `object` types
+> - no support for `interfaces`
 
 ### Options
 
@@ -113,6 +114,37 @@ begin
     myvec.x := 2;
     myvec.y := 3;
     vec2_inc(myvec);
+end.
+```
+
+## Classes
+
+```pascal
+program test;
+type
+    TMyClass = class
+            x : integer;
+            y : integer;
+        public
+            constructor Create(a, b: integer);
+            procedure inc_x;
+    end;
+    
+    constructor TMyClass.Create(a, b: integer);
+    begin
+        x := a;
+        y := b;
+    end;
+    procedure TMyClass.inc_x;
+    begin
+        x := x + 1;
+    end;
+var
+    my_class : TMyClass;
+begin
+    my_class := TMyClass.Create(1, 2);
+    my_class.inc_x;
+    Writeln(my_class.x); // Outputs 2
 end.
 ```
 
