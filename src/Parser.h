@@ -86,6 +86,7 @@ class Parser
                                              const Token &methodNameToken);
     [[nodiscard]] bool isFieldAMethodCall(const std::string &variableName, const std::string &methodName,
                                           const Scope &scope) const;
+    [[nodiscard]] bool isClassInstance(const Token &token) const;
     std::shared_ptr<ASTNode> parseVariableAccess(const Scope &scope);
     std::shared_ptr<ASTNode> parseToken(const Scope &scope);
     std::shared_ptr<ASTNode> parseRangeElementOrType(const Scope &scope);

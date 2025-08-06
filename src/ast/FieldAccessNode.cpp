@@ -6,6 +6,7 @@
 #include "exceptions/CompilerException.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "types/ClassType.h"
 #include "types/RecordType.h"
 
 
@@ -83,17 +84,34 @@ llvm::Value *FieldAccessNode::codegen(std::unique_ptr<Context> &context)
     {
         return LogErrorV("Unknown record variable name");
     }
-    else
+    if (auto classType = std::dynamic_pointer_cast<ClassType>(structDef->variableType))
     {
-        auto recordType = std::dynamic_pointer_cast<RecordType>(structDef->variableType);
+        auto member = classType->member(m_fieldName);
+        if (!member)
+        {
+            return LogErrorV("Unknown field name: " + m_fieldName + " in class: " + m_elementName);
+        }
+        auto fieldType = member.value().variableDefinition->variableType->generateLlvmType(context);
 
-        auto index = recordType->getFieldIndexByName(m_fieldName);
-        auto field = recordType->getField(index);
+        const llvm::DataLayout &DL = context->module()->getDataLayout();
+        auto alignment = DL.getPrefTypeAlign(fieldType);
 
+        auto index = classType->getFieldIndexByName(m_fieldName);
+        auto fieldName = m_elementName + "." + m_fieldName;
 
-        auto arrayValue = context->builder()->CreateStructGEP(V->getAllocatedType(), V, index, fieldName);
-        return context->builder()->CreateLoad(field.variableType->generateLlvmType(context), arrayValue, fieldName);
+        auto arrayValue =
+                context->builder()->CreateStructGEP(classType->generateLlvmType(context), V, index, fieldName);
+        return context->builder()->CreateAlignedLoad(fieldType, arrayValue, alignment, fieldName);
     }
+
+    auto recordType = std::dynamic_pointer_cast<RecordType>(structDef->variableType);
+
+    auto index = recordType->getFieldIndexByName(m_fieldName);
+    auto field = recordType->getField(index);
+
+
+    auto arrayValue = context->builder()->CreateStructGEP(V->getAllocatedType(), V, index, fieldName);
+    return context->builder()->CreateLoad(field.variableType->generateLlvmType(context), arrayValue, fieldName);
 }
 
 std::shared_ptr<VariableType> FieldAccessNode::resolveType(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
@@ -136,6 +154,15 @@ std::shared_ptr<VariableType> FieldAccessNode::resolveType(const std::unique_ptr
         if (auto field = type->getFieldByName(m_fieldName))
         {
             return field.value().variableType;
+        }
+    }
+
+    if (definition->variableType->baseType == VariableBaseType::Class)
+    {
+        auto type = std::dynamic_pointer_cast<ClassType>(definition->variableType);
+        if (auto member = type->member(m_fieldName))
+        {
+            return member.value().variableDefinition->variableType;
         }
     }
 

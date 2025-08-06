@@ -1128,6 +1128,16 @@ bool Parser::isFieldAMethodCall(const std::string &variableName, const std::stri
     }
     return false;
 }
+bool Parser::isClassInstance(const Token &token) const
+{
+    const auto vardef =
+            std::ranges::find(m_known_variable_definitions, token.lexical(), &VariableDefinition::variableName);
+    if (vardef != m_known_variable_definitions.end())
+    {
+        return vardef->variableType->baseType == VariableBaseType::Class;
+    }
+    return false;
+}
 std::shared_ptr<ASTNode> Parser::parseVariableAccess(const Scope &scope)
 {
     consume(TokenType::NAMEDTOKEN);
@@ -1203,6 +1213,37 @@ std::shared_ptr<ASTNode> Parser::parseVariableAccess(const Scope &scope)
         {
             return parseMethodCall(scope, token, field);
         }
+        if (isClassInstance(token))
+        {
+            // check field access on a class
+            const auto vardef =
+                    std::ranges::find(m_known_variable_definitions, token.lexical(), &VariableDefinition::variableName);
+
+            if (auto classTypePtr = std::dynamic_pointer_cast<ClassType>(vardef->variableType))
+            {
+                if (const auto member = classTypePtr->member(field.lexical()); member.has_value())
+                {
+                    if ((member->accessModifier == AccessModifier::Protected &&
+                         (!scope.classType || *scope.classType != *classTypePtr)) ||
+                        (member->accessModifier == AccessModifier::Private && !scope.classType))
+                    {
+                        m_errors.push_back(ParserError{.token = field,
+                                                       .message = "The member field '" + field.lexical() +
+                                                                  "' is not accessible in this context!"});
+                        return nullptr;
+                    }
+                }
+                else
+                {
+                    m_errors.push_back(ParserError{.token = field,
+                                                   .message = "The member field '" + field.lexical() +
+                                                              "' is not defined in the class '" + token.lexical() +
+                                                              "'!"});
+                    return nullptr;
+                }
+            }
+        }
+
 
         return std::make_shared<FieldAccessNode>(token, field);
     }

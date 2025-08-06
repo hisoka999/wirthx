@@ -1,0 +1,3 @@
+FILENAME:23:45: error: The member field 'FValue' is not accessible in this context!
+    WriteLn('Initial Value: ', TestInstance.FValue);
+                                            ^-------
