@@ -2,26 +2,32 @@
 #include <iostream>
 #include "compare.h"
 
-inline std::vector<std::string> possible_tokens = {"program",   "unit",         "uses",
-                                                   "begin",     "end",          "procedure",
-                                                   "function",  "var",          "if",
-                                                   "then",      "else",         "while",
-                                                   "do",        "for",          "to",
-                                                   "break",     "repeat",       "until",
-                                                   "type",      "array",        "of",
-                                                   "const",     "true",         "false",
-                                                   "and",       "or",           "not",
-                                                   "record",    "external",     "name",
-                                                   "mod",       "inline",       "implementation",
-                                                   "interface", "finalization", "initialization",
-                                                   "div",       "downto",       "file",
-                                                   "case",      "in",           "nil"};
+static std::vector<std::string> possible_tokens = {
+        "program",   "unit",         "uses",
+        "begin",     "end",          "procedure",
+        "function",  "var",          "if",
+        "then",      "else",         "while",
+        "do",        "for",          "to",
+        "break",     "repeat",       "until",
+        "type",      "array",        "of",
+        "const",     "true",         "false",
+        "and",       "or",           "not",
+        "record",    "external",     "name",
+        "mod",       "inline",       "implementation",
+        "interface", "finalization", "initialization",
+        "div",       "downto",       "file",
+        "case",      "in",           "nil",
+        "class",     "constructor",  "private",
+        "public",    "protected",    "published",
+        "virtual",   "inherited",    "override",
 
-inline std::vector<std::string> macro_token{"ifdef", "else", "endif"};
+};
 
-Lexer::Lexer() {}
+static std::vector<std::string> macro_token{"ifdef", "else", "endif"};
 
-Lexer::~Lexer() {}
+Lexer::Lexer() = default;
+
+Lexer::~Lexer() = default;
 
 constexpr bool validStartNameChar(const char value)
 {
@@ -29,6 +35,26 @@ constexpr bool validStartNameChar(const char value)
 }
 
 constexpr bool validNameChar(const char value) { return validStartNameChar(value) || (value >= '0' && value <= '9'); }
+
+constexpr bool find_fixed_token(const std::string &content, const size_t start, size_t *endPosition)
+{
+
+    char current = content[start];
+    *endPosition = start + 1;
+    if (!validStartNameChar(current))
+        return false;
+
+    while (validNameChar(current))
+    {
+
+        *endPosition += 1;
+        current = content[*endPosition];
+    }
+
+    const auto tmp = std::string_view(content.data() + start, *endPosition - start);
+    return std::ranges::any_of(possible_tokens, [tmp](const std::string &token) { return iequals(tmp, token); });
+}
+
 
 std::vector<Token> Lexer::tokenize(const std::string &filename, const std::string &content)
 {
@@ -361,24 +387,6 @@ bool Lexer::find_token(const std::string &content, const size_t start, size_t *e
     return true;
 }
 
-bool Lexer::find_fixed_token(const std::string &content, const size_t start, size_t *endPosition)
-{
-
-    char current = content[start];
-    *endPosition = start + 1;
-    if (!validStartNameChar(current))
-        return false;
-
-    while (validNameChar(current))
-    {
-
-        *endPosition += 1;
-        current = content[*endPosition];
-    }
-
-    const auto tmp = std::string_view(content.data() + start, *endPosition - start);
-    return std::ranges::any_of(possible_tokens, [tmp](const std::string &token) { return iequals(tmp, token); });
-}
 
 bool Lexer::find_comment(const std::string &content, const size_t start, size_t *endPosition)
 {

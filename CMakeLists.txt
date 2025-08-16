@@ -77,6 +77,7 @@ file(GLOB SRC
         src/ast/UnitNode.cpp
         src/ast/SystemFunctionCallNode.cpp
         src/ast/AddressNode.cpp
+        src/ast/CreateObjectNode.cpp
         src/ast/types/VariableType.cpp
         src/ast/types/RecordType.cpp
         src/ast/types/StringType.cpp
@@ -86,11 +87,13 @@ file(GLOB SRC
         src/ast/types/ValueRangeType.cpp
         src/ast/types/ArrayType.cpp
         src/ast/types/TypeRegistry.cpp
+        src/ast/types/ClassType.cpp
         src/ast/ForNode.cpp
         src/ast/ForEachNode.cpp
         src/ast/RepeatUntilNode.cpp
         src/ast/BreakNode.cpp
         src/ast/CaseNode.cpp
+        src/ast/MethodCallNode.cpp
         src/compiler/intrinsics.cpp
         src/compiler/CompilerOptions.cpp
         src/compiler/Context.cpp

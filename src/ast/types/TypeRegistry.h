@@ -6,6 +6,7 @@
 #define TYPEREGISTRY_H
 
 #include <map>
+#include <optional>
 #include <unordered_map>
 
 #include "VariableType.h"
@@ -25,7 +26,7 @@ public:
     TypeRegistry();
     ~TypeRegistry();
     void registerType(const std::string &name, const std::shared_ptr<VariableType> &type);
-    std::shared_ptr<VariableType> getType(const std::string &name) const;
+    std::optional<std::shared_ptr<VariableType>> getType(const std::string &name) const;
     bool hasType(const std::string &name) const { return m_types.contains(name); }
 
 

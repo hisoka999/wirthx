@@ -581,3 +581,10 @@ std::shared_ptr<VariableType> SystemFunctionCallNode::resolveType(const std::uni
 
     return nullptr;
 }
+void SystemFunctionCallNode::typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
+{
+    for (const auto &arg: m_args)
+    {
+        arg->typeCheck(unit, parentNode);
+    }
+}

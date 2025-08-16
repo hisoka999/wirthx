@@ -182,7 +182,29 @@ std::shared_ptr<VariableType> FunctionCallNode::resolveType(const std::unique_pt
 
 
 std::string FunctionCallNode::name() { return m_name; }
-void FunctionCallNode::typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode) {}
+void FunctionCallNode::typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
+{
+    auto functionDefinition = unit->getFunctionDefinition(callSignature(unit, parentNode));
+    if (!functionDefinition)
+    {
+        functionDefinition = unit->getFunctionDefinition(m_name);
+    }
+    for (size_t i = 0; i < m_args.size(); ++i)
+    {
+        const auto arg = m_args[i];
+
+        if (const auto paramType = functionDefinition.value()->getParam(i); paramType.has_value())
+        {
+            arg->typeCheck(unit, parentNode);
+            const auto argType = arg->resolveType(unit, parentNode);
+            if (*argType != *(paramType.value().type))
+            {
+                throw std::runtime_error("Argument type mismatch for argument " + std::to_string(i) +
+                                         " in function call " + m_name);
+            }
+        }
+    }
+}
 bool FunctionCallNode::tokenIsPartOfNode(const Token &token) const
 {
     if (ASTNode::tokenIsPartOfNode(token))

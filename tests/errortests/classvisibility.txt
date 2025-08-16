@@ -1,0 +1,3 @@
+FILENAME:31:45: error: The member function 'GetValue' is not accessible in this context!
+    WriteLn('Initial Value: ', TestInstance.GetValue);
+                                            ^---------

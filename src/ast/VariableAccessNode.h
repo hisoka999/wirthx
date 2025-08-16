@@ -15,5 +15,5 @@ public:
     llvm::Value *codegen(std::unique_ptr<Context> &context) override;
 
     std::shared_ptr<VariableType> resolveType(const std::unique_ptr<UnitNode> &unit, ASTNode *parent) override;
-    std::string variableName() const { return m_variableName; }
+    [[nodiscard]] std::string variableName() const { return m_variableName; }
 };

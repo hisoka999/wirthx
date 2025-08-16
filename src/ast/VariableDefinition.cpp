@@ -5,6 +5,7 @@
 #include "ASTNode.h"
 #include "compiler/Context.h"
 #include "types/ArrayType.h"
+#include "types/ClassType.h"
 #include "types/FileType.h"
 #include "types/RecordType.h"
 #include "types/StringType.h"
@@ -101,6 +102,15 @@ llvm::AllocaInst *VariableDefinition::generateCode(std::unique_ptr<Context> &con
             if (structType != nullptr)
             {
                 return context->builder()->CreateAlloca(structType->generateLlvmType(context), nullptr,
+                                                        this->variableName);
+            }
+        }
+        case VariableBaseType::Class:
+        {
+            const auto classType = std::dynamic_pointer_cast<ClassType>(this->variableType);
+            if (classType != nullptr)
+            {
+                return context->builder()->CreateAlloca(classType->generateLlvmType(context), nullptr,
                                                         this->variableName);
             }
         }

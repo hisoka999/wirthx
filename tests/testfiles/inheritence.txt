@@ -1,0 +1,2 @@
+Base Value: 10
+Derived Value: 50

@@ -247,10 +247,12 @@ INSTANTIATE_TEST_SUITE_P(CompilerTestNoError, CompilerTest,
                                          "basicvec2", "dynarray", "externalfunction", "stringtest", "readfile",
                                          "repeatuntil", "stringcompare", "pointer_test", "rule110", "positive_assert",
                                          "stringconv", "singletest", "doubletest", "exittest", "stringreturn",
-                                         "enumtest", "rangetypetest", "casetest", "forintest"));
+                                         "enumtest", "rangetypetest", "casetest", "forintest", "classtest",
+                                         "inheritence"));
 
 INSTANTIATE_TEST_SUITE_P(CompilerTestWithError, CompilerTestError,
-                         testing::Values("arrayaccess", "missing_return_type", "wrong_return_type", "parsing_errors"));
+                         testing::Values("arrayaccess", "missing_return_type", "wrong_return_type", "parsing_errors",
+                                         "classvisibility", "classfielderror"));
 
 INSTANTIATE_TEST_SUITE_P(ProjectEuler, ProjectEulerTest,
                          testing::Values("problem1", "problem2", "problem3", "problem4", "problem5", "problem6",

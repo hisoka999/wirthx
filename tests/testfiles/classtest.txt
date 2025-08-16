@@ -1,0 +1,5 @@
+Initial Value: 10
+SetValue called, new value: 20
+Updated Value: 20
+Initial Float Value: 12.000000
+Updated Float Value: 3.140000
