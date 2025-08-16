@@ -1,15 +1,9 @@
-//
-// Created by stefan on 26.07.25.
-//
-
 #include "CreateObjectNode.h"
-
 #include <cassert>
 #include <iostream>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Intrinsics.h>
 #include <utility>
-
 #include "FunctionCallNode.h"
 #include "FunctionDefinitionNode.h"
 #include "UnitNode.h"
@@ -77,15 +71,7 @@ llvm::Value *CreateObjectNode::codegen(std::unique_ptr<Context> &context)
 
         auto argValue = arguments[argumentIndex]->codegen(context);
         context->loadValue = true;
-        if (argumentIndex == 0 && m_inherited)
-        {
-            // The first argument is always the "self" pointer.
-            auto self = context->findValue("self");
-            // auto loadedSelf = context->builder()->CreateLoad(llvm::PointerType::getUnqual(*context->context()),
-            //                                                  self.value(), "self.load");
-            ArgsV.push_back(self.value());
-        }
-        else if (argType.has_value() && argType.value().isReference)
+        if (argType.has_value() && argType.value().isReference)
         {
             ArgsV.push_back(argValue);
         }
@@ -118,7 +104,6 @@ llvm::Value *CreateObjectNode::codegen(std::unique_ptr<Context> &context)
             ArgsV.push_back(argValue);
         }
 
-
         if (!ArgsV.back())
             return nullptr;
     }
@@ -146,4 +131,23 @@ llvm::Value *CreateObjectNode::codegen(std::unique_ptr<Context> &context)
 std::shared_ptr<VariableType> CreateObjectNode::resolveType(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
 {
     return m_classType;
+}
+void CreateObjectNode::typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
+{
+    const auto functionDefinition = m_memberFunction;
+
+    for (size_t i = 0; i < m_arguments.size(); ++i)
+    {
+        const auto arg = m_arguments[i];
+
+        if (const auto paramType = functionDefinition->getParam(i); paramType.has_value())
+        {
+            arg->typeCheck(unit, parentNode);
+            if (const auto argType = arg->resolveType(unit, parentNode); *argType != *(paramType.value().type))
+            {
+                throw std::runtime_error("Argument type mismatch for argument " + std::to_string(i) +
+                                         " in function call " + functionDefinition->name());
+            }
+        }
+    }
 }

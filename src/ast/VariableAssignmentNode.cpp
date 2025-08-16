@@ -62,8 +62,7 @@ llvm::Value *VariableAssignmentNode::codegen(std::unique_ptr<Context> &context)
     {
         auto functionDefinition =
                 context->programUnit()->getFunctionDefinition(context->currentFunction()->getName().str());
-        if (functionDefinition.has_value() && functionDefinition.value()->parent() &&
-            functionDefinition.value()->functionType() != FunctionType::Constructor)
+        if (functionDefinition.has_value() && functionDefinition.value()->parent())
         {
             auto thisPointer = context->currentFunction()->getArg(0);
             auto rawType = context->programUnit()
@@ -77,45 +76,13 @@ llvm::Value *VariableAssignmentNode::codegen(std::unique_ptr<Context> &context)
                     const auto fieldName = "self." + m_variableName;
                     auto llvmRecordType = llvm::cast<llvm::StructType>(classType->generateLlvmType(context));
 
-
-                    type = member.value().variableDefinition->variableType->generateLlvmType(context);
                     const auto index = classType->getFieldIndexByName(m_variableName);
-
-
                     auto fieldPointer =
                             context->builder()->CreateStructGEP(llvmRecordType, thisPointer, index, fieldName);
 
                     auto expressionResult = m_expression->codegen(context);
 
                     context->builder()->CreateStore(expressionResult, fieldPointer);
-                    return expressionResult;
-                }
-            }
-        }
-        else if (functionDefinition.value()->functionType() == FunctionType::Constructor)
-        {
-            auto thisPointer = context->findValue("self").value();
-            auto rawType = context->programUnit()
-                                   ->getTypeDefinitions()
-                                   .getType(functionDefinition.value()->parent().value())
-                                   .value();
-            if (const auto classType = std::dynamic_pointer_cast<ClassType>(rawType))
-            {
-                if (auto member = classType->member(m_variableName); member.has_value())
-                {
-                    const auto fieldName = "self." + m_variableName;
-                    auto llvmRecordType = classType->generateLlvmType(context);
-
-                    type = member.value().variableDefinition->variableType->generateLlvmType(context);
-                    const auto index = classType->getFieldIndexByName(m_variableName);
-
-
-                    auto arrayValue =
-                            context->builder()->CreateStructGEP(llvmRecordType, thisPointer, index, fieldName);
-
-                    auto expressionResult = m_expression->codegen(context);
-
-                    context->builder()->CreateStore(expressionResult, arrayValue);
                     return expressionResult;
                 }
             }
@@ -141,7 +108,6 @@ llvm::Value *VariableAssignmentNode::codegen(std::unique_ptr<Context> &context)
         }
 
         context->builder()->CreateStore(expressionResult, allocatedValue);
-        // context->NamedValues[m_variableName] = expressionResult;
         return allocatedValue;
     }
 

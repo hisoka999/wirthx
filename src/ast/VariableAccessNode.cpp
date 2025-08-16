@@ -18,10 +18,9 @@ void VariableAccessNode::print() { std::cout << m_variableName; }
 llvm::Value *VariableAccessNode::codegen(std::unique_ptr<Context> &context)
 {
     const auto variableName = to_lower(m_variableName);
-    llvm::Value *V = context->namedValue(m_variableName);
-    if (V)
+    if (auto value = context->namedValue(m_variableName))
     {
-        return V;
+        return value;
     }
 
     llvm::AllocaInst *allocation = context->namedAllocation(m_variableName);
@@ -103,11 +102,6 @@ llvm::Value *VariableAccessNode::codegen(std::unique_ptr<Context> &context)
 
         return LogErrorV("Unknown variable name: " + m_variableName);
     }
-    // auto type = resolveType(context->programUnit(), resolveParent(context));
-    // if (!m_dereference && type->baseType == VariableBaseType::Pointer)
-    // {
-    //     return A;
-    // }
 
     // Load the value.
     if (allocation->getAllocatedType()->isStructTy() || !context->loadValue)

@@ -1,16 +1,13 @@
 #include "FunctionDefinitionNode.h"
 #include <iostream>
+#include <llvm/IR/Function.h>
 #include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/PassManager.h>
 #include <utility>
-
 #include "FieldAccessNode.h"
 #include "UnitNode.h"
 #include "compare.h"
 #include "compiler/Context.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/PassManager.h"
-#include "llvm/IR/Verifier.h"
-#include "types/ClassType.h"
 #include "types/RecordType.h"
 
 
@@ -45,8 +42,7 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
 
     if (m_parent)
     {
-        auto classType = context->programUnit()->getTypeDefinitions().getType(m_parent.value().lexical());
-        params.push_back(classType.value()->generateLlvmType(context)->getPointerTo());
+        params.push_back(context->builder()->getPtrTy());
     }
 
     for (const auto &param: m_params)
@@ -55,9 +51,7 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
         if (param.isReference || param.type->baseType == VariableBaseType::Struct ||
             param.type->baseType == VariableBaseType::String)
         {
-
-            auto ptr = llvm::PointerType::getUnqual(param.type->generateLlvmType(context));
-            params.push_back(ptr);
+            params.push_back(llvm::PointerType::getUnqual(param.type->generateLlvmType(context)));
         }
         else
         {
@@ -69,7 +63,6 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
     {
         resultType = llvm::Type::getVoidTy(*context->context());
     }
-
     else
     {
         resultType = m_returnType->generateLlvmType(context);
@@ -129,7 +122,6 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
     }
     if (m_libName.empty())
     {
-        // functionDefinition->setDSOLocal(true);
         functionDefinition->addFnAttr(llvm::Attribute::MustProgress);
         if (m_functionType != FunctionType::Procedure && m_returnType &&
             m_returnType->baseType == VariableBaseType::String)
@@ -158,21 +150,6 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
     {
         context->explicitReturn = false;
         m_body->setBlockName(m_name + "_block");
-        if (m_parent)
-        {
-            auto type = context->programUnit()->getTypeDefinitions().getType(m_parent->lexical());
-            if (!type.has_value())
-            {
-                return LogErrorV("Unknown type for constructor: " + m_parent->lexical());
-            }
-            // m_body->addVariableDefinition(VariableDefinition{.variableType = type.value(),
-            //                                                  .variableName = "self",
-            //                                                  .token = ASTNode::expressionToken(),
-            //                                                  .alias = "",
-            //                                                  .scopeId = 0,
-            //                                                  .llvmValue = nullptr,
-            //                                                  .constant = false});
-        }
         m_body->codegen(context);
         if (m_functionType == FunctionType::Procedure)
         {
