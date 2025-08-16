@@ -163,3 +163,22 @@ std::shared_ptr<VariableType> MethodCallNode::resolveType(const std::unique_ptr<
 {
     return m_memberFunction.functionDefinition->returnType();
 }
+void MethodCallNode::typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
+{
+    const auto functionDefinition = m_memberFunction.functionDefinition;
+
+    for (size_t i = 0; i < m_arguments.size(); ++i)
+    {
+        const auto arg = m_arguments[i];
+
+        if (const auto paramType = functionDefinition->getParam(i); paramType.has_value())
+        {
+            arg->typeCheck(unit, parentNode);
+            if (const auto argType = arg->resolveType(unit, parentNode); *argType != *(paramType.value().type))
+            {
+                throw std::runtime_error("Argument type mismatch for argument " + std::to_string(i) +
+                                         " in function call " + functionDefinition->name());
+            }
+        }
+    }
+}

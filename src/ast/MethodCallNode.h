@@ -28,4 +28,5 @@ public:
     [[nodiscard]] MemberFunction memberFunction() const { return m_memberFunction; }
 
     std::shared_ptr<VariableType> resolveType(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode) override;
+    void typeCheck(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode) override;
 };
