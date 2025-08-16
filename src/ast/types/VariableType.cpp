@@ -16,6 +16,7 @@ bool VariableType::isSimpleType() const
         case VariableBaseType::Array:
         case VariableBaseType::Struct:
         case VariableBaseType::String:
+        case VariableBaseType::Class:
             return false;
         case VariableBaseType::Pointer:
         case VariableBaseType::Integer:

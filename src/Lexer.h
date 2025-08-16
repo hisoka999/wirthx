@@ -7,7 +7,6 @@
 class Lexer
 {
 private:
-    static bool find_fixed_token(const std::string &content, size_t start, size_t *endPosition);
     static bool find_token(const std::string &content, size_t start, size_t *endPosition);
 
     static bool find_string(const std::string &content, size_t start, size_t *endPosition);

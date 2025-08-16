@@ -247,7 +247,8 @@ INSTANTIATE_TEST_SUITE_P(CompilerTestNoError, CompilerTest,
                                          "basicvec2", "dynarray", "externalfunction", "stringtest", "readfile",
                                          "repeatuntil", "stringcompare", "pointer_test", "rule110", "positive_assert",
                                          "stringconv", "singletest", "doubletest", "exittest", "stringreturn",
-                                         "enumtest", "rangetypetest", "casetest", "forintest", "classtest"));
+                                         "enumtest", "rangetypetest", "casetest", "forintest", "classtest",
+                                         "inheritence"));
 
 INSTANTIATE_TEST_SUITE_P(CompilerTestWithError, CompilerTestError,
                          testing::Values("arrayaccess", "missing_return_type", "wrong_return_type", "parsing_errors",

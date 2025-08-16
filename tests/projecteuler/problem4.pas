@@ -1,8 +1,4 @@
 program problem4;
-
-
-
-
     function is_palindrom(product : integer) : boolean;inline;
     var
         tmp : string;
@@ -20,7 +16,6 @@ program problem4;
             end;
         end;
     end;
-
 var
     product : integer;
     palindrom : integer = 0;

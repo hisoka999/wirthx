@@ -43,8 +43,14 @@ struct Token
     size_t row{};
     size_t col{};
     TokenType tokenType;
+    std::string lexicalValue;
 
     Token() : sourceLocation(), tokenType(TokenType::T_EOF) {}
+
+    explicit Token(std::string lexicalValue) :
+        sourceLocation(), row(0), col(0), tokenType(TokenType::NAMEDTOKEN), lexicalValue(std::move(lexicalValue))
+    {
+    }
 
     Token(const SourceLocation &sourceLocation, const size_t row, const size_t col, const TokenType tokenType) :
         sourceLocation(sourceLocation), row(row), col(col), tokenType(tokenType)
@@ -56,7 +62,12 @@ struct Token
 
     Token &operator=(const Token &other) = default;
 
-    [[nodiscard]] std::string lexical() const { return sourceLocation.text(); }
+    [[nodiscard]] std::string lexical() const
+    {
+        if (!lexicalValue.empty())
+            return lexicalValue;
+        return sourceLocation.text();
+    }
     bool operator==(const Token &other) const
     {
         return sourceLocation == other.sourceLocation && row == other.row && col == other.col &&

@@ -1,6 +1,7 @@
 #include "ClassType.h"
 
 #include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/IRBuilder.h>
 
 #include "ast/FunctionDefinitionNode.h"
 #include "compare.h"
@@ -35,6 +36,11 @@ llvm::Type *ClassType::generateLlvmType(std::unique_ptr<Context> &context)
     if (cached_type == nullptr)
     {
         std::vector<llvm::Type *> types;
+        if (m_baseClass)
+        {
+            types.emplace_back(m_baseClass->generateLlvmType(context));
+        }
+
         for (const auto &member: m_members)
         {
             types.emplace_back(member.variableDefinition->variableType->generateLlvmType(context));
@@ -50,6 +56,10 @@ llvm::Type *ClassType::generateLlvmType(std::unique_ptr<Context> &context)
 size_t ClassType::getFieldIndexByName(const std::string &name) const
 {
     size_t index = 0;
+    if (m_baseClass)
+    {
+        index++;
+    }
     for (auto &member: m_members)
     {
         if (iequals(member.variableDefinition->variableName, name))
@@ -64,4 +74,13 @@ bool ClassType::hasMemberFunction(const std::string &functionName) const
 {
     return std::ranges::any_of(m_memberFunctions, [&functionName](const MemberFunction &memberFunction)
                                { return iequals(memberFunction.functionDefinition->name(), functionName); });
+}
+void ClassType::setBaseClass(const std::shared_ptr<ClassType> &value) { m_baseClass = value; }
+std::shared_ptr<ClassType> ClassType::baseClass() const { return m_baseClass; }
+llvm::Value *ClassType::generateParentAccess(llvm::Value *objectValue, std::unique_ptr<Context> &context)
+{
+    assert(m_baseClass && "Base class is not set for class  ");
+    // constexpr int index = 0;
+    //  return context->builder()->CreateStructGEP(generateLlvmType(context), objectValue, index, "parent_access");
+    return context->builder()->CreateLoad(context->builder()->getPtrTy(), objectValue, "parent_access");
 }

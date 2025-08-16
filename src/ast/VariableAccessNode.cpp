@@ -29,8 +29,7 @@ llvm::Value *VariableAccessNode::codegen(std::unique_ptr<Context> &context)
 
     const auto functionDefinition =
             context->programUnit()->getFunctionDefinition(context->currentFunction()->getName().str());
-    if (functionDefinition.has_value() && functionDefinition.value()->parent() &&
-        functionDefinition.value()->functionType() != FunctionType::Constructor)
+    if (functionDefinition.has_value() && functionDefinition.value()->parent())
     {
         const auto thisPointer = context->currentFunction()->getArg(0);
 
@@ -65,20 +64,34 @@ llvm::Value *VariableAccessNode::codegen(std::unique_ptr<Context> &context)
     {
         for (auto &arg: context->currentFunction()->args())
         {
+            if (iequals(arg.getName(), "self"))
+            {
+                const auto rawType = context->programUnit()
+                                             ->getTypeDefinitions()
+                                             .getType(functionDefinition.value()->parent().value())
+                                             .value();
+            }
             if (iequals(arg.getName(), variableName))
             {
 
                 const auto argType = functionDefinition.value()->getParam(arg.getName().str());
-                const auto llvmArgType = argType->type->generateLlvmType(context);
-                auto argValue = context->currentFunction()->getArg(arg.getArgNo());
-                if (argType->type->baseType == VariableBaseType::Struct)
+                std::shared_ptr<VariableType> type;
+                if (iequals(arg.getName(), "self"))
                 {
-                    llvm::AllocaInst *alloca =
-                            context->builder()->CreateAlloca(llvmArgType, nullptr, argType->argumentName + "_struct");
-                    return context->builder()->CreateLoad(allocation->getAllocatedType(), alloca,
-                                                          m_variableName.c_str());
+                    type = context->programUnit()
+                                   ->getTypeDefinitions()
+                                   .getType(functionDefinition.value()->parent().value())
+                                   .value();
                 }
-                if (argType->isReference && (argType->type->isSimpleType()))
+                else
+                {
+                    type = argType->type;
+                }
+                assert(type && "Argument type should not be null");
+                const auto llvmArgType = type->generateLlvmType(context);
+                auto argValue = context->currentFunction()->getArg(arg.getArgNo());
+
+                if (argType && argType->isReference && (type->isSimpleType()))
                 {
 
                     return context->builder()->CreateLoad(llvmArgType, argValue);
@@ -123,7 +136,11 @@ std::shared_ptr<VariableType> VariableAccessNode::resolveType(const std::unique_
             if (auto tmpClassType = unit->getTypeDefinitions().getType(functionDefinition->parent().value()))
             {
                 const auto classType = std::dynamic_pointer_cast<ClassType>(tmpClassType.value());
-                if (auto memberVariable = classType->member(m_variableName))
+                if (iequals(this->m_variableName, "self"))
+                {
+                    type = classType;
+                }
+                else if (auto memberVariable = classType->member(m_variableName))
                 {
                     type = memberVariable.value().variableDefinition->variableType;
                 }

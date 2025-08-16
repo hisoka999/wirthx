@@ -43,7 +43,7 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
 {
     std::vector<llvm::Type *> params;
 
-    if (m_parent && m_functionType != FunctionType::Constructor)
+    if (m_parent)
     {
         auto classType = context->programUnit()->getTypeDefinitions().getType(m_parent.value().lexical());
         params.push_back(classType.value()->generateLlvmType(context)->getPointerTo());
@@ -65,19 +65,11 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
         }
     }
     llvm::Type *resultType;
-    if (m_functionType == FunctionType::Procedure)
+    if (m_functionType == FunctionType::Procedure or m_functionType == FunctionType::Constructor)
     {
         resultType = llvm::Type::getVoidTy(*context->context());
     }
-    else if (m_functionType == FunctionType::Constructor)
-    {
-        auto type = context->programUnit()->getTypeDefinitions().getType(m_parent->lexical());
-        if (!type.has_value())
-        {
-            return LogErrorV("Unknown type for constructor: " + m_parent->lexical());
-        }
-        resultType = type.value()->generateLlvmType(context);
-    }
+
     else
     {
         resultType = m_returnType->generateLlvmType(context);
@@ -87,6 +79,10 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
     if (!m_libName.empty())
     {
         linkage = llvm::Function::ExternalLinkage;
+    }
+    else if (m_functionType == FunctionType::Constructor || m_functionType == FunctionType::Destructor)
+    {
+        linkage = llvm::Function::LinkOnceODRLinkage;
     }
     else
     {
@@ -100,7 +96,7 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
     // Set names for all arguments.
     unsigned idx = 0;
     size_t offset = 0;
-    if (m_parent && m_functionType != FunctionType::Constructor)
+    if (m_parent)
     {
         offset = 1;
     }
@@ -109,6 +105,15 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
         if (arg.getArgNo() == 0 && offset == 1)
         {
             arg.setName("self");
+            // noundef nonnull align 4 dereferenceable(4)
+            arg.addAttr(llvm::Attribute::get(*context->context(), llvm::Attribute::NoUndef));
+            arg.addAttr(llvm::Attribute::get(*context->context(), llvm::Attribute::NonNull));
+            arg.addAttr(llvm::Attribute::get(*context->context(), llvm::Attribute::Alignment, 4));
+            auto classType = context->programUnit()->getTypeDefinitions().getType(m_parent.value().lexical());
+            auto llvmClassType = classType.value()->generateLlvmType(context);
+            const llvm::DataLayout &DL = context->module()->getDataLayout();
+            arg.addAttr(llvm::Attribute::getWithDereferenceableBytes(*context->context(),
+                                                                     DL.getTypeAllocSize(llvmClassType)));
             continue;
         }
         const auto param = m_params[idx];
@@ -129,10 +134,7 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
         if (m_functionType != FunctionType::Procedure && m_returnType &&
             m_returnType->baseType == VariableBaseType::String)
             functionDefinition->addFnAttr(llvm::Attribute::NoFree);
-        if (m_functionType == FunctionType::Constructor)
-        {
-            functionDefinition->addFnAttr(llvm::Attribute::NoFree);
-        }
+
         llvm::AttrBuilder b(*context->context());
         b.addAttribute("frame-pointer", "all");
         functionDefinition->addFnAttrs(b);
@@ -156,20 +158,20 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
     {
         context->explicitReturn = false;
         m_body->setBlockName(m_name + "_block");
-        if (m_functionType == FunctionType::Constructor)
+        if (m_parent)
         {
             auto type = context->programUnit()->getTypeDefinitions().getType(m_parent->lexical());
             if (!type.has_value())
             {
                 return LogErrorV("Unknown type for constructor: " + m_parent->lexical());
             }
-            m_body->addVariableDefinition(VariableDefinition{.variableType = type.value(),
-                                                             .variableName = "self",
-                                                             .token = ASTNode::expressionToken(),
-                                                             .alias = "",
-                                                             .scopeId = 0,
-                                                             .llvmValue = nullptr,
-                                                             .constant = false});
+            // m_body->addVariableDefinition(VariableDefinition{.variableType = type.value(),
+            //                                                  .variableName = "self",
+            //                                                  .token = ASTNode::expressionToken(),
+            //                                                  .alias = "",
+            //                                                  .scopeId = 0,
+            //                                                  .llvmValue = nullptr,
+            //                                                  .constant = false});
         }
         m_body->codegen(context);
         if (m_functionType == FunctionType::Procedure)
@@ -179,13 +181,14 @@ llvm::Value *FunctionDefinitionNode::codegen(std::unique_ptr<Context> &context)
             context->verifyFunction(functionDefinition);
             return functionDefinition;
         }
-        if (m_functionType == FunctionType::Constructor)
+        if (!context->explicitReturn && m_returnType)
         {
-            context->builder()->CreateRet(context->builder()->CreateLoad(resultType, context->namedAllocation("self")));
+            context->builder()->CreateRet(
+                    context->builder()->CreateLoad(resultType, context->namedAllocation(m_name), m_name));
         }
-        else if (!context->explicitReturn)
+        else if (!m_returnType)
         {
-            context->builder()->CreateRet(context->builder()->CreateLoad(resultType, context->namedAllocation(m_name)));
+            context->builder()->CreateRetVoid();
         }
 
         // Finish off the function.

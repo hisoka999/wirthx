@@ -8,6 +8,8 @@
 #include <iostream>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
+#include <llvm/Support/CommandLine.h>
+#include <utility>
 
 #include "FunctionCallNode.h"
 #include "FunctionDefinitionNode.h"
@@ -15,10 +17,11 @@
 #include "VariableAccessNode.h"
 #include "compare.h"
 #include "compiler/Context.h"
-MethodCallNode::MethodCallNode(const Token &token, Token methodName, MemberFunction memberFunction,
+MethodCallNode::MethodCallNode(const Token &token, std::shared_ptr<ClassType> classType, Token methodName,
+                               MemberFunction memberFunction, const bool inherited,
                                std::vector<std::shared_ptr<ASTNode>> arguments) :
-    ASTNode(token), m_methodName(std::move(methodName)), m_memberFunction(std::move(memberFunction)),
-    m_arguments(std::move(arguments))
+    ASTNode(token), m_classType(std::move(classType)), m_methodName(std::move(methodName)),
+    m_memberFunction(std::move(memberFunction)), m_inherited(inherited), m_arguments(std::move(arguments))
 {
 }
 void MethodCallNode::print() {}
@@ -30,8 +33,8 @@ std::string MethodCallNode::callSignature(const std::unique_ptr<UnitNode> &unit,
     {
         parent = parentNode;
     }
-    auto token = expressionToken();
-    auto type = to_lower(unit->getVariableDefinition(token.lexical())->variableType->typeName);
+    const auto token = expressionToken();
+    const auto type = to_lower(m_classType->typeName);
 
     std::string result = type + "." + to_lower(m_methodName.lexical()) + "(";
     for (size_t i = 0; i < m_arguments.size(); ++i)
@@ -83,6 +86,7 @@ llvm::Value *MethodCallNode::codegen(std::unique_ptr<Context> &context)
             context->loadValue = !argType.value().isReference;
 
         auto argValue = arguments[argumentIndex]->codegen(context);
+
         context->loadValue = true;
 
         if (argType.has_value() && argType.value().isReference)
@@ -153,8 +157,8 @@ llvm::Value *MethodCallNode::codegen(std::unique_ptr<Context> &context)
     }
     return callInst;
 }
-std::string MethodCallNode::name() { return m_methodName.lexical(); }
-std::string MethodCallNode::className() { return ASTNode::expressionToken().lexical(); }
+std::string MethodCallNode::name() const { return m_methodName.lexical(); }
+std::string MethodCallNode::className() const { return m_classType->typeName; }
 std::shared_ptr<VariableType> MethodCallNode::resolveType(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
 {
     return m_memberFunction.functionDefinition->returnType();

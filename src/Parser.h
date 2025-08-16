@@ -59,9 +59,10 @@ class Parser
     [[nodiscard]] bool canConsumeKeyWord(const std::string &keyword) const;
     [[nodiscard]] std::optional<std::shared_ptr<VariableType>>
     determinVariableTypeByName(const std::string &name) const;
-    std::shared_ptr<ASTNode> parseEscapedString(const Token &token);
+    static std::shared_ptr<ASTNode> parseEscapedString(const Token &token);
     std::shared_ptr<ASTNode> parseNumber();
     AccessModifier tryParseAccessModifier(AccessModifier defaultModifier = AccessModifier::Public);
+    VirtualModifier parseVirtualModifier();
     std::optional<std::shared_ptr<VariableType>> parseVariableType(const Scope &scope, bool includeErrors,
                                                                    const std::string &typeName = "");
     void parseTypeDefinitions(const Scope &scope);
@@ -78,7 +79,7 @@ class Parser
 
     std::shared_ptr<BlockNode> parseBlock(const Scope &scope);
     std::shared_ptr<ASTNode> parseKeyword(const Scope &scope, bool withSemicolon);
-    std::shared_ptr<ASTNode> parseFunctionCall(const Scope &scope);
+    std::shared_ptr<ASTNode> parseFunctionCall(const Scope &scope, bool inheritedCall = false);
     std::shared_ptr<ASTNode> parseVariableAssignment(const Scope &scope);
     std::optional<std::shared_ptr<EnumType>> tryGetEnumTypeByValue(const std::string &enumKey) const;
     std::shared_ptr<ASTNode> parseConstantAccess(const Scope &scope);
@@ -98,7 +99,7 @@ class Parser
     std::unique_ptr<UnitNode> parseUnit(bool includeSystem);
     bool importUnit(const Token &token, const std::string &filename, bool includeSystem = true);
 
-    bool isFunctionDeclared(const std::string &name) const;
+    bool isFunctionDeclared(const std::string &name, const Scope &scope) const;
 
     [[nodiscard]] std::unique_ptr<UnitNode> parseUnit();
     [[nodiscard]] std::unique_ptr<UnitNode> parseProgram();

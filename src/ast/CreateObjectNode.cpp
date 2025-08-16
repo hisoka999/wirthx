@@ -12,13 +12,15 @@
 
 #include "FunctionCallNode.h"
 #include "FunctionDefinitionNode.h"
+#include "UnitNode.h"
+#include "VariableAccessNode.h"
 #include "compare.h"
 #include "compiler/Context.h"
 CreateObjectNode::CreateObjectNode(const Token &token, const std::shared_ptr<ClassType> &classType, Token field,
-                                   const std::shared_ptr<FunctionDefinitionNode> &memberFunction,
+                                   const std::shared_ptr<FunctionDefinitionNode> &memberFunction, const bool inherited,
                                    std::vector<std::shared_ptr<ASTNode>> arguments) :
     ASTNode(token), m_classType(classType), m_field(std::move(field)), m_memberFunction(memberFunction),
-    m_arguments(std::move(arguments))
+    m_inherited(inherited), m_arguments(std::move(arguments))
 {
 }
 void CreateObjectNode::print() {}
@@ -29,19 +31,43 @@ llvm::Value *CreateObjectNode::codegen(std::unique_ptr<Context> &context)
 
     llvm::Function *CalleeF = context->module()->getFunction(functionName);
 
+    std::vector<std::shared_ptr<ASTNode>> arguments;
+
+
+    if (m_inherited)
+    {
+        Token selfToken("self");
+        arguments.push_back(std::make_shared<VariableAccessNode>(selfToken, true));
+    }
+    else
+    {
+        Token selfToken("self" + m_classType->typeName);
+        VariableDefinition selfVariable{.variableType = m_classType,
+                                        .variableName = selfToken.lexical(),
+                                        .token = selfToken,
+                                        .scopeId = 0,
+                                        .value = nullptr,
+                                        .constant = false};
+        context->setNamedAllocation(selfToken.lexical(), selfVariable.generateCode(context));
+        arguments.push_back(std::make_shared<VariableAccessNode>(selfToken, false));
+    }
+    for (auto &arg: m_arguments)
+    {
+        arguments.push_back(arg);
+    }
 
     if (!CalleeF)
         return LogErrorV("Unknown constructor referenced: " + functionName);
 
     // If argument mismatch error.
-    if (CalleeF->arg_size() != m_arguments.size() && !CalleeF->isVarArg())
+    if (CalleeF->arg_size() != arguments.size() && !CalleeF->isVarArg())
     {
         std::cerr << "incorrect argument size for call " << functionName << " != " << CalleeF->arg_size() << "\n";
         return LogErrorV("Incorrect # arguments passed");
     }
 
     std::vector<llvm::Value *> ArgsV;
-    for (unsigned argumentIndex = 0; argumentIndex < m_arguments.size(); ++argumentIndex)
+    for (unsigned argumentIndex = 0; argumentIndex < arguments.size(); ++argumentIndex)
     {
 
         std::optional<FunctionArgument> argType = m_memberFunction->getParam(argumentIndex);
@@ -49,10 +75,17 @@ llvm::Value *CreateObjectNode::codegen(std::unique_ptr<Context> &context)
         if (argType.has_value())
             context->loadValue = !argType.value().isReference;
 
-        auto argValue = m_arguments[argumentIndex]->codegen(context);
+        auto argValue = arguments[argumentIndex]->codegen(context);
         context->loadValue = true;
-
-        if (argType.has_value() && argType.value().isReference)
+        if (argumentIndex == 0 && m_inherited)
+        {
+            // The first argument is always the "self" pointer.
+            auto self = context->findValue("self");
+            // auto loadedSelf = context->builder()->CreateLoad(llvm::PointerType::getUnqual(*context->context()),
+            //                                                  self.value(), "self.load");
+            ArgsV.push_back(self.value());
+        }
+        else if (argType.has_value() && argType.value().isReference)
         {
             ArgsV.push_back(argValue);
         }
@@ -107,10 +140,8 @@ llvm::Value *CreateObjectNode::codegen(std::unique_ptr<Context> &context)
         }
     };
 
-    const auto allocInst = context->builder()->CreateAlloca(m_classType->generateLlvmType(context));
 
-    context->builder()->CreateStore(callInst, allocInst);
-    return allocInst;
+    return context->namedAllocation("self" + m_classType->typeName);
 }
 std::shared_ptr<VariableType> CreateObjectNode::resolveType(const std::unique_ptr<UnitNode> &unit, ASTNode *parentNode)
 {
